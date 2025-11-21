@@ -3,5 +3,6 @@
     "Auth": true,
     "User": true,
     "Organization": true,
-    "JobProfile": true
+    "JobProfile": true,
+    "Configuration": true
 }

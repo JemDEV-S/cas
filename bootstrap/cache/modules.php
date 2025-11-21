@@ -2,18 +2,20 @@
   'providers' => 
   array (
     0 => 'Modules\\Auth\\Providers\\AuthServiceProvider',
-    1 => 'Modules\\Core\\Providers\\CoreServiceProvider',
-    2 => 'Modules\\JobProfile\\Providers\\JobProfileServiceProvider',
-    3 => 'Modules\\Organization\\Providers\\OrganizationServiceProvider',
-    4 => 'Modules\\User\\Providers\\UserServiceProvider',
+    1 => 'Modules\\Configuration\\Providers\\ConfigurationServiceProvider',
+    2 => 'Modules\\Core\\Providers\\CoreServiceProvider',
+    3 => 'Modules\\JobProfile\\Providers\\JobProfileServiceProvider',
+    4 => 'Modules\\Organization\\Providers\\OrganizationServiceProvider',
+    5 => 'Modules\\User\\Providers\\UserServiceProvider',
   ),
   'eager' => 
   array (
     0 => 'Modules\\Auth\\Providers\\AuthServiceProvider',
-    1 => 'Modules\\Core\\Providers\\CoreServiceProvider',
-    2 => 'Modules\\JobProfile\\Providers\\JobProfileServiceProvider',
-    3 => 'Modules\\Organization\\Providers\\OrganizationServiceProvider',
-    4 => 'Modules\\User\\Providers\\UserServiceProvider',
+    1 => 'Modules\\Configuration\\Providers\\ConfigurationServiceProvider',
+    2 => 'Modules\\Core\\Providers\\CoreServiceProvider',
+    3 => 'Modules\\JobProfile\\Providers\\JobProfileServiceProvider',
+    4 => 'Modules\\Organization\\Providers\\OrganizationServiceProvider',
+    5 => 'Modules\\User\\Providers\\UserServiceProvider',
   ),
   'deferred' => 
   array (
