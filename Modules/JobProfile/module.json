@@ -1,0 +1,11 @@
+{
+    "name": "JobProfile",
+    "alias": "jobprofile",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\JobProfile\\Providers\\JobProfileServiceProvider"
+    ],
+    "files": []
+}

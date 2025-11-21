@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(php artisan:*)",
+      "Bash(composer dump-autoload:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
