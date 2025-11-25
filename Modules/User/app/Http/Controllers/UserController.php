@@ -145,7 +145,7 @@ class UserController extends Controller
         $this->authorize('update', $user);
 
         try {
-            $this->userService->update($user, $request->validated());
+            $this->userService->update($user->id, $request->validated());
 
             // Actualizar roles
             if ($request->filled('roles')) {
@@ -171,7 +171,7 @@ class UserController extends Controller
         $this->authorize('delete', $user);
 
         try {
-            $this->userService->delete($user);
+            $this->userService->delete($user->id);
 
             return redirect()
                 ->route('users.index')

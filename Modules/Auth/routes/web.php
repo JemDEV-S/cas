@@ -5,6 +5,8 @@ use Modules\Auth\Http\Controllers\LoginController;
 use Modules\Auth\Http\Controllers\RegisterController;
 use Modules\Auth\Http\Controllers\ForgotPasswordController;
 use Modules\Auth\Http\Controllers\ResetPasswordController;
+use Modules\Auth\Http\Controllers\RoleController;
+use Modules\Auth\Http\Controllers\PermissionController;
 
 // Guest Routes (Login, Register, Password Reset)
 Route::middleware('guest')->group(function () {
@@ -28,4 +30,11 @@ Route::middleware('guest')->group(function () {
 // Authenticated Routes
 Route::middleware('auth')->group(function () {
     Route::post('logout', [LoginController::class, 'logout'])->name('logout');
+
+    // Roles Management
+    Route::resource('roles', RoleController::class);
+    Route::post('roles/{role}/toggle-status', [RoleController::class, 'toggleStatus'])->name('roles.toggle-status');
+
+    // Permissions Management
+    Route::resource('permissions', PermissionController::class)->only(['index', 'show']);
 });
