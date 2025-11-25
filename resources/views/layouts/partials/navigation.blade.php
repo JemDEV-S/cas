@@ -22,7 +22,7 @@
                     @endcan
 
                     @can('organization.view.units')
-                    <x-nav-link :href="route('organization.index')" :active="request()->routeIs('organization.*')">
+                    <x-nav-link :href="route('organizational-units.index')" :active="request()->routeIs('organization.*')">
                         {{ __('Organización') }}
                     </x-nav-link>
                     @endcan

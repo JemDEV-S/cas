@@ -3,10 +3,12 @@
 namespace Modules\Auth\Providers;
 
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Nwidart\Modules\Traits\PathNamespace;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
+use Modules\User\Entities\User;
 
 class AuthServiceProvider extends ServiceProvider
 {
@@ -27,6 +29,9 @@ class AuthServiceProvider extends ServiceProvider
         $this->registerConfig();
         $this->registerViews();
         $this->loadMigrationsFrom(module_path($this->name, 'database/migrations'));
+        
+        // Registrar Gate para el sistema de permisos
+        $this->registerPermissionGate();
     }
 
     /**
@@ -51,8 +56,36 @@ class AuthServiceProvider extends ServiceProvider
         $this->app['router']->aliasMiddleware('permission', \Modules\Auth\Middleware\CheckPermission::class);
 
         // Registrar policies
-        \Illuminate\Support\Facades\Gate::policy(\Modules\Auth\Entities\Role::class, \Modules\Auth\Policies\RolePolicy::class);
-        \Illuminate\Support\Facades\Gate::policy(\Modules\Auth\Entities\Permission::class, \Modules\Auth\Policies\PermissionPolicy::class);
+        Gate::policy(\Modules\Auth\Entities\Role::class, \Modules\Auth\Policies\RolePolicy::class);
+        Gate::policy(\Modules\Auth\Entities\Permission::class, \Modules\Auth\Policies\PermissionPolicy::class);
+    }
+
+    /**
+     * Registrar Gate para verificar permisos por slug
+     * Esto permite que @can, Gate::allows() y $user->can() funcionen con slugs de permisos
+     */
+    protected function registerPermissionGate(): void
+    {
+        Gate::before(function (?User $user, string $ability) {
+            // Si no hay usuario autenticado, denegar
+            if (!$user) {
+                return null;
+            }
+
+            // Super-admin tiene acceso a todo
+            if ($user->isSuperAdmin()) {
+                return true;
+            }
+
+            // Si el ability es un slug de permiso (contiene puntos como 'user.view.users')
+            if (str_contains($ability, '.')) {
+                // Verificar si el usuario tiene el permiso
+                return $user->hasPermission($ability) ?: null;
+            }
+
+            // Si no es un slug de permiso, continuar con el flujo normal (policies, etc)
+            return null;
+        });
     }
 
     /**
