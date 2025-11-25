@@ -109,4 +109,108 @@ class User extends Authenticatable
     {
         $this->roles()->sync($roleIds);
     }
+
+    /**
+     * Verificar si el usuario es super-admin
+     */
+    public function isSuperAdmin(): bool
+    {
+        return $this->hasRole('super-admin');
+    }
+
+    /**
+     * Verificar si el usuario tiene un permiso específico
+     */
+    public function hasPermission(string $permissionSlug): bool
+    {
+        // Super-admin tiene todos los permisos
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        // Cargar roles con sus permisos si no están cargados
+        if (!$this->relationLoaded('roles')) {
+            $this->load('roles.permissions');
+        }
+
+        // Verificar en todos los roles del usuario
+        foreach ($this->roles as $role) {
+            if ($role->permissions->contains('slug', $permissionSlug)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Verificar si el usuario tiene alguno de los permisos especificados
+     */
+    public function hasAnyPermission(array $permissionSlugs): bool
+    {
+        // Super-admin tiene todos los permisos
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        foreach ($permissionSlugs as $permissionSlug) {
+            if ($this->hasPermission($permissionSlug)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Verificar si el usuario tiene todos los permisos especificados
+     */
+    public function hasAllPermissions(array $permissionSlugs): bool
+    {
+        // Super-admin tiene todos los permisos
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        foreach ($permissionSlugs as $permissionSlug) {
+            if (!$this->hasPermission($permissionSlug)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Obtener todos los permisos del usuario (a través de sus roles)
+     */
+    public function getAllPermissions()
+    {
+        return $this->roles()
+            ->with('permissions')
+            ->get()
+            ->pluck('permissions')
+            ->flatten()
+            ->unique('id');
+    }
+
+    /**
+     * Override del método can() de Laravel para usar nuestro sistema de permisos
+     * Permite usar Gate::allows() y @can directivas con slugs de permisos
+     */
+    public function can($ability, $arguments = []): bool
+    {
+        // Super-admin puede todo
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        // Si es un slug de permiso (formato: modulo.accion.recurso)
+        if (is_string($ability) && str_contains($ability, '.')) {
+            return $this->hasPermission($ability);
+        }
+
+        // Si no, usar la implementación por defecto de Laravel (Policies)
+        return parent::can($ability, $arguments);
+    }
 }

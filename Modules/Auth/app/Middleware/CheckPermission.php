@@ -10,6 +10,7 @@ use Modules\Core\Exceptions\UnauthorizedException;
  * CheckPermission Middleware
  *
  * Verifica que el usuario tenga uno de los permisos requeridos.
+ * Los super-admin tienen acceso automático a todo.
  */
 class CheckPermission
 {
@@ -20,6 +21,11 @@ class CheckPermission
         }
 
         $user = $request->user();
+
+        // Super-admin tiene todos los permisos
+        if ($user->isSuperAdmin()) {
+            return $next($request);
+        }
 
         foreach ($permissions as $permission) {
             if ($this->hasPermission($user, $permission)) {
@@ -32,12 +38,6 @@ class CheckPermission
 
     private function hasPermission($user, string $permissionSlug): bool
     {
-        foreach ($user->roles as $role) {
-            if ($role->hasPermission($permissionSlug)) {
-                return true;
-            }
-        }
-
-        return false;
+        return $user->hasPermission($permissionSlug);
     }
 }

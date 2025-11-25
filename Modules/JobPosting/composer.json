@@ -1,0 +1,30 @@
+{
+    "name": "nwidart/jobposting",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\JobPosting\\": "app/",
+            "Modules\\JobPosting\\Database\\Factories\\": "database/factories/",
+            "Modules\\JobPosting\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\JobPosting\\Tests\\": "tests/"
+        }
+    }
+}

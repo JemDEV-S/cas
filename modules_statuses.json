@@ -4,5 +4,6 @@
     "User": true,
     "Organization": true,
     "JobProfile": true,
-    "Configuration": true
+    "Configuration": true,
+    "JobPosting": true
 }
