@@ -3,7 +3,10 @@
 namespace Modules\Organization\Providers;
 
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
+use Modules\Organization\Entities\OrganizationalUnit;
+use Modules\Organization\Policies\OrganizationalUnitPolicy;
 use Nwidart\Modules\Traits\PathNamespace;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -26,6 +29,7 @@ class OrganizationServiceProvider extends ServiceProvider
         $this->registerTranslations();
         $this->registerConfig();
         $this->registerViews();
+        $this->registerPolicies();
         $this->loadMigrationsFrom(module_path($this->name, 'database/migrations'));
     }
 
@@ -39,9 +43,19 @@ class OrganizationServiceProvider extends ServiceProvider
 
         // Registrar servicios
         $this->app->singleton(\Modules\Organization\Services\OrganizationalUnitService::class);
+        $this->app->singleton(\Modules\Organization\Services\HierarchyService::class);
+        $this->app->singleton(\Modules\Organization\Services\TreeService::class);
 
         // Registrar repositorios
         $this->app->singleton(\Modules\Organization\Repositories\OrganizationalUnitRepository::class);
+    }
+
+    /**
+     * Register policies.
+     */
+    protected function registerPolicies(): void
+    {
+        Gate::policy(OrganizationalUnit::class, OrganizationalUnitPolicy::class);
     }
 
     /**

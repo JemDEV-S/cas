@@ -53,12 +53,15 @@ class RegisterController extends Controller
                 'is_active' => true,
             ]);
 
-            // Assign default role (applicant)
-            $user->syncRoles(['applicant']);
+            $role = \Modules\Auth\Entities\Role::where('slug', 'applicant')->first();
+            if (!$role) {
+                throw new \Exception('Rol "applicant" no encontrado. ¿Ejecutaste los seeders?');
+            }
+            $user->syncRoles([$role->id]);
 
             Auth::login($user);
-
             return redirect()->route('dashboard')->with('success', 'Registro exitoso. Bienvenido al sistema.');
+
         } catch (\Exception $e) {
             return redirect()
                 ->back()

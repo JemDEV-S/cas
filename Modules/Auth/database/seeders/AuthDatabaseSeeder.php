@@ -13,7 +13,8 @@ class AuthDatabaseSeeder extends Seeder
         $this->call([
             RolesTableSeeder::class,
             PermissionsTableSeeder::class,
-            RolePermissionsSeeder::class, // Asignar permisos a roles
+            RolePermissionsSeeder::class,
+            SuperAdminSeeder::class,
         ]);
     }
 }
