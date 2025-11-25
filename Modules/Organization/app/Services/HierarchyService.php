@@ -247,6 +247,14 @@ class HierarchyService
     }
 
     /**
+     * Reconstruir toda la tabla de closure (alias para rebuildAllClosures)
+     */
+    public function rebuildClosureTable(): void
+    {
+        $this->rebuildAllClosures();
+    }
+
+    /**
      * Reconstruir toda la tabla de closure
      */
     public function rebuildAllClosures(): void
