@@ -17,6 +17,24 @@
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
 
+        <!-- Tailwind CSS -->
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        colors: {
+                            'blue-500': '#3B82F6',
+                            'blue-600': '#2563EB',
+                            'blue-700': '#1D4ED8',
+                            'blue-50': '#EFF6FF',
+                            'blue-100': '#DBEAFE',
+                        }
+                    }
+                }
+            }
+        </script>
+
         {{-- Vite CSS --}}
         {{-- {{ module_vite('build-jobposting', 'resources/assets/sass/app.scss') }} --}}
     </head>
