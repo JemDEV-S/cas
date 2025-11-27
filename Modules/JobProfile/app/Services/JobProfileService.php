@@ -74,6 +74,16 @@ class JobProfileService extends BaseService
 
             $profile = JobProfile::create($data);
 
+            // Registrar en historial
+            \Modules\JobProfile\Entities\JobProfileHistory::log(
+                $profile->id,
+                'created',
+                auth()->id(),
+                null,
+                'draft',
+                'Perfil de puesto creado'
+            );
+
             // Crear requisitos
             foreach ($requirements as $index => $requirement) {
                 $profile->requirements()->create([

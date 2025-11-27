@@ -12,6 +12,7 @@ Route::middleware(['auth', 'verified'])->prefix('jobprofile')->name('jobprofile.
     // Job Profiles CRUD
     Route::resource('profiles', JobProfileController::class)->except(['index']);
     Route::get('/', [JobProfileController::class, 'index'])->name('index');
+    Route::post('/profiles/{id}/submit', [JobProfileController::class, 'submitForReview'])->name('profiles.submit');
 
     // Position Codes
     Route::prefix('positions')->name('positions.')->group(function () {

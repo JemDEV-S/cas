@@ -55,9 +55,49 @@ class User extends Authenticatable
         return $this->hasOne(UserPreference::class);
     }
 
-    public function organizationUnits(): HasMany
+    /**
+     * Relación muchos a muchos con OrganizationalUnit a través de UserOrganizationUnit
+     */
+    public function organizationUnits(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            \Modules\Organization\Entities\OrganizationalUnit::class,
+            'user_organization_units',
+            'user_id',
+            'organization_unit_id'
+        )
+        ->withPivot(['start_date', 'end_date', 'is_primary', 'is_active', 'id'])
+        ->withTimestamps()
+        ->using(UserOrganizationUnit::class);
+    }
+
+    /**
+     * Relación directa con los registros de asignación
+     */
+    public function userOrganizationUnits(): HasMany
     {
         return $this->hasMany(UserOrganizationUnit::class);
+    }
+
+    /**
+     * Obtener la unidad organizacional primaria del usuario
+     */
+    public function primaryOrganizationUnit()
+    {
+        return $this->organizationUnits()
+            ->wherePivot('is_primary', true)
+            ->wherePivot('is_active', true)
+            ->first();
+    }
+
+    /**
+     * Obtener las unidades organizacionales activas del usuario
+     */
+    public function activeOrganizationUnits()
+    {
+        return $this->organizationUnits()
+            ->wherePivot('is_active', true)
+            ->get();
     }
 
     public function roles(): BelongsToMany

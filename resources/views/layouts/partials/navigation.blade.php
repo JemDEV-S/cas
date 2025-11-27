@@ -38,6 +38,11 @@
                         {{ __('Convocatorias') }}
                     </x-nav-link>
                     @endcan
+                    @can('jobprofile.view.profiles')
+                    <x-nav-link :href="route('jobprofile.index')" :active="request()->routeIs('jobprofiles.*')">
+                        {{ __('Perfiles de Puesto') }}
+                    </x-nav-link>
+                    @endcan
                 </div>
             </div>
 

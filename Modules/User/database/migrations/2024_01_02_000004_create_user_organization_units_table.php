@@ -19,10 +19,12 @@ return new class extends Migration
             $table->timestamps();
 
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+            $table->foreign('organization_unit_id')->references('id')->on('organizational_units')->onDelete('cascade');
             $table->index('user_id');
             $table->index('organization_unit_id');
             $table->index(['user_id', 'is_active']);
             $table->index(['user_id', 'is_primary']);
+            $table->index(['organization_unit_id', 'is_active']);
         });
     }
 

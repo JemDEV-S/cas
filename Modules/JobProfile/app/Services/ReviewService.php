@@ -35,6 +35,8 @@ class ReviewService
             // Validar que tenga datos mínimos requeridos
             $this->validateMinimumRequirements($jobProfile);
 
+            $oldStatus = $jobProfile->status;
+
             // Actualizar estado
             $jobProfile->update([
                 'status' => 'in_review',
@@ -45,6 +47,16 @@ class ReviewService
                 'reviewed_by' => null,
                 'reviewed_at' => null,
             ]);
+
+            // Registrar en historial
+            \Modules\JobProfile\Entities\JobProfileHistory::log(
+                $jobProfile->id,
+                'submitted',
+                $userId,
+                $oldStatus,
+                'in_review',
+                'Perfil enviado a revisión'
+            );
 
             // Disparar evento
             event(new ProfileInReview($jobProfile, $userId));
@@ -66,6 +78,8 @@ class ReviewService
                 throw new BusinessRuleException('Solo se pueden solicitar modificaciones a perfiles en revisión.');
             }
 
+            $oldStatus = $jobProfile->status;
+
             // Actualizar estado
             $jobProfile->update([
                 'status' => 'modification_requested',
@@ -73,6 +87,16 @@ class ReviewService
                 'reviewed_at' => now(),
                 'review_comments' => $comments,
             ]);
+
+            // Registrar en historial
+            \Modules\JobProfile\Entities\JobProfileHistory::log(
+                $jobProfile->id,
+                'modification_requested',
+                $reviewerId,
+                $oldStatus,
+                'modification_requested',
+                'Modificaciones solicitadas: ' . $comments
+            );
 
             // Disparar evento
             event(new ProfileModificationRequested($jobProfile, $reviewerId, $comments));
@@ -97,6 +121,8 @@ class ReviewService
             // Validar requisitos completos para aprobación
             $this->validateForApproval($jobProfile);
 
+            $oldStatus = $jobProfile->status;
+
             // Actualizar estado
             $jobProfile->update([
                 'status' => 'approved',
@@ -106,6 +132,16 @@ class ReviewService
                 'reviewed_at' => now(),
                 'review_comments' => $comments,
             ]);
+
+            // Registrar en historial
+            \Modules\JobProfile\Entities\JobProfileHistory::log(
+                $jobProfile->id,
+                'approved',
+                $approverId,
+                $oldStatus,
+                'approved',
+                'Perfil aprobado' . ($comments ? ': ' . $comments : '')
+            );
 
             // Disparar evento (esto activará la generación automática de vacantes)
             event(new JobProfileApproved($jobProfile, $approverId));
@@ -131,6 +167,8 @@ class ReviewService
                 throw new BusinessRuleException('Debe proporcionar una razón para el rechazo.');
             }
 
+            $oldStatus = $jobProfile->status;
+
             // Actualizar estado
             $jobProfile->update([
                 'status' => 'rejected',
@@ -138,6 +176,16 @@ class ReviewService
                 'reviewed_at' => now(),
                 'rejection_reason' => $reason,
             ]);
+
+            // Registrar en historial
+            \Modules\JobProfile\Entities\JobProfileHistory::log(
+                $jobProfile->id,
+                'rejected',
+                $reviewerId,
+                $oldStatus,
+                'rejected',
+                'Perfil rechazado: ' . $reason
+            );
 
             // Disparar evento
             event(new ProfileRejected($jobProfile, $reviewerId, $reason));

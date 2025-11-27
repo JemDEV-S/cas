@@ -44,9 +44,9 @@
             <div class="flex gap-2">
                 @if($jobProfile->canSubmitForReview())
                     @can('submitForReview', $jobProfile)
-                        <form action="{{ route('jobprofile.review.submit', $jobProfile->id) }}" method="POST" class="inline">
+                        <form action="{{ route('jobprofile.profiles.submit', $jobProfile->id) }}" method="POST" class="inline">
                             @csrf
-                            <x-button type="submit" variant="success" onclick="return confirm('¿Enviar a revisión?')">
+                            <x-button type="submit" variant="success" onclick="return confirm('¿Está seguro de enviar este perfil a revisión? Asegúrese de que toda la información esté completa.')">
                                 <i class="fas fa-paper-plane mr-2"></i> Enviar a Revisión
                             </x-button>
                         </form>
@@ -63,6 +63,86 @@
             </div>
         </div>
     </x-card>
+
+    <!-- Alertas de Estado -->
+    @if($jobProfile->isInReview())
+        <div class="mb-6 bg-blue-50 border-l-4 border-blue-400 p-4">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-info-circle text-blue-400"></i>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm text-blue-700">
+                        <strong>En Revisión:</strong> Este perfil está siendo revisado por el equipo de RRHH.
+                    </p>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    @if($jobProfile->isModificationRequested())
+        <div class="mb-6 bg-yellow-50 border-l-4 border-yellow-400 p-4">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-exclamation-triangle text-yellow-400"></i>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm text-yellow-700">
+                        <strong>Modificaciones Solicitadas:</strong>
+                    </p>
+                    @if($jobProfile->review_comments)
+                        <p class="mt-2 text-sm text-yellow-700 bg-white rounded p-2 border border-yellow-200">
+                            {{ $jobProfile->review_comments }}
+                        </p>
+                        <p class="mt-2 text-xs text-yellow-600">
+                            Revisado por: {{ $jobProfile->reviewedBy->name ?? 'N/A' }} - {{ $jobProfile->reviewed_at?->format('d/m/Y H:i') }}
+                        </p>
+                    @endif
+                </div>
+            </div>
+        </div>
+    @endif
+
+    @if($jobProfile->isRejected())
+        <div class="mb-6 bg-red-50 border-l-4 border-red-400 p-4">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-times-circle text-red-400"></i>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm text-red-700">
+                        <strong>Perfil Rechazado:</strong>
+                    </p>
+                    @if($jobProfile->rejection_reason)
+                        <p class="mt-2 text-sm text-red-700 bg-white rounded p-2 border border-red-200">
+                            {{ $jobProfile->rejection_reason }}
+                        </p>
+                        <p class="mt-2 text-xs text-red-600">
+                            Rechazado por: {{ $jobProfile->reviewedBy->name ?? 'N/A' }} - {{ $jobProfile->reviewed_at?->format('d/m/Y H:i') }}
+                        </p>
+                    @endif
+                </div>
+            </div>
+        </div>
+    @endif
+
+    @if($jobProfile->isApproved())
+        <div class="mb-6 bg-green-50 border-l-4 border-green-400 p-4">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-check-circle text-green-400"></i>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm text-green-700">
+                        <strong>Perfil Aprobado:</strong> Este perfil ha sido aprobado y se han generado las vacantes correspondientes.
+                    </p>
+                    <p class="mt-2 text-xs text-green-600">
+                        Aprobado por: {{ $jobProfile->approvedBy->name ?? 'N/A' }} - {{ $jobProfile->approved_at?->format('d/m/Y H:i') }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    @endif
 
     <!-- Información General -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">

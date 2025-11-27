@@ -77,6 +77,7 @@ class PermissionsTableSeeder extends Seeder
             ['name' => 'Actualizar Perfil Propio', 'slug' => 'jobprofile.update.own', 'module' => 'jobprofile', 'description' => 'Modificar perfil propio en borrador'],
             ['name' => 'Actualizar Cualquier Perfil', 'slug' => 'jobprofile.update.any', 'module' => 'jobprofile', 'description' => 'Modificar cualquier perfil'],
             ['name' => 'Eliminar Perfil', 'slug' => 'jobprofile.delete.profile', 'module' => 'jobprofile', 'description' => 'Eliminar perfil de puesto'],
+            ['name' => 'Enviar Perfil para Revisión', 'slug' => 'jobprofile.submit.profile', 'module' => 'jobprofile', 'description' => 'Enviar perfil para revisión'],
             ['name' => 'Revisar Perfil', 'slug' => 'jobprofile.review.profile', 'module' => 'jobprofile', 'description' => 'Revisar perfil solicitado'],
             ['name' => 'Aprobar Perfil', 'slug' => 'jobprofile.approve.profile', 'module' => 'jobprofile', 'description' => 'Aprobar perfil de puesto'],
             ['name' => 'Rechazar Perfil', 'slug' => 'jobprofile.reject.profile', 'module' => 'jobprofile', 'description' => 'Rechazar perfil de puesto'],

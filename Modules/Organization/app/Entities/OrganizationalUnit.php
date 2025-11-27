@@ -41,6 +41,50 @@ class OrganizationalUnit extends BaseSoftDelete
     protected $sortable = ['name', 'code', 'type', 'level', 'order'];
 
     /**
+     * Relación muchos a muchos con User a través de UserOrganizationUnit
+     */
+    public function users(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            \Modules\User\Entities\User::class,
+            'user_organization_units',
+            'organization_unit_id',
+            'user_id'
+        )
+        ->withPivot(['start_date', 'end_date', 'is_primary', 'is_active', 'id'])
+        ->withTimestamps()
+        ->using(\Modules\User\Entities\UserOrganizationUnit::class);
+    }
+
+    /**
+     * Relación directa con los registros de asignación
+     */
+    public function userOrganizationUnits(): HasMany
+    {
+        return $this->hasMany(\Modules\User\Entities\UserOrganizationUnit::class, 'organization_unit_id');
+    }
+
+    /**
+     * Obtener usuarios activos de esta unidad organizacional
+     */
+    public function activeUsers()
+    {
+        return $this->users()
+            ->wherePivot('is_active', true)
+            ->get();
+    }
+
+    /**
+     * Obtener usuarios con asignación primaria a esta unidad
+     */
+    public function primaryUsers()
+    {
+        return $this->users()
+            ->wherePivot('is_primary', true)
+            ->wherePivot('is_active', true)
+            ->get();
+    }
+    /**
      * Relación con unidad padre
      */
     public function parent(): BelongsTo

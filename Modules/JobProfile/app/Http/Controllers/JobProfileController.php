@@ -12,7 +12,8 @@ use Modules\Core\Exceptions\BusinessRuleException;
 class JobProfileController extends Controller
 {
     public function __construct(
-        protected JobProfileService $jobProfileService
+        protected JobProfileService $jobProfileService,
+        protected \Modules\JobProfile\Services\ReviewService $reviewService
     ) {}
 
     /**
@@ -34,7 +35,43 @@ class JobProfileController extends Controller
      */
     public function create(): View
     {
-        return view('jobprofile::create');
+        $user = auth()->user();
+
+        // Obtener unidades organizacionales para el dropdown
+        $organizationalUnits = \Modules\Organization\Entities\OrganizationalUnit::where('is_active', true)
+            ->orderBy('name')
+            ->get()
+            ->pluck('name', 'id')
+            ->toArray();
+        // Obtener códigos de posición
+        $positionCodes = \Modules\JobProfile\Entities\PositionCode::where('is_active', true)
+            ->orderBy('code')
+            ->get()
+            ->mapWithKeys(fn($pc) => [$pc->id => $pc->code . ' - ' . $pc->title])
+            ->toArray();
+
+        // Verificar si el usuario es area-user
+        $isAreaUser = $user->hasRole('area-user');
+
+        // Obtener la unidad organizacional del usuario (la primaria y activa)
+        $userOrganizationalUnit = null;
+        if ($isAreaUser) {
+            $userOrgUnit = \Modules\User\Entities\UserOrganizationUnit::where('user_id', $user->id)
+                ->where('is_active', true)
+                ->where('is_primary', true)
+                ->first();
+
+            if ($userOrgUnit) {
+                $userOrganizationalUnit = $userOrgUnit->organization_unit_id;
+            }
+        }
+
+        return view('jobprofile::create', compact(
+            'organizationalUnits',
+            'positionCodes',
+            'isAreaUser',
+            'userOrganizationalUnit'
+        ));
     }
 
     /**
@@ -135,6 +172,34 @@ class JobProfileController extends Controller
             return back()->with('error', $e->getMessage());
         } catch (\Exception $e) {
             return back()->with('error', 'Error al eliminar el perfil: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Submit a job profile for review.
+     */
+    public function submitForReview(string $id): RedirectResponse
+    {
+        $jobProfile = $this->jobProfileService->findById($id);
+
+        if (!$jobProfile) {
+            abort(404, 'Perfil de puesto no encontrado.');
+        }
+
+        // Verificar autorización usando policy
+        $this->authorize('submitForReview', $jobProfile);
+
+        try {
+            $userId = auth()->id();
+            $this->reviewService->submitForReview($id, $userId);
+
+            return redirect()
+                ->route('jobprofile.show', $id)
+                ->with('success', 'Perfil enviado a revisión exitosamente. El equipo de RRHH lo revisará pronto.');
+        } catch (BusinessRuleException $e) {
+            return back()->with('error', $e->getMessage());
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error al enviar a revisión: ' . $e->getMessage());
         }
     }
 }
