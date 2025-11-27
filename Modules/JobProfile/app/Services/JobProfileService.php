@@ -2,10 +2,13 @@
 
 namespace Modules\JobProfile\Services;
 
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 use Modules\Core\Services\BaseService;
 use Modules\JobProfile\Entities\JobProfile;
 use Modules\JobProfile\Repositories\JobProfileRepository;
 use Modules\Core\Exceptions\BusinessRuleException;
+use Modules\JobProfile\Events\JobProfileCreated;
 
 class JobProfileService extends BaseService
 {
@@ -14,13 +17,62 @@ class JobProfileService extends BaseService
         $this->repository = $repository;
     }
 
+    /**
+     * Obtiene todos los perfiles
+     */
+    public function getAll(): Collection
+    {
+        return JobProfile::with(['positionCode', 'organizationalUnit', 'requestedBy'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+    }
+
+    /**
+     * Obtiene perfiles por estado
+     */
+    public function getByStatus(string $status): Collection
+    {
+        return JobProfile::byStatus($status)
+            ->with(['positionCode', 'organizationalUnit', 'requestedBy'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+    }
+
+    /**
+     * Obtiene un perfil por ID
+     */
+    public function findById(string $id): ?JobProfile
+    {
+        return JobProfile::with([
+            'positionCode',
+            'organizationalUnit',
+            'requestingUnit',
+            'requestedBy',
+            'reviewedBy',
+            'approvedBy',
+            'requirements',
+            'responsibilities',
+            'vacancies',
+            'history'
+        ])->find($id);
+    }
+
+    /**
+     * Crea un nuevo perfil de puesto
+     */
     public function create(array $data, array $requirements = [], array $responsibilities = []): JobProfile
     {
-        return $this->transaction(function () use ($data, $requirements, $responsibilities) {
-            $data['status'] = 'draft';
-            $data['requested_at'] = now();
+        return DB::transaction(function () use ($data, $requirements, $responsibilities) {
+            // Generar código único si no se proporciona
+            if (!isset($data['code'])) {
+                $data['code'] = $this->generateCode($data['job_posting_id'] ?? null);
+            }
 
-            $profile = $this->repository->create($data);
+            // Establecer estado inicial y usuario solicitante
+            $data['status'] = 'draft';
+            $data['requested_by'] = $data['requested_by'] ?? auth()->id();
+
+            $profile = JobProfile::create($data);
 
             // Crear requisitos
             foreach ($requirements as $index => $requirement) {
@@ -40,94 +92,134 @@ class JobProfileService extends BaseService
                 ]);
             }
 
+            // Disparar evento
+            event(new JobProfileCreated($profile));
+
             return $profile->fresh(['requirements', 'responsibilities']);
         });
     }
 
+    /**
+     * Actualiza un perfil de puesto
+     */
     public function update(string $id, array $data): JobProfile
     {
-        $profile = $this->repository->findOrFail($id);
+        return DB::transaction(function () use ($id, $data) {
+            $profile = $this->repository->findOrFail($id);
 
-        if ($profile->status === 'approved' || $profile->status === 'active') {
-            throw new BusinessRuleException('No se puede modificar un perfil aprobado o activo.');
-        }
+            // Validar que se pueda editar
+            if (!$profile->canEdit()) {
+                throw new BusinessRuleException(
+                    'No se puede modificar un perfil en estado: ' . $profile->status_label
+                );
+            }
 
-        $this->repository->update($id, $data);
-        return $this->repository->findOrFail($id);
+            $profile->update($data);
+
+            return $profile->fresh();
+        });
     }
 
-    public function submitForReview(string $id, string $requestedBy): JobProfile
+    /**
+     * Actualiza requisitos del perfil
+     */
+    public function updateRequirements(string $id, array $requirements): JobProfile
     {
-        $profile = $this->repository->findOrFail($id);
+        return DB::transaction(function () use ($id, $requirements) {
+            $profile = $this->repository->findOrFail($id);
 
-        if ($profile->status !== 'draft') {
-            throw new BusinessRuleException('Solo se pueden enviar a revisión perfiles en borrador.');
-        }
+            if (!$profile->canEdit()) {
+                throw new BusinessRuleException('No se pueden modificar los requisitos de este perfil.');
+            }
 
-        $profile->update([
-            'status' => 'pending_review',
-            'requested_by' => $requestedBy,
-            'requested_at' => now(),
-        ]);
+            // Eliminar requisitos existentes
+            $profile->requirements()->delete();
 
-        return $profile->fresh();
+            // Crear nuevos requisitos
+            foreach ($requirements as $index => $requirement) {
+                $profile->requirements()->create([
+                    'category' => $requirement['category'],
+                    'description' => $requirement['description'],
+                    'is_mandatory' => $requirement['is_mandatory'] ?? true,
+                    'order' => $index + 1,
+                ]);
+            }
+
+            return $profile->fresh(['requirements']);
+        });
     }
 
-    public function approve(string $id, string $approvedBy, ?string $comments = null): JobProfile
+    /**
+     * Actualiza responsabilidades del perfil
+     */
+    public function updateResponsibilities(string $id, array $responsibilities): JobProfile
     {
-        $profile = $this->repository->findOrFail($id);
+        return DB::transaction(function () use ($id, $responsibilities) {
+            $profile = $this->repository->findOrFail($id);
 
-        if ($profile->status !== 'pending_review') {
-            throw new BusinessRuleException('Solo se pueden aprobar perfiles en revisión.');
-        }
+            if (!$profile->canEdit()) {
+                throw new BusinessRuleException('No se pueden modificar las responsabilidades de este perfil.');
+            }
 
-        $profile->update([
-            'status' => 'approved',
-            'approved_by' => $approvedBy,
-            'approved_at' => now(),
-        ]);
+            // Eliminar responsabilidades existentes
+            $profile->responsibilities()->delete();
 
-        return $profile->fresh();
+            // Crear nuevas responsabilidades
+            foreach ($responsibilities as $index => $responsibility) {
+                $profile->responsibilities()->create([
+                    'description' => $responsibility['description'],
+                    'order' => $index + 1,
+                ]);
+            }
+
+            return $profile->fresh(['responsibilities']);
+        });
     }
 
-    public function reject(string $id, string $reviewedBy, string $reason): JobProfile
+    /**
+     * Elimina un perfil de puesto
+     */
+    public function delete(string $id): bool
     {
-        $profile = $this->repository->findOrFail($id);
+        return DB::transaction(function () use ($id) {
+            $profile = $this->repository->findOrFail($id);
 
-        if ($profile->status !== 'pending_review') {
-            throw new BusinessRuleException('Solo se pueden rechazar perfiles en revisión.');
-        }
+            // Solo se pueden eliminar perfiles en borrador o rechazados
+            if (!in_array($profile->status, ['draft', 'rejected'])) {
+                throw new BusinessRuleException(
+                    'Solo se pueden eliminar perfiles en borrador o rechazados.'
+                );
+            }
 
-        $profile->update([
-            'status' => 'rejected',
-            'reviewed_by' => $reviewedBy,
-            'reviewed_at' => now(),
-        ]);
-
-        return $profile->fresh();
+            return $profile->delete();
+        });
     }
 
-    public function activate(string $id): JobProfile
+    /**
+     * Genera un código único para el perfil
+     * Formato: PROF-2025-001 o CONV-2025-001-01 si está asociado a convocatoria
+     */
+    protected function generateCode(?string $jobPostingId = null): string
     {
-        $profile = $this->repository->findOrFail($id);
+        $year = now()->year;
 
-        if ($profile->status !== 'approved') {
-            throw new BusinessRuleException('Solo se pueden activar perfiles aprobados.');
+        if ($jobPostingId) {
+            // Obtener el código de la convocatoria si existe el módulo
+            if (class_exists('\Modules\JobPosting\Entities\JobPosting')) {
+                $jobPosting = \Modules\JobPosting\Entities\JobPosting::find($jobPostingId);
+                if ($jobPosting) {
+                    // Contar perfiles de esta convocatoria
+                    $count = JobProfile::where('job_posting_id', $jobPostingId)->count() + 1;
+                    return $jobPosting->code . '-' . str_pad($count, 2, '0', STR_PAD_LEFT);
+                }
+            }
         }
 
-        $profile->update(['status' => 'active']);
-        return $profile->fresh();
-    }
+        // Código independiente
+        $count = JobProfile::whereNull('job_posting_id')
+            ->whereYear('created_at', $year)
+            ->count() + 1;
 
-    public function deactivate(string $id): JobProfile
-    {
-        $profile = $this->repository->findOrFail($id);
-
-        if ($profile->status !== 'active') {
-            throw new BusinessRuleException('Solo se pueden desactivar perfiles activos.');
-        }
-
-        $profile->update(['status' => 'inactive']);
-        return $profile->fresh();
+        return 'PROF-' . $year . '-' . str_pad($count, 3, '0', STR_PAD_LEFT);
     }
 }

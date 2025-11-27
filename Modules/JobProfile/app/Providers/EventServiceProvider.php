@@ -11,14 +11,22 @@ class EventServiceProvider extends ServiceProvider
      *
      * @var array<string, array<int, string>>
      */
-    protected $listen = [];
+    protected $listen = [
+        \Modules\JobProfile\Events\JobProfileApproved::class => [
+            \Modules\JobProfile\Listeners\GenerateVacancies::class,
+            \Modules\JobProfile\Listeners\NotifyProfileApproved::class,
+        ],
+        \Modules\JobProfile\Events\ProfileModificationRequested::class => [
+            \Modules\JobProfile\Listeners\NotifyModificationRequested::class,
+        ],
+    ];
 
     /**
      * Indicates if events should be discovered.
      *
      * @var bool
      */
-    protected static $shouldDiscoverEvents = true;
+    protected static $shouldDiscoverEvents = false;
 
     /**
      * Configure the proper event listeners for email verification.

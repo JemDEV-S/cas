@@ -26,7 +26,25 @@ class JobProfileServiceProvider extends ServiceProvider
         $this->registerTranslations();
         $this->registerConfig();
         $this->registerViews();
+        $this->registerObservers();
+        $this->registerPolicies();
         $this->loadMigrationsFrom(module_path($this->name, 'database/migrations'));
+    }
+
+    /**
+     * Register policies
+     */
+    protected function registerPolicies(): void
+    {
+        \Illuminate\Support\Facades\Gate::policy(
+            \Modules\JobProfile\Entities\JobProfile::class,
+            \Modules\JobProfile\Policies\JobProfilePolicy::class
+        );
+
+        \Illuminate\Support\Facades\Gate::policy(
+            \Modules\JobProfile\Entities\PositionCode::class,
+            \Modules\JobProfile\Policies\PositionCodePolicy::class
+        );
     }
 
     /**
@@ -37,11 +55,50 @@ class JobProfileServiceProvider extends ServiceProvider
         $this->app->register(EventServiceProvider::class);
         $this->app->register(RouteServiceProvider::class);
 
-        // Register Services
-        $this->app->singleton(\Modules\JobProfile\Services\JobProfileService::class);
+        $this->registerServices();
+        $this->registerRepositories();
+    }
 
-        // Register Repositories
+    /**
+     * Register services
+     */
+    protected function registerServices(): void
+    {
+        // Services
+        $this->app->singleton(\Modules\JobProfile\Services\JobProfileService::class);
+        $this->app->singleton(\Modules\JobProfile\Services\PositionCodeService::class);
+        $this->app->singleton(\Modules\JobProfile\Services\CriterionService::class);
+        $this->app->singleton(\Modules\JobProfile\Services\VacancyService::class);
+        $this->app->singleton(\Modules\JobProfile\Services\ReviewService::class);
+
+        // Bind interfaces
+        $this->app->bind(
+            \Modules\JobProfile\Services\Contracts\PositionCodeServiceInterface::class,
+            \Modules\JobProfile\Services\PositionCodeService::class
+        );
+    }
+
+    /**
+     * Register repositories
+     */
+    protected function registerRepositories(): void
+    {
         $this->app->singleton(\Modules\JobProfile\Repositories\JobProfileRepository::class);
+        $this->app->singleton(\Modules\JobProfile\Repositories\Eloquent\PositionCodeRepository::class);
+
+        // Bind interfaces
+        $this->app->bind(
+            \Modules\JobProfile\Repositories\Contracts\PositionCodeRepositoryInterface::class,
+            \Modules\JobProfile\Repositories\Eloquent\PositionCodeRepository::class
+        );
+    }
+
+    /**
+     * Register model observers
+     */
+    protected function registerObservers(): void
+    {
+        \Modules\JobProfile\Entities\JobProfile::observe(\Modules\JobProfile\Observers\JobProfileObserver::class);
     }
 
     /**
