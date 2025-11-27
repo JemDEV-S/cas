@@ -21,6 +21,12 @@
                     </x-nav-link>
                     @endcan
 
+                    @can('auth.view.roles')
+                    <x-nav-link :href="route('roles.index')" :active="request()->routeIs('roles.*') || request()->routeIs('permissions.*')">
+                        {{ __('Roles y Permisos') }}
+                    </x-nav-link>
+                    @endcan
+
                     @can('organization.view.units')
                     <x-nav-link :href="route('organizational-units.index')" :active="request()->routeIs('organization.*')">
                         {{ __('Organización') }}
@@ -90,6 +96,30 @@
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
+
+            @can('user.view.users')
+            <x-responsive-nav-link :href="route('users.index')" :active="request()->routeIs('users.*')">
+                {{ __('Usuarios') }}
+            </x-responsive-nav-link>
+            @endcan
+
+            @can('auth.view.roles')
+            <x-responsive-nav-link :href="route('roles.index')" :active="request()->routeIs('roles.*') || request()->routeIs('permissions.*')">
+                {{ __('Roles y Permisos') }}
+            </x-responsive-nav-link>
+            @endcan
+
+            @can('organization.view.units')
+            <x-responsive-nav-link :href="route('organizational-units.index')" :active="request()->routeIs('organization.*')">
+                {{ __('Organización') }}
+            </x-responsive-nav-link>
+            @endcan
+
+            @can('jobposting.view.postings')
+            <x-responsive-nav-link :href="route('jobposting.index')" :active="request()->routeIs('jobposting.*')">
+                {{ __('Convocatorias') }}
+            </x-responsive-nav-link>
+            @endcan
         </div>
 
         <!-- Responsive Settings Options -->

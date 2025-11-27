@@ -4,7 +4,9 @@
       "Bash(php artisan:*)",
       "Bash(composer dump-autoload:*)",
       "Bash(NUL)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(mkdir:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []
