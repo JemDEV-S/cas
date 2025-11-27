@@ -2,16 +2,16 @@
 
 namespace Modules\JobPosting\Entities;
 
-use Modules\Core\Entities\BaseModel;
-use Modules\Core\Traits\{HasUuid, HasStatus, HasMetadata};
-use Modules\JobPosting\Enums\JobPostingStatusEnum;
-use Modules\User\Entities\User;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\{BelongsTo, HasMany};
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Modules\Core\Traits\{HasUuid, HasMetadata};
+use Modules\JobPosting\Enums\JobPostingStatusEnum;
+use Modules\User\Entities\User;
 
-class JobPosting extends BaseModel
+class JobPosting extends Model
 {
-    use HasUuid, HasStatus, HasMetadata, SoftDeletes;
+    use HasUuid, HasMetadata, SoftDeletes;
 
     protected $fillable = [
         'code',
@@ -138,6 +138,11 @@ class JobPosting extends BaseModel
         return $query->where('year', $year);
     }
 
+    public function scopeDraft($query)
+    {
+        return $query->where('status', JobPostingStatusEnum::BORRADOR);
+    }
+
     /**
      * Verificar si está en borrador
      */
@@ -207,7 +212,6 @@ class JobPosting extends BaseModel
      */
     public function hasCompleteSchedule(): bool
     {
-        // Verificar que todas las fases tengan fechas programadas
         $requiredPhasesCount = ProcessPhase::where('is_active', true)->count();
         $scheduledPhasesCount = $this->schedules()->count();
 
@@ -220,7 +224,7 @@ class JobPosting extends BaseModel
     public function getCurrentPhase(): ?JobPostingSchedule
     {
         return $this->schedules()
-            ->where('status', 'IN_PROGRESS')
+            ->where('status', ScheduleStatusEnum::IN_PROGRESS)
             ->first();
     }
 
@@ -236,9 +240,93 @@ class JobPosting extends BaseModel
         }
 
         $completedPhases = $this->schedules()
-            ->where('status', 'COMPLETED')
+            ->where('status', ScheduleStatusEnum::COMPLETED)
             ->count();
 
-        return ($completedPhases / $totalPhases) * 100;
+        return round(($completedPhases / $totalPhases) * 100, 2);
+    }
+
+    /**
+     * Publicar convocatoria
+     */
+    public function publish(User $user): bool
+    {
+        if (!$this->canBePublished()) {
+            return false;
+        }
+
+        return $this->update([
+            'status' => JobPostingStatusEnum::PUBLICADA,
+            'published_at' => now(),
+            'published_by' => $user->id,
+        ]);
+    }
+
+    /**
+     * Iniciar proceso
+     */
+    public function startProcess(): bool
+    {
+        if (!$this->isPublished()) {
+            return false;
+        }
+
+        return $this->update([
+            'status' => JobPostingStatusEnum::EN_PROCESO,
+        ]);
+    }
+
+    /**
+     * Finalizar convocatoria
+     */
+    public function finalize(User $user): bool
+    {
+        if (!$this->isInProcess()) {
+            return false;
+        }
+
+        return $this->update([
+            'status' => JobPostingStatusEnum::FINALIZADA,
+            'finalized_at' => now(),
+            'finalized_by' => $user->id,
+        ]);
+    }
+
+    /**
+     * Cancelar convocatoria
+     */
+    public function cancel(User $user, string $reason): bool
+    {
+        if (!$this->canBeCancelled()) {
+            return false;
+        }
+
+        return $this->update([
+            'status' => JobPostingStatusEnum::CANCELADA,
+            'cancelled_at' => now(),
+            'cancelled_by' => $user->id,
+            'cancellation_reason' => $reason,
+        ]);
+    }
+
+    /**
+     * Obtener días restantes
+     */
+    public function getDaysRemaining(): ?int
+    {
+        if (!$this->end_date) {
+            return null;
+        }
+
+        return now()->diffInDays($this->end_date, false);
+    }
+
+    /**
+     * Está próxima a finalizar
+     */
+    public function isNearingEnd(int $days = 7): bool
+    {
+        $remaining = $this->getDaysRemaining();
+        return $remaining !== null && $remaining <= $days && $remaining > 0;
     }
 }
