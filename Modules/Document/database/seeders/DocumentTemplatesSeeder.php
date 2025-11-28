@@ -34,14 +34,14 @@ class DocumentTemplatesSeeder extends Seeder
                 'signature_workflow_type' => 'sequential',
                 'signers_config' => [
                     [
-                        'role_key' => 'reviewed_by',
-                        'type' => 'visto_bueno',
-                        'role' => 'Jefe de Recursos Humanos',
-                    ],
-                    [
                         'role_key' => 'approved_by',
                         'type' => 'aprobacion',
-                        'role' => 'Director General',
+                        'role' => 'Área Aprobadora',
+                    ],
+                    [
+                        'role_key' => 'requested_by',
+                        'type' => 'visto_bueno',
+                        'role' => 'Área Usuaria',
                     ],
                 ],
                 'signature_positions' => [

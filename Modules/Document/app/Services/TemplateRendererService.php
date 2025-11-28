@@ -13,16 +13,25 @@ class TemplateRendererService
     public function render(string $template, array $data = []): string
     {
         try {
-            // Compilar el template Blade
-            $compiled = Blade::compileString($template);
+            // Crear un archivo temporal para el template
+            $tempPath = storage_path('framework/views/temp_' . md5($template . microtime()) . '.blade.php');
 
-            // Extraer variables para el template
-            extract($data, EXTR_SKIP);
+            // Crear directorio si no existe
+            $dir = dirname($tempPath);
+            if (!file_exists($dir)) {
+                mkdir($dir, 0755, true);
+            }
 
-            // Evaluar el template compilado
-            ob_start();
-            eval('?>' . $compiled);
-            $rendered = ob_get_clean();
+            // Guardar el template temporalmente
+            file_put_contents($tempPath, $template);
+
+            // Renderizar usando View::file()
+            $rendered = View::file($tempPath, $data)->render();
+
+            // Limpiar archivo temporal
+            if (file_exists($tempPath)) {
+                unlink($tempPath);
+            }
 
             return $rendered;
         } catch (\Exception $e) {

@@ -119,6 +119,14 @@ class JobPosting extends Model
     }
 
     /**
+     * Perfiles de puesto asociados a la convocatoria
+     */
+    public function jobProfiles(): HasMany
+    {
+        return $this->hasMany(\Modules\JobProfile\Entities\JobProfile::class);
+    }
+
+    /**
      * Scopes
      */
     public function scopePublished($query)

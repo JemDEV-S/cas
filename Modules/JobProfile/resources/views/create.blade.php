@@ -8,8 +8,18 @@
             <div>
                 <h1 class="text-3xl font-bold text-gray-900">Crear Perfil de Puesto</h1>
                 <p class="mt-1 text-sm text-gray-600">Complete la información del perfil de puesto CAS</p>
+                @if(request('job_posting_id') && isset($jobPosting))
+                <div class="mt-3 px-4 py-2 bg-green-50 border border-green-200 rounded-lg">
+                    <p class="text-sm text-green-800 font-medium">
+                        <svg class="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        Este perfil se asociará a la convocatoria: <strong>{{ $jobPosting->code }} - {{ $jobPosting->title }}</strong>
+                    </p>
+                </div>
+                @endif
             </div>
-            <a href="{{ route('jobprofile.index') }}">
+            <a href="{{ request('job_posting_id') && isset($jobPosting) ? route('jobposting.show', $jobPosting->id) : route('jobprofile.index') }}">
                 <x-button variant="secondary">
                     <i class="fas fa-arrow-left mr-2"></i> Volver
                 </x-button>
@@ -25,6 +35,9 @@
         <input type="hidden" name="work_regime" value="cas">
         @if($isAreaUser ?? false)
             <input type="hidden" name="requesting_unit_id" value="{{ $userOrganizationalUnit }}">
+        @endif
+        @if(request('job_posting_id'))
+            <input type="hidden" name="job_posting_id" value="{{ request('job_posting_id') }}">
         @endif
 
         <!-- Información General -->
@@ -90,6 +103,26 @@
                     :selected="old('position_code_id')"
                     placeholder="Seleccione un código"
                 />
+
+                @if(!request('job_posting_id'))
+                <!-- Campo para seleccionar convocatoria (solo si no viene pre-seleccionada) -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Convocatoria (Opcional)
+                    </label>
+                    <select name="job_posting_id" class="border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm w-full">
+                        <option value="">Sin convocatoria</option>
+                        @foreach(\Modules\JobPosting\Entities\JobPosting::draft()->orderBy('created_at', 'desc')->get() as $posting)
+                            <option value="{{ $posting->id }}" {{ old('job_posting_id') == $posting->id ? 'selected' : '' }}>
+                                {{ $posting->code }} - {{ $posting->title }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <p class="mt-1 text-xs text-gray-500">
+                        <i class="fas fa-info-circle"></i> Asocie este perfil a una convocatoria en borrador
+                    </p>
+                </div>
+                @endif
 
                 <x-form.select
                     name="job_level"

@@ -145,42 +145,39 @@ class GenerateJobProfileDocument
     {
         $signers = [];
 
-        // Configurar firmantes según la configuración del template o del sistema
-        // Ejemplo: Revisor y Aprobador
-
-        if ($jobProfile->reviewed_by) {
-            $signers[] = [
-                'user_id' => $jobProfile->reviewed_by,
-                'type' => 'visto_bueno',
-                'role' => 'Revisor',
-            ];
-        }
-
-        if ($jobProfile->approved_by) {
-            $signers[] = [
-                'user_id' => $jobProfile->approved_by,
-                'type' => 'aprobacion',
-                'role' => 'Aprobador',
-            ];
-        }
-
-        // Agregar otros firmantes según la configuración del template
+        // Obtener firmantes desde la configuración del template
         $templateSigners = $document->template->signers_config ?? [];
+
         foreach ($templateSigners as $signer) {
             // Resolver el user_id dinámicamente según el rol
             $userId = $this->resolveSignerUserId($signer, $jobProfile);
+
             if ($userId) {
                 $signers[] = [
                     'user_id' => $userId,
                     'type' => $signer['type'] ?? 'firma',
                     'role' => $signer['role'] ?? 'Firmante',
                 ];
+
+                Log::info('Firmante agregado al flujo', [
+                    'document_id' => $document->id,
+                    'user_id' => $userId,
+                    'role' => $signer['role'] ?? 'Firmante',
+                    'type' => $signer['type'] ?? 'firma',
+                ]);
+            } else {
+                Log::warning('No se pudo resolver firmante', [
+                    'document_id' => $document->id,
+                    'role_key' => $signer['role_key'] ?? 'unknown',
+                ]);
             }
         }
 
         if (empty($signers)) {
             Log::warning('No se encontraron firmantes para el documento', [
                 'document_id' => $document->id,
+                'job_profile_id' => $jobProfile->id,
+                'template_code' => $document->template->code,
             ]);
             return;
         }
@@ -192,10 +189,11 @@ class GenerateJobProfileDocument
             $document->template->signature_workflow_type ?? 'sequential'
         );
 
-        Log::info('Flujo de firmas creado', [
+        Log::info('Flujo de firmas creado exitosamente', [
             'document_id' => $document->id,
             'workflow_id' => $workflow->id,
             'signers_count' => count($signers),
+            'workflow_type' => $document->template->signature_workflow_type ?? 'sequential',
         ]);
     }
 

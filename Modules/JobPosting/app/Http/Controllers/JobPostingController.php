@@ -102,7 +102,8 @@ class JobPostingController extends Controller
             'publisher',
             'schedules.phase', // Cargamos la relación con la fase
             'schedules.responsibleUnit',
-            'history.user'
+            'history.user',
+            'jobProfiles' // Cargamos los perfiles asociados
         ]);
 
         // 1. CORRECCIÓN IMPORTANTE: Ordenar los horarios por el número de fase (1 al 12)

@@ -236,30 +236,44 @@
                     </div>
 
                     {{-- Actions --}}
-                    <div class="flex items-center space-x-2">
-                        <a href="{{ route('jobposting.show', $posting) }}"
-                           class="flex-1 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-center rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg">
-                            Ver Detalles
-                        </a>
+                    <div class="space-y-2">
+                        <div class="flex items-center space-x-2">
+                            <a href="{{ route('jobposting.show', $posting) }}"
+                               class="flex-1 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-center rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg">
+                                Ver Detalles
+                            </a>
 
-                        @can('jobposting.update.posting')
-                        @if($posting->canBeEdited())
-                        <a href="{{ route('jobposting.edit', $posting) }}"
-                           class="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                            @can('jobposting.update.posting')
+                            @if($posting->canBeEdited())
+                            <a href="{{ route('jobposting.edit', $posting) }}"
+                               class="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                </svg>
+                            </a>
+                            @endif
+                            @endcan
+
+                            @can('jobposting.manage.schedule')
+                            <a href="{{ route('jobposting.schedule.edit', $posting) }}"
+                               class="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                            </a>
+                            @endcan
+                        </div>
+
+                        @can('jobposting.manage.profiles')
+                        @if($posting->isDraft())
+                        <a href="{{ route('jobprofile.profiles.create', ['job_posting_id' => $posting->id]) }}"
+                           class="flex items-center justify-center w-full px-4 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-center rounded-xl font-semibold hover:from-green-600 hover:to-emerald-700 transition-all shadow-md hover:shadow-lg">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                             </svg>
+                            Agregar Perfiles
                         </a>
                         @endif
-                        @endcan
-
-                        @can('jobposting.manage.schedule')
-                        <a href="{{ route('jobposting.schedule', $posting) }}"
-                           class="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                            </svg>
-                        </a>
                         @endcan
                     </div>
                 </div>

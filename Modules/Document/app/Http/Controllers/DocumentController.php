@@ -42,6 +42,8 @@ class DocumentController extends Controller
         $documents = $query->orderBy('created_at', 'desc')->paginate(20);
         $templates = DocumentTemplate::active()->get();
 
+        dd($documents);
+
         return view('document::documents.index', compact('documents', 'templates'));
     }
 

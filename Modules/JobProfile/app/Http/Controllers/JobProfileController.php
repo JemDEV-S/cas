@@ -70,12 +70,25 @@ class JobProfileController extends Controller
         }
         $educationOptions = EducationLevelEnum::selectOptions();
 
+        // Si viene desde una convocatoria, cargar la información
+        $jobPosting = null;
+        if (request('job_posting_id')) {
+            $jobPosting = \Modules\JobPosting\Entities\JobPosting::find(request('job_posting_id'));
+
+            // Validar que la convocatoria existe y está en borrador
+            if ($jobPosting && !$jobPosting->isDraft()) {
+                return redirect()->route('jobprofile.profiles.create')
+                    ->with('error', 'Solo se pueden agregar perfiles a convocatorias en estado borrador.');
+            }
+        }
+
         return view('jobprofile::create', compact(
             'organizationalUnits',
             'positionCodes',
             'isAreaUser',
             'userOrganizationalUnit',
-            'educationOptions'
+            'educationOptions',
+            'jobPosting'
         ));
     }
 
@@ -199,7 +212,7 @@ class JobProfileController extends Controller
             $this->reviewService->submitForReview($id, $userId);
 
             return redirect()
-                ->route('jobprofile.show', $id)
+                ->route('jobprofile.profiles.show', $id)
                 ->with('success', 'Perfil enviado a revisión exitosamente. El equipo de RRHH lo revisará pronto.');
         } catch (BusinessRuleException $e) {
             return back()->with('error', $e->getMessage());

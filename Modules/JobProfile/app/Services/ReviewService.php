@@ -48,16 +48,6 @@ class ReviewService
                 'reviewed_at' => null,
             ]);
 
-            // Registrar en historial
-            \Modules\JobProfile\Entities\JobProfileHistory::log(
-                $jobProfile->id,
-                'submitted',
-                $userId,
-                $oldStatus,
-                'in_review',
-                'Perfil enviado a revisión'
-            );
-
             // Disparar evento
             event(new ProfileInReview($jobProfile, $userId));
 
@@ -87,16 +77,6 @@ class ReviewService
                 'reviewed_at' => now(),
                 'review_comments' => $comments,
             ]);
-
-            // Registrar en historial
-            \Modules\JobProfile\Entities\JobProfileHistory::log(
-                $jobProfile->id,
-                'modification_requested',
-                $reviewerId,
-                $oldStatus,
-                'modification_requested',
-                'Modificaciones solicitadas: ' . $comments
-            );
 
             // Disparar evento
             event(new ProfileModificationRequested($jobProfile, $reviewerId, $comments));
@@ -133,16 +113,6 @@ class ReviewService
                 'review_comments' => $comments,
             ]);
 
-            // Registrar en historial
-            \Modules\JobProfile\Entities\JobProfileHistory::log(
-                $jobProfile->id,
-                'approved',
-                $approverId,
-                $oldStatus,
-                'approved',
-                'Perfil aprobado' . ($comments ? ': ' . $comments : '')
-            );
-
             // Disparar evento (esto activará la generación automática de vacantes)
             event(new JobProfileApproved($jobProfile, $approverId));
 
@@ -176,16 +146,6 @@ class ReviewService
                 'reviewed_at' => now(),
                 'rejection_reason' => $reason,
             ]);
-
-            // Registrar en historial
-            \Modules\JobProfile\Entities\JobProfileHistory::log(
-                $jobProfile->id,
-                'rejected',
-                $reviewerId,
-                $oldStatus,
-                'rejected',
-                'Perfil rechazado: ' . $reason
-            );
 
             // Disparar evento
             event(new ProfileRejected($jobProfile, $reviewerId, $reason));

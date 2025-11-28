@@ -176,6 +176,22 @@
                         <dt class="text-sm font-medium text-gray-500">Unidad Organizacional</dt>
                         <dd class="text-sm text-gray-900 col-span-2">{{ $jobProfile->organizationalUnit->name ?? 'N/A' }}</dd>
                     </div>
+                    @if($jobProfile->jobPosting)
+                    <div class="grid grid-cols-3 gap-4 border-t border-gray-200 pt-4">
+                        <dt class="text-sm font-medium text-gray-500">Convocatoria Asociada</dt>
+                        <dd class="text-sm text-gray-900 col-span-2">
+                            <a href="{{ route('jobposting.show', $jobProfile->jobPosting->id) }}" class="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                                {{ $jobProfile->jobPosting->code }} - {{ $jobProfile->jobPosting->title }}
+                            </a>
+                            <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ $jobProfile->jobPosting->status->badgeClass() }}">
+                                {{ $jobProfile->jobPosting->status->label() }}
+                            </span>
+                        </dd>
+                    </div>
+                    @endif
                     <div class="grid grid-cols-3 gap-4 border-t border-gray-200 pt-4">
                         <dt class="text-sm font-medium text-gray-500">Descripción</dt>
                         <dd class="text-sm text-gray-900 col-span-2">{{ $jobProfile->description ?? 'Sin descripción' }}</dd>

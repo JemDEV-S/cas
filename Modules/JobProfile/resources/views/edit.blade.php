@@ -60,6 +60,29 @@
                     placeholder="Seleccione un código"
                 />
 
+                <!-- Campo para seleccionar convocatoria -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Convocatoria (Opcional)
+                    </label>
+                    <select name="job_posting_id" class="border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm w-full">
+                        <option value="">Sin convocatoria</option>
+                        @foreach(\Modules\JobPosting\Entities\JobPosting::draft()->orderBy('created_at', 'desc')->get() as $posting)
+                            <option value="{{ $posting->id }}" {{ old('job_posting_id', $jobProfile->job_posting_id) == $posting->id ? 'selected' : '' }}>
+                                {{ $posting->code }} - {{ $posting->title }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <p class="mt-1 text-xs text-gray-500">
+                        <i class="fas fa-info-circle"></i> Asocie este perfil a una convocatoria en borrador
+                    </p>
+                    @if($jobProfile->jobPosting && !$jobProfile->jobPosting->isDraft())
+                    <p class="mt-1 text-xs text-amber-600">
+                        <i class="fas fa-exclamation-triangle"></i> La convocatoria actual no está en borrador, solo se pueden asociar perfiles a convocatorias en borrador
+                    </p>
+                    @endif
+                </div>
+
                 <x-form.select
                     name="work_regime"
                     label="Régimen Laboral"
