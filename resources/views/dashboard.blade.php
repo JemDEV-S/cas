@@ -1,184 +1,76 @@
-@extends('layouts.app')
+@extends('layouts.admin')
 
 @section('title', 'Dashboard')
 
 @section('content')
-<div class="max-w-7xl mx-auto space-y-6">
-    <!-- Header -->
-    <div class="mb-6">
-        <h2 class="text-2xl font-bold text-gray-900">Dashboard</h2>
-        <p class="mt-1 text-sm text-gray-600">Bienvenido, {{ auth()->user()->full_name }}</p>
-    </div>
+<div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
-    <!-- Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        @can('user.view.users')
-        <x-card>
-            <div class="flex items-center">
-                <div class="flex-shrink-0">
-                    <div class="flex items-center justify-center h-12 w-12 rounded-md bg-blue-500 text-white">
-                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
-                        </svg>
-                    </div>
-                </div>
-                <div class="ml-4">
-                    <h3 class="text-lg font-medium text-gray-900">Usuarios</h3>
-                    <p class="mt-1 text-2xl font-semibold text-gray-900">{{ \Modules\User\Entities\User::count() }}</p>
-                </div>
-            </div>
-        </x-card>
-        @endcan
+        {{-- Header Premium con Saludo Personalizado --}}
+        <div class="relative overflow-hidden bg-white rounded-3xl shadow-2xl mb-8">
+            <div class="absolute inset-0 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 opacity-95"></div>
+            <div class="absolute inset-0 opacity-10" style="background-image: url('data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');"></div>
 
-        @can('auth.view.roles')
-        <x-card>
-            <div class="flex items-center">
-                <div class="flex-shrink-0">
-                    <div class="flex items-center justify-center h-12 w-12 rounded-md bg-green-500 text-white">
-                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-                        </svg>
-                    </div>
-                </div>
-                <div class="ml-4">
-                    <h3 class="text-lg font-medium text-gray-900">Roles</h3>
-                    <p class="mt-1 text-2xl font-semibold text-gray-900">{{ \Modules\Auth\Entities\Role::count() }}</p>
-                </div>
-            </div>
-        </x-card>
-        @endcan
-
-        @can('organization.view.units')
-        <x-card>
-            <div class="flex items-center">
-                <div class="flex-shrink-0">
-                    <div class="flex items-center justify-center h-12 w-12 rounded-md bg-yellow-500 text-white">
-                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                        </svg>
-                    </div>
-                </div>
-                <div class="ml-4">
-                    <h3 class="text-lg font-medium text-gray-900">Unidades Org.</h3>
-                    <p class="mt-1 text-2xl font-semibold text-gray-900">{{ \Modules\Organization\Entities\OrganizationalUnit::count() }}</p>
-                </div>
-            </div>
-        </x-card>
-        @endcan
-
-        <x-card>
-            <div class="flex items-center">
-                <div class="flex-shrink-0">
-                    <div class="flex items-center justify-center h-12 w-12 rounded-md bg-purple-500 text-white">
-                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                        </svg>
-                    </div>
-                </div>
-                <div class="ml-4">
-                    <h3 class="text-lg font-medium text-gray-900">Mi Perfil</h3>
-                    <p class="mt-1 text-sm text-gray-600">{{ auth()->user()->email }}</p>
-                </div>
-            </div>
-        </x-card>
-    </div>
-
-    <!-- Quick Actions -->
-    <x-card title="Acciones Rápidas">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            @can('user.create.user')
-            <a href="{{ route('users.create') }}" class="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
-                <svg class="h-8 w-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
-                </svg>
-                <div class="ml-4">
-                    <h4 class="text-sm font-medium text-gray-900">Crear Usuario</h4>
-                    <p class="text-xs text-gray-500">Agregar nuevo usuario al sistema</p>
-                </div>
-            </a>
-            @endcan
-
-            @can('user.view.users')
-            <a href="{{ route('users.index') }}" class="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
-                <svg class="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
-                </svg>
-                <div class="ml-4">
-                    <h4 class="text-sm font-medium text-gray-900">Ver Usuarios</h4>
-                    <p class="text-xs text-gray-500">Gestionar usuarios del sistema</p>
-                </div>
-            </a>
-            @endcan
-
-            @can('auth.view.roles')
-            <a href="{{ route('roles.index') }}" class="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
-                <svg class="h-8 w-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-                </svg>
-                <div class="ml-4">
-                    <h4 class="text-sm font-medium text-gray-900">Gestionar Roles</h4>
-                    <p class="text-xs text-gray-500">Administrar roles y permisos</p>
-                </div>
-            </a>
-            @endcan
-
-            @can('auth.create.role')
-            <a href="{{ route('roles.create') }}" class="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
-                <svg class="h-8 w-8 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-                </svg>
-                <div class="ml-4">
-                    <h4 class="text-sm font-medium text-gray-900">Crear Rol</h4>
-                    <p class="text-xs text-gray-500">Agregar nuevo rol al sistema</p>
-                </div>
-            </a>
-            @endcan
-
-            @can('auth.view.permissions')
-            <a href="{{ route('permissions.index') }}" class="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
-                <svg class="h-8 w-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
-                </svg>
-                <div class="ml-4">
-                    <h4 class="text-sm font-medium text-gray-900">Ver Permisos</h4>
-                    <p class="text-xs text-gray-500">Explorar permisos del sistema</p>
-                </div>
-            </a>
-            @endcan
-
-            <a href="{{ route('users.show', auth()->user()) }}" class="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
-                <svg class="h-8 w-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                </svg>
-                <div class="ml-4">
-                    <h4 class="text-sm font-medium text-gray-900">Mi Perfil</h4>
-                    <p class="text-xs text-gray-500">Ver y editar mi información</p>
-                </div>
-            </a>
-        </div>
-    </x-card>
-
-    <!-- Recent Activity -->
-    <x-card title="Actividad Reciente">
-        <div class="space-y-4">
-            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                            <span class="text-blue-600 font-bold">
-                                {{ substr(auth()->user()->first_name, 0, 1) }}{{ substr(auth()->user()->last_name, 0, 1) }}
+            <div class="relative px-8 py-10">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <div class="flex items-center justify-center w-20 h-20 bg-white/20 backdrop-blur-lg rounded-2xl shadow-lg">
+                            <span class="text-4xl font-bold text-white">
+                                {{ strtoupper(substr(auth()->user()->first_name, 0, 1)) }}{{ strtoupper(substr(auth()->user()->last_name, 0, 1)) }}
                             </span>
                         </div>
+                        <div>
+                            <h1 class="text-4xl font-bold text-white mb-1">
+                                @php
+                                    $hour = now()->hour;
+                                    if ($hour < 12) echo '¡Buenos días';
+                                    elseif ($hour < 19) echo '¡Buenas tardes';
+                                    else echo '¡Buenas noches';
+                                @endphp, {{ auth()->user()->first_name }}!
+                            </h1>
+                            <p class="text-blue-100 text-lg">{{ auth()->user()->roles->first()?->name ?? 'Usuario' }}</p>
+                        </div>
                     </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-900">Iniciaste sesión</p>
-                        <p class="text-xs text-gray-500">
-                            Último acceso: {{ auth()->user()->last_login_at ? \Modules\Core\Helpers\DateHelper::diffForHumans(auth()->user()->last_login_at) : 'Nunca' }}
-                        </p>
+                    <div class="text-right text-white">
+                        <div class="text-sm text-blue-100">Último acceso</div>
+                        <div class="text-lg font-semibold">
+                            {{ auth()->user()->last_login_at ? auth()->user()->last_login_at->diffForHumans() : 'Primera vez' }}
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </x-card>
+
+        {{-- Dashboard Dinámico según Rol --}}
+        @php
+            $userRole = auth()->user()->roles->first()?->code;
+        @endphp
+
+        {{-- SUPER ADMIN / ADMIN GENERAL / ADMIN RRHH - Dashboard Completo --}}
+        @if(in_array($userRole, ['admin_general', 'admin_rrhh']))
+            @include('layouts.partials.dashboards.admin-dashboard')
+
+        {{-- USUARIO DE ÁREA - Dashboard de Solicitudes --}}
+        @elseif($userRole === 'usuario_area')
+            @include('layouts.partials.dashboards.area-user-dashboard')
+
+        {{-- REVISOR RRHH - Dashboard de Revisión --}}
+        @elseif($userRole === 'revisor_rrhh')
+            @include('layouts.partials.dashboards.reviewer-dashboard')
+
+        {{-- JURADO/EVALUADOR - Dashboard de Evaluaciones --}}
+        @elseif($userRole === 'jurado')
+            @include('layouts.partials.dashboards.jury-dashboard')
+
+        {{-- CONSULTA - Dashboard de Solo Lectura --}}
+        @elseif($userRole === 'consulta')
+            @include('layouts.partials.dashboards.readonly-dashboard')
+
+        {{-- FALLBACK - Dashboard Genérico --}}
+        @else
+            @include('layouts.partials.dashboards.generic-dashboard')
+        @endif
+
+    </div>
 </div>
 @endsection

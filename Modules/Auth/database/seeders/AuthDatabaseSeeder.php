@@ -15,6 +15,12 @@ class AuthDatabaseSeeder extends Seeder
             PermissionsTableSeeder::class,
             RolePermissionsSeeder::class,
             SuperAdminSeeder::class,
+            AdminRRHHSeeder::class,
+            AreaUserSeeder::class,
+            RRHHReviewerSeeder::class,
+            JurySeeder::class,
+            ApplicantSeeder::class,
+            ViewerSeeder::class,
         ]);
     }
 }

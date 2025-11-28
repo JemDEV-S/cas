@@ -38,19 +38,7 @@ enum JobPostingStatusEnum: string
         };
     }
 
-    /**
-     * Obtener clase CSS para badge con gradiente
-     */
-    public function badgeClass(): string
-    {
-        return match($this) {
-            self::BORRADOR => 'bg-gradient-to-r from-gray-400 to-gray-600',
-            self::PUBLICADA => 'bg-gradient-to-r from-blue-500 to-blue-700',
-            self::EN_PROCESO => 'bg-gradient-to-r from-amber-400 to-orange-500',
-            self::FINALIZADA => 'bg-gradient-to-r from-green-500 to-emerald-600',
-            self::CANCELADA => 'bg-gradient-to-r from-red-500 to-red-700',
-        };
-    }
+
 
     /**
      * Obtener icono
@@ -107,5 +95,37 @@ enum JobPostingStatusEnum: string
             fn($case) => ['value' => $case->value, 'label' => $case->label()],
             self::cases()
         );
+    }
+    public function badgeClass(): string
+    {
+        return match($this) {
+            self::BORRADOR => 'bg-gray-100 text-gray-700 border border-gray-300',
+            self::PUBLICADA => 'bg-blue-100 text-blue-700 border border-blue-300',
+            self::EN_PROCESO => 'bg-amber-100 text-amber-700 border border-amber-300',
+            self::FINALIZADA => 'bg-green-100 text-green-700 border border-green-300',
+            self::CANCELADA => 'bg-red-100 text-red-700 border border-red-300',
+        };
+    }
+
+    public function gradientClass(): string
+    {
+        return match($this) {
+            self::BORRADOR => 'from-gray-500 to-gray-600',
+            self::PUBLICADA => 'from-blue-500 to-blue-600',
+            self::EN_PROCESO => 'from-amber-500 to-amber-600',
+            self::FINALIZADA => 'from-green-500 to-green-600',
+            self::CANCELADA => 'from-red-500 to-red-600',
+        };
+    }
+
+    public function iconEmoji(): string
+    {
+        return match($this) {
+            self::BORRADOR => '📝',
+            self::PUBLICADA => '📢',
+            self::EN_PROCESO => '⚙️',
+            self::FINALIZADA => '✅',
+            self::CANCELADA => '❌',
+        };
     }
 }

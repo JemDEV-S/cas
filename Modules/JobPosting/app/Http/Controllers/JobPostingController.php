@@ -28,8 +28,13 @@ class JobPostingController extends Controller
      */
     public function index(Request $request): View
     {
+        return $this->dashboard($request);
+    }
+
+    public function listAll(Request $request): View
+    {
         $filters = $request->only(['year', 'status', 'search', 'sort_by', 'sort_order']);
-        
+
         $jobPostings = $this->jobPostingService->list($filters, 15);
         $statistics = $this->jobPostingService->getStatistics($request->get('year'));
         $availableYears = $this->jobPostingService->getAvailableYears();
@@ -289,20 +294,75 @@ class JobPostingController extends Controller
     /**
      * Dashboard de métricas
      */
-    public function dashboard(): View
+    public function dashboard(Request $request)
     {
-        $currentYear = now()->year;
-        $statistics = $this->jobPostingService->getStatistics($currentYear);
-        $nearingEnd = $this->jobPostingService->getNearingEnd(7);
-        $delayed = $this->jobPostingService->getDelayed();
-        $availableYears = $this->jobPostingService->getAvailableYears();
+        $currentYear = $request->input('year', date('Y'));
+
+        // Estadísticas
+        $statistics = [
+            'total' => JobPosting::whereYear('created_at', $currentYear)->count(),
+            'activas' => JobPosting::whereYear('created_at', $currentYear)
+                ->whereIn('status', ['PUBLICADA', 'EN_PROCESO'])
+                ->count(),
+            'por_estado' => [
+                'borradores' => JobPosting::whereYear('created_at', $currentYear)
+                    ->where('status', 'BORRADOR')->count(),
+                'publicadas' => JobPosting::whereYear('created_at', $currentYear)
+                    ->where('status', 'PUBLICADA')->count(),
+                'en_proceso' => JobPosting::whereYear('created_at', $currentYear)
+                    ->where('status', 'EN_PROCESO')->count(),
+                'finalizadas' => JobPosting::whereYear('created_at', $currentYear)
+                    ->where('status', 'FINALIZADA')->count(),
+                'canceladas' => JobPosting::whereYear('created_at', $currentYear)
+                    ->where('status', 'CANCELADA')->count(),
+            ],
+            'por_mes' => $this->getMonthlyStats($currentYear),
+        ];
+
+        // Años disponibles
+        $availableYears = JobPosting::selectRaw('DISTINCT YEAR(created_at) as year')
+            ->orderBy('year', 'desc')
+            ->pluck('year');
+
+        if ($availableYears->isEmpty()) {
+            $availableYears = collect([date('Y')]);
+        }
+
+        // Convocatorias próximas a vencer
+        $nearingEnd = JobPosting::where('status', 'PUBLICADA')
+            ->where('end_date', '>=', now())
+            ->where('end_date', '<=', now()->addDays(7))
+            ->orderBy('end_date', 'asc')
+            ->get();
+
+        // Convocatorias con fases retrasadas
+        $delayed = JobPosting::whereHas('schedules', function($query) {
+            $query->where('end_date', '<', now())
+                  ->where('status', '!=', 'COMPLETADA');
+        })->get();
 
         return view('jobposting::dashboard', compact(
             'statistics',
-            'nearingEnd',
-            'delayed',
+            'currentYear',
             'availableYears',
-            'currentYear'
+            'nearingEnd',
+            'delayed'
         ));
+    }
+
+    protected function getMonthlyStats($year)
+    {
+        $monthlyData = JobPosting::whereYear('created_at', $year)
+            ->selectRaw('MONTH(created_at) as month, COUNT(*) as count')
+            ->groupBy('month')
+            ->pluck('count', 'month');
+
+        // Llenar todos los meses (1-12) con 0 si no hay datos
+        $result = [];
+        for ($i = 1; $i <= 12; $i++) {
+            $result[$i] = $monthlyData->get($i, 0);
+        }
+
+        return $result;
     }
 }
