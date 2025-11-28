@@ -25,36 +25,167 @@
             </ol>
         </nav>
 
-        {{-- Alertas --}}
-        @if(session('success'))
-        <div class="bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl shadow-2xl p-6 mb-6 text-white">
-            <div class="flex items-center">
-                <svg class="w-8 h-8 mr-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                </svg>
-                <div>
-                    <h3 class="text-lg font-bold mb-1">¡Éxito!</h3>
-                    <p>{{ session('success') }}</p>
-                </div>
-            </div>
-        </div>
-        @endif
-
-        {{-- Header Premium --}}
-        <div class="relative overflow-hidden bg-white rounded-3xl shadow-2xl mb-8">
-            <div class="absolute inset-0 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 opacity-95"></div>
-            <div class="absolute inset-0 opacity-10" style="background-image: url('data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');"></div>
-
-            <div class="relative px-8 py-10">
+        {{-- Card Principal --}}
+        <div class="bg-white rounded-lg shadow-sm border border-gray-100 mb-6">
+            {{-- Header con estado --}}
+            <div class="px-6 py-6 border-b border-gray-100">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-6">
                         <div class="flex items-center justify-center w-20 h-20 bg-white/20 backdrop-blur-lg rounded-2xl shadow-lg">
                             <div class="text-2xl font-bold text-white">{{ substr($jobPosting->year, -2) }}</div>
                         </div>
                         <div>
-                            <div class="text-blue-100 text-lg font-medium mb-1">{{ $jobPosting->code }}</div>
-                            <h1 class="text-4xl font-bold text-white mb-2">{{ $jobPosting->title }}</h1>
-                            <div class="flex items-center space-x-4 text-blue-100">
+                            <div class="text-sm text-gray-500 font-medium">{{ $jobPosting->code }}</div>
+                            <h1 class="text-2xl font-semibold text-gray-900">{{ $jobPosting->title }}</h1>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium {{ $jobPosting->status->badgeClass() }}">
+                            {{ $jobPosting->status->icon() }} {{ $jobPosting->status->label() }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Barra de progreso --}}
+            <div class="bg-gray-50 px-6 py-4 border-b border-gray-100">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-medium text-gray-700">Progreso General</span>
+                    <span class="text-sm font-medium text-blue-600">{{ number_format($progress['percentage'], 1) }}%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                    <div class="bg-blue-500 h-2 rounded-full transition-all duration-500" 
+                         style="width: {{ $progress['percentage'] }}%"></div>
+                </div>
+                <div class="flex justify-between mt-2 text-xs text-gray-600">
+                    <span>{{ $progress['completed'] }} completadas</span>
+                    <span>{{ $progress['in_progress'] }} en progreso</span>
+                    <span>{{ $progress['pending'] }} pendientes</span>
+                </div>
+            </div>
+
+            {{-- Contenido principal --}}
+            <div class="p-6">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {{-- Información principal --}}
+                    <div class="lg:col-span-2 space-y-6">
+                        
+                        {{-- Descripción --}}
+                        @if($jobPosting->description)
+                        <div class="bg-blue-50 rounded-lg p-6">
+                            <h3 class="text-base font-semibold text-gray-800 mb-3">Descripción</h3>
+                            <p class="text-gray-700 leading-relaxed">{{ $jobPosting->description }}</p>
+                        </div>
+                        @endif
+
+                        {{-- Fase actual --}}
+                        @if($currentPhase)
+                        <div class="bg-green-50 rounded-lg p-6 border border-green-200">
+                            <div class="flex items-start justify-between">
+                                <div>
+                                    <h3 class="text-base font-semibold text-gray-800 mb-2">Fase Actual</h3>
+                                    <p class="text-lg font-medium text-gray-900">{{ $currentPhase->phase->name }}</p>
+                                    <p class="text-sm text-gray-600 mt-2">
+                                        {{ $currentPhase->start_date->format('d/m/Y') }} - {{ $currentPhase->end_date->format('d/m/Y') }}
+                                    </p>
+                                    @if($currentPhase->responsibleUnit)
+                                    <p class="text-sm text-gray-600">
+                                        {{ $currentPhase->responsibleUnit->name }}
+                                    </p>
+                                    @endif
+                                </div>
+                                <span class="px-3 py-1 bg-blue-500 text-white rounded-lg font-medium text-sm">
+                                    Fase {{ $currentPhase->phase->phase_number }}
+                                </span>
+                            </div>
+                        </div>
+                        @endif
+
+                        {{-- Próxima fase --}}
+                        @if($nextPhase)
+                        <div class="bg-amber-50 rounded-lg p-6">
+                            <h3 class="text-base font-semibold text-gray-800 mb-2">Próxima Fase</h3>
+                            <p class="text-lg font-medium text-gray-900">{{ $nextPhase->phase->name }}</p>
+                            <p class="text-sm text-gray-600 mt-2">
+                                Inicia: {{ $nextPhase->start_date->format('d/m/Y') }}
+                            </p>
+                        </div>
+                        @endif
+
+                        {{-- Fases retrasadas --}}
+                        @if($delayedPhases->isNotEmpty())
+                        <div class="bg-red-50 rounded-lg p-6 border border-red-200">
+                            <h3 class="text-base font-semibold text-red-800 mb-3">Fases Retrasadas ({{ $delayedPhases->count() }})</h3>
+                            <div class="space-y-2">
+                                @foreach($delayedPhases as $delayed)
+                                <div class="flex items-center justify-between bg-white rounded-lg p-3">
+                                    <span class="text-sm font-medium text-gray-800">{{ $delayed->phase->name }}</span>
+                                    <span class="text-xs text-red-600">Venció: {{ $delayed->end_date->format('d/m/Y') }}</span>
+                                </div>
+                                @endforeach
+                            </div>
+                        </div>
+                        @endif
+
+                        {{-- Cronograma resumido --}}
+                        <div class="bg-white rounded-lg border border-gray-200 p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-base font-semibold text-gray-800">Cronograma</h3>
+                                <a href="{{ route('jobposting.schedule.edit', $jobPosting) }}" 
+                                    class="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors">
+                                        Ver cronograma completo
+                                </a>
+                            </div>
+                            <div class="space-y-3">
+                                @foreach($jobPosting->schedules->take(5) as $schedule)
+                                <div class="flex items-center space-x-3">
+                                    <div class="flex-shrink-0">
+                                        @if($schedule->status->value === 'COMPLETED')
+                                        <div class="h-8 w-8 rounded-full bg-green-500 flex items-center justify-center text-white text-xs font-medium">
+                                            ✓
+                                        </div>
+                                        @elseif($schedule->status->value === 'IN_PROGRESS')
+                                        <div class="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-medium">
+                                            ▶
+                                        </div>
+                                        @else
+                                        <div class="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 text-xs font-medium">
+                                            {{ $schedule->phase->phase_number }}
+                                        </div>
+                                        @endif
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-sm font-medium text-gray-800">{{ $schedule->phase->name }}</span>
+                                            <span class="text-xs px-2 py-1 rounded-full {{ $schedule->status->badgeClass() }} text-white">
+                                                {{ $schedule->status->icon() }}
+                                            </span>
+                                        </div>
+                                        <div class="text-xs text-gray-500">
+                                            {{ $schedule->start_date->format('d/m/Y') }} - {{ $schedule->end_date->format('d/m/Y') }}
+                                        </div>
+                                    </div>
+                                </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Sidebar --}}
+                    <div class="space-y-6">
+                        
+                        {{-- Información general --}}
+                        <div class="bg-gray-50 rounded-lg p-6">
+                            <h3 class="text-base font-semibold text-gray-800 mb-4">Información</h3>
+                            <div class="space-y-3">
+                                <div>
+                                    <div class="text-xs text-gray-500 font-medium">Código</div>
+                                    <div class="text-sm font-medium text-gray-900">{{ $jobPosting->code }}</div>
+                                </div>
+                                <div>
+                                    <div class="text-xs text-gray-500 font-medium">Año</div>
+                                    <div class="text-sm font-medium text-gray-900">{{ $jobPosting->year }}</div>
+                                </div>
                                 @if($jobPosting->start_date)
                                 <span class="flex items-center">
                                     <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -73,14 +204,70 @@
                                 @endif
                             </div>
                         </div>
-                    </div>
-                    <div class="text-right">
-                        <span class="inline-flex items-center px-6 py-3 rounded-2xl text-lg font-bold bg-white/20 backdrop-blur-md text-white border border-white/30">
-                            {{ $jobPosting->status->iconEmoji() }} {{ $jobPosting->status->label() }}
-                        </span>
-                        @if($jobPosting->published_at)
-                        <div class="mt-3 text-blue-100 text-sm">
-                            Publicada: {{ $jobPosting->published_at->format('d/m/Y H:i') }}
+
+                        {{-- Acciones --}}
+                        <div class="bg-white rounded-lg border border-gray-200 p-6">
+                            <h3 class="text-base font-semibold text-gray-800 mb-4">Acciones</h3>
+                            <div class="space-y-3">
+                                @if($jobPosting->canBeEdited())
+                                <a href="{{ route('jobposting.edit', $jobPosting) }}" 
+                                   class="block w-full px-4 py-2 bg-amber-500 text-white rounded-lg text-center font-medium hover:bg-amber-600 transition-colors">
+                                    Editar
+                                </a>
+                                @endif
+
+                                @if($jobPosting->canBePublished())
+                                <form action="{{ route('jobposting.publish', $jobPosting) }}" method="POST">
+                                    @csrf
+                                    <button type="submit" 
+                                            class="w-full px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors"
+                                            onclick="return confirm('¿Publicar convocatoria?')">
+                                        Publicar
+                                    </button>
+                                </form>
+                                @endif
+
+                                <a href="{{ route('jobposting.schedule.edit', $jobPosting) }}" 
+                                   class="block w-full px-4 py-2 bg-purple-500 text-white rounded-lg text-center font-medium hover:bg-purple-600 transition-colors">
+                                    Ver Cronograma
+                                </a>
+
+                                <a href="{{ route('jobposting.history', $jobPosting) }}" 
+                                   class="block w-full px-4 py-2 bg-cyan-500 text-white rounded-lg text-center font-medium hover:bg-cyan-600 transition-colors">
+                                    Ver Historial
+                                </a>
+
+                                <form action="{{ route('jobposting.clone', $jobPosting) }}" method="POST">
+                                    @csrf
+                                    <button type="submit" 
+                                            class="w-full px-4 py-2 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition-colors"
+                                            onclick="return confirm('¿Clonar convocatoria?')">
+                                        Clonar
+                                    </button>
+                                </form>
+
+                                @if($jobPosting->canBeCancelled())
+                                <button onclick="showCancelModal()" 
+                                        class="w-full px-4 py-2 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 transition-colors">
+                                    Cancelar
+                                </button>
+                                @endif
+                            </div>
+                        </div>
+
+                        {{-- Zona de peligro --}}
+                        @if($jobPosting->canBeEdited())
+                        <div class="bg-red-50 rounded-lg p-6 border border-red-200">
+                            <h3 class="text-sm font-medium text-red-800 mb-3">Zona de Peligro</h3>
+                            <form action="{{ route('jobposting.destroy', $jobPosting) }}" method="POST">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" 
+                                        class="w-full px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
+                                        onclick="return confirm('¿Está seguro de eliminar esta convocatoria?')">
+                                    Eliminar Convocatoria
+                                </button>
+                            </form>
                         </div>
                         @endif
                     </div>
@@ -264,7 +451,7 @@
                                 </svg>
                                 Cronograma
                             </h3>
-                            <a href="{{ route('jobposting.schedule', $jobPosting) }}"
+                            <a href="{{ route('jobposting.schedule.edit', $jobPosting) }}"
                                class="px-4 py-2 bg-white/20 backdrop-blur-md text-white rounded-xl font-bold hover:bg-white/30 transition-all shadow-lg">
                                 Ver Completo
                             </a>
@@ -386,7 +573,7 @@
                         </form>
                         @endif
 
-                        <a href="{{ route('jobposting.schedule', $jobPosting) }}"
+                        <a href="{{ route('jobposting.schedule.edit', $jobPosting) }}"
                            class="block w-full px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-xl font-bold hover:from-purple-600 hover:to-pink-700 transition-all shadow-lg hover:shadow-xl text-center">
                             📅 Gestionar Cronograma
                         </a>

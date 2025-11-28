@@ -3,7 +3,7 @@
     "alias": "jobposting",
     "description": "",
     "keywords": [],
-    "priority": 0,
+    "priority": 1,
     "providers": [
         "Modules\\JobPosting\\Providers\\JobPostingServiceProvider"
     ],

@@ -3,6 +3,7 @@
 namespace Modules\JobPosting\Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Modules\JobPosting\Database\Seeders\ProcessPhasesSeeder;
 
 class JobPostingDatabaseSeeder extends Seeder
 {
@@ -11,6 +12,6 @@ class JobPostingDatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // $this->call([]);
+        $this->call(ProcessPhasesSeeder::class);
     }
 }

@@ -24,7 +24,7 @@ class JobPostingController extends Controller
     ) {}
 
     /**
-     * Display a listing of the resource.
+     * Listado de convocatorias
      */
     public function index(Request $request): View
     {
@@ -48,7 +48,7 @@ class JobPostingController extends Controller
     }
 
     /**
-     * Show the form for creating a new resource.
+     * Formulario de creación
      */
     public function create(): View
     {
@@ -64,26 +64,29 @@ class JobPostingController extends Controller
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Guardar convocatoria (CORREGIDO)
      */
     public function store(StoreJobPostingRequest $request): RedirectResponse
     {
         try {
+            // Delegamos toda la lógica al servicio.
+            // El servicio se encargará de:
+            // 1. Generar el código único (respetando eliminados)
+            // 2. Crear el registro
+            // 3. Generar el cronograma automático si auto_schedule es true
             $jobPosting = $this->jobPostingService->create(
                 $request->validated(),
                 auth()->user()
             );
 
-            // Si se solicita crear cronograma automático
-            if ($request->boolean('create_schedule')) {
-                $startDate = $request->date('schedule_start_date') ?? now()->addDays(7);
-                $this->scheduleService->createFullSchedule($jobPosting, $startDate);
-            }
-
             return redirect()
                 ->route('jobposting.show', $jobPosting)
                 ->with('success', '✅ Convocatoria creada exitosamente con código: ' . $jobPosting->code);
+
         } catch (\Exception $e) {
+            // Loguear el error para depuración interna
+            \Log::error('Error creando convocatoria: ' . $e->getMessage());
+
             return back()
                 ->withInput()
                 ->with('error', '❌ Error al crear convocatoria: ' . $e->getMessage());
@@ -91,19 +94,39 @@ class JobPostingController extends Controller
     }
 
     /**
-     * Display the specified resource.
+     * Ver detalle de convocatoria
      */
     public function show(JobPosting $jobPosting): View
     {
         $jobPosting->load([
             'publisher',
-            'schedules.phase',
+            'schedules.phase', // Cargamos la relación con la fase
             'schedules.responsibleUnit',
             'history.user'
         ]);
 
-        $currentPhase = $this->scheduleService->getCurrentPhase($jobPosting);
-        $nextPhase = $this->scheduleService->getNextPhase($jobPosting);
+        // 1. CORRECCIÓN IMPORTANTE: Ordenar los horarios por el número de fase (1 al 12)
+        // Esto arregla la lista desordenada en la vista
+        $sortedSchedules = $jobPosting->schedules->sortBy('phase.phase_number');
+        $jobPosting->setRelation('schedules', $sortedSchedules);
+
+        // 2. CORRECCIÓN PRÓXIMA FASE: 
+        // Buscamos la primera fase que NO esté completada, basándonos en el orden lógico (1, 2, 3...)
+        // y no solo en la fecha.
+        $nextPhase = $sortedSchedules->first(function ($schedule) {
+            return $schedule->status !== \Modules\JobPosting\Enums\ScheduleStatusEnum::COMPLETED 
+                && $schedule->status !== 'COMPLETED'; // Por si acaso es string
+        });
+
+        // Fase actual (la que está en progreso)
+        $currentPhase = $sortedSchedules->firstWhere('status', 'IN_PROGRESS');
+
+        // Si no hay ninguna en progreso, la "actual" visualmente puede ser la "siguiente"
+        if (!$currentPhase) {
+            $currentPhase = $nextPhase;
+        }
+
+        // Estadísticas
         $progress = $this->scheduleService->getScheduleProgress($jobPosting);
         $delayedPhases = $this->scheduleService->getDelayedPhases($jobPosting);
 
@@ -117,7 +140,7 @@ class JobPostingController extends Controller
     }
 
     /**
-     * Show the form for editing the specified resource.
+     * Formulario de edición
      */
     public function edit(JobPosting $jobPosting): View
     {
@@ -138,7 +161,7 @@ class JobPostingController extends Controller
     }
 
     /**
-     * Update the specified resource in storage.
+     * Actualizar convocatoria
      */
     public function update(UpdateJobPostingRequest $request, JobPosting $jobPosting): RedirectResponse
     {
@@ -164,7 +187,7 @@ class JobPostingController extends Controller
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Eliminar convocatoria (Soft Delete)
      */
     public function destroy(JobPosting $jobPosting): RedirectResponse
     {
@@ -247,18 +270,19 @@ class JobPostingController extends Controller
     public function clone(JobPosting $jobPosting): RedirectResponse
     {
         try {
+            // El servicio genera el nuevo código único automáticamente
             $newJobPosting = $this->jobPostingService->clone($jobPosting, auth()->user());
 
             return redirect()
                 ->route('jobposting.edit', $newJobPosting)
-                ->with('success', '📋 Convocatoria clonada exitosamente. Código: ' . $newJobPosting->code);
+                ->with('success', '📋 Convocatoria clonada exitosamente. Nuevo código: ' . $newJobPosting->code);
         } catch (\Exception $e) {
             return back()->with('error', '❌ Error al clonar: ' . $e->getMessage());
         }
     }
 
     /**
-     * Ver cronograma
+     * Ver/Gestionar cronograma
      */
     public function schedule(JobPosting $jobPosting): View
     {
@@ -279,7 +303,7 @@ class JobPostingController extends Controller
     }
 
     /**
-     * Ver historial
+     * Ver historial de cambios
      */
     public function history(JobPosting $jobPosting): View
     {
@@ -292,7 +316,7 @@ class JobPostingController extends Controller
     }
 
     /**
-     * Dashboard de métricas
+     * Dashboard general
      */
     public function dashboard(Request $request)
     {
