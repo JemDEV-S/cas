@@ -14,16 +14,6 @@
             </a>
         </div>
 
-        {{-- Alertas --}}
-        @if(session('success'))
-        <div class="bg-green-50 text-green-700 px-4 py-3 rounded-lg mb-6 flex items-center">
-            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-            </svg>
-            <span>{{ session('success') }}</span>
-        </div>
-        @endif
-
         {{-- Card Principal --}}
         <div class="bg-white rounded-lg shadow-sm border border-gray-100 mb-6">
             {{-- Header con estado --}}
@@ -130,9 +120,9 @@
                         <div class="bg-white rounded-lg border border-gray-200 p-6">
                             <div class="flex items-center justify-between mb-4">
                                 <h3 class="text-base font-semibold text-gray-800">Cronograma</h3>
-                                <a href="{{ route('jobposting.schedule', $jobPosting) }}" 
-                                   class="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors">
-                                    Ver cronograma completo
+                                <a href="{{ route('jobposting.schedule.edit', $jobPosting) }}" 
+                                    class="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors">
+                                        Ver cronograma completo
                                 </a>
                             </div>
                             <div class="space-y-3">
@@ -234,7 +224,7 @@
                                 </form>
                                 @endif
 
-                                <a href="{{ route('jobposting.schedule', $jobPosting) }}" 
+                                <a href="{{ route('jobposting.schedule.edit', $jobPosting) }}" 
                                    class="block w-full px-4 py-2 bg-purple-500 text-white rounded-lg text-center font-medium hover:bg-purple-600 transition-colors">
                                     Ver Cronograma
                                 </a>

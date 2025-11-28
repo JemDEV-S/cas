@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\JobPosting\Http\Controllers\JobPostingController;
+use Modules\JobPosting\Http\Controllers\ScheduleController;
 
 Route::middleware(['auth', 'verified'])->prefix('convocatorias')->name('jobposting.')->group(function () {
     
@@ -18,8 +19,13 @@ Route::middleware(['auth', 'verified'])->prefix('convocatorias')->name('jobposti
     Route::post('/{jobPosting}/cancelar', [JobPostingController::class, 'cancel'])->name('cancel');
     Route::post('/{jobPosting}/clonar', [JobPostingController::class, 'clone'])->name('clone');
     
-    // Cronograma
-    Route::get('/{jobPosting}/cronograma', [JobPostingController::class, 'schedule'])->name('schedule');
+    // RUTAS DEL CRONOGRAMA
+    // Ver/Editar cronograma
+    Route::get('/{jobPosting}/cronograma', [ScheduleController::class, 'edit'])->name('schedule.edit');
+    // Guardar cambios
+    Route::put('/{jobPosting}/cronograma', [ScheduleController::class, 'update'])->name('schedule.update');
+    // Generar automático (botón mágico)
+    Route::post('/{jobPosting}/cronograma/init', [ScheduleController::class, 'initialize'])->name('schedule.init');
     
     // Historial
     Route::get('/{jobPosting}/historial', [JobPostingController::class, 'history'])->name('history');

@@ -19,7 +19,7 @@ return new class extends Migration
             $table->uuid('changed_by')->comment('Usuario que realizó el cambio');
             $table->timestamp('changed_at')->comment('Fecha del cambio');
             $table->text('change_reason')->nullable()->comment('Razón del cambio');
-            $table->inet('ip_address')->nullable()->comment('IP del usuario');
+            $table->ipAddress('ip_address')->nullable()->comment('IP del usuario');
             $table->jsonb('metadata')->nullable()->comment('Metadatos adicionales');
             $table->timestamps();
 

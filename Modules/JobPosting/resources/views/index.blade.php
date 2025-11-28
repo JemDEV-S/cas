@@ -54,15 +54,6 @@
             </div>
         </div>
 
-        {{-- Alertas/Mensajes --}}
-        @if(session('success'))
-        <div class="bg-green-50 text-green-700 px-4 py-3 rounded-lg mb-6 flex items-center">
-            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-            </svg>
-            <span>{{ session('success') }}</span>
-        </div>
-        @endif
 
         @if(session('error'))
         <div class="bg-red-50 text-red-700 px-4 py-3 rounded-lg mb-6 flex items-center">
@@ -192,9 +183,9 @@
                                     Editar
                                 </a>
                                 @endif
-                                <a href="{{ route('jobposting.schedule', $posting) }}" 
-                                   class="inline-flex items-center px-2.5 py-1.5 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors">
-                                    Calendario
+                                <a href="{{ route('jobposting.schedule.edit', $posting) }}" 
+                                    class="inline-flex items-center px-2.5 py-1.5 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors">
+                                        Calendario
                                 </a>
                             </td>
                         </tr>

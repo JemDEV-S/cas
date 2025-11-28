@@ -4,22 +4,26 @@ namespace Modules\JobPosting\Entities;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Factories\HasFactory; // Importante para factories
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Modules\Core\Traits\{HasUuid, HasMetadata};
 
 class ProcessPhase extends Model
 {
-    use HasUuid, HasMetadata, SoftDeletes;
+    use HasUuid, HasMetadata, SoftDeletes, HasFactory;
+
+    protected $table = 'process_phases'; // Buena práctica explicitar la tabla
 
     protected $fillable = [
         'code',
         'name',
         'description',
         'phase_number',
-        'order',
+        'order', // Opcional, si quieres un orden visual distinto al número de fase
         'requires_evaluation',
         'is_public',
         'is_active',
+        'is_system', // <--- AGREGADO: Para proteger las fases base
         'default_duration_days',
         'metadata',
     ];
@@ -30,6 +34,7 @@ class ProcessPhase extends Model
         'requires_evaluation' => 'boolean',
         'is_public' => 'boolean',
         'is_active' => 'boolean',
+        'is_system' => 'boolean', // <--- AGREGADO
         'default_duration_days' => 'integer',
         'metadata' => 'array',
     ];
@@ -62,28 +67,32 @@ class ProcessPhase extends Model
 
     public function scopeOrdered($query)
     {
-        return $query->orderBy('order');
+        // CAMBIO: Usamos 'phase_number' como orden principal para asegurar
+        // que salgan en el orden del 1 al 12 como en el Seeder.
+        return $query->orderBy('phase_number', 'asc')->orderBy('order', 'asc');
+    }
+    
+    /**
+     * Scope para obtener solo las fases del sistema (las 12 base)
+     */
+    public function scopeSystem($query)
+    {
+        return $query->where('is_system', true);
     }
 
     /**
-     * Verificar si requiere evaluación
+     * Helpers
      */
     public function requiresEvaluation(): bool
     {
         return $this->requires_evaluation;
     }
 
-    /**
-     * Verificar si es pública
-     */
     public function isPublic(): bool
     {
         return $this->is_public;
     }
 
-    /**
-     * Verificar si está activa
-     */
     public function isActive(): bool
     {
         return $this->is_active;

@@ -3,9 +3,11 @@
 namespace Modules\JobPosting\Services;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Str;
+use Carbon\Carbon;
 use Modules\JobPosting\Entities\{JobPosting, JobPostingHistory, ProcessPhase};
 use Modules\User\Entities\User;
-use Illuminate\Pagination\LengthAwarePaginator;
 
 class JobPostingService
 {
@@ -56,13 +58,28 @@ class JobPostingService
 
     /**
      * Crear nueva convocatoria
+     * Incluye generación de código único y cronograma automático.
      */
     public function create(array $data, ?User $user = null): JobPosting
     {
         return DB::transaction(function() use ($data, $user) {
+            // 1. Generar código único (soluciona el error de duplicidad)
+            $data['code'] = $this->generateNextCode($data['year']);
+            
+            // 2. Establecer estado inicial
+            $data['status'] = 'BORRADOR';
+
+            // 3. Crear la convocatoria
             $jobPosting = JobPosting::create($data);
 
-            // Registrar en historial
+            // 4. Generar cronograma automático si se solicitó
+            // Verificamos si vino 'auto_schedule' (desde el request preparado) o 'create_schedule'
+            if (!empty($data['auto_schedule']) && $data['auto_schedule'] == true) {
+                $startDate = $data['schedule_start_date'] ?? now();
+                $this->generateAutomaticSchedule($jobPosting, $startDate);
+            }
+
+            // 5. Registrar en historial
             JobPostingHistory::log(
                 $jobPosting,
                 'created',
@@ -117,7 +134,6 @@ class JobPostingService
             
             $jobPosting->publish($user);
 
-            // Registrar en historial
             JobPostingHistory::log(
                 $jobPosting,
                 'published',
@@ -145,7 +161,6 @@ class JobPostingService
             
             $jobPosting->startProcess();
 
-            // Registrar en historial
             JobPostingHistory::log(
                 $jobPosting,
                 'started',
@@ -173,7 +188,6 @@ class JobPostingService
             
             $jobPosting->finalize($user);
 
-            // Registrar en historial
             JobPostingHistory::log(
                 $jobPosting,
                 'finalized',
@@ -201,7 +215,6 @@ class JobPostingService
             
             $jobPosting->cancel($user, $reason);
 
-            // Registrar en historial
             JobPostingHistory::log(
                 $jobPosting,
                 'cancelled',
@@ -222,7 +235,6 @@ class JobPostingService
     public function delete(JobPosting $jobPosting, ?User $user = null): bool
     {
         return DB::transaction(function() use ($jobPosting, $user) {
-            // Registrar en historial antes de eliminar
             JobPostingHistory::log(
                 $jobPosting,
                 'deleted',
@@ -250,8 +262,11 @@ class JobPostingService
                 'end_date',
             ]);
             
-            // Agregar año actual
+            // Asignar al año actual
             $data['year'] = now()->year;
+            // Generar NUEVO código para el año actual
+            $data['code'] = $this->generateNextCode($data['year']);
+            $data['status'] = 'BORRADOR';
 
             $newJobPosting = JobPosting::create($data);
 
@@ -259,17 +274,17 @@ class JobPostingService
             foreach ($original->schedules as $schedule) {
                 $newJobPosting->schedules()->create([
                     'process_phase_id' => $schedule->process_phase_id,
-                    'start_date' => $schedule->start_date,
+                    'start_date' => $schedule->start_date, // Opcional: Podrías recalcular fechas
                     'end_date' => $schedule->end_date,
                     'start_time' => $schedule->start_time,
                     'end_time' => $schedule->end_time,
                     'location' => $schedule->location,
                     'responsible_unit_id' => $schedule->responsible_unit_id,
                     'notes' => $schedule->notes,
+                    'status' => 'PENDING'
                 ]);
             }
 
-            // Registrar en historial
             JobPostingHistory::log(
                 $newJobPosting,
                 'cloned',
@@ -283,9 +298,83 @@ class JobPostingService
         });
     }
 
+    /* -------------------------------------------------------------------------- */
+    /*                              MÉTODOS PRIVADOS                              */
+    /* -------------------------------------------------------------------------- */
+
     /**
-     * Obtener estadísticas de convocatorias
+     * Genera el siguiente código disponible: CONV-2025-001
+     * Considera registros eliminados para evitar colisiones.
      */
+    private function generateNextCode(int $year): string
+    {
+        // Buscamos la última convocatoria de ese año, INCLUYENDO las eliminadas
+        $lastPosting = JobPosting::withTrashed()
+            ->where('year', $year)
+            ->where('code', 'LIKE', "CONV-{$year}-%")
+            // CORRECCIÓN: No ordenar por ID (es UUID), ordenar por el código mismo
+            ->orderBy('code', 'desc') 
+            ->first();
+
+        if (!$lastPosting) {
+            return "CONV-{$year}-001";
+        }
+
+        // Extraer número. Ej: CONV-2025-005 -> 5
+        $parts = explode('-', $lastPosting->code);
+        $lastNumber = (int) end($parts);
+
+        // Incrementar
+        $nextNumber = $lastNumber + 1;
+
+        // Formatear
+        return "CONV-{$year}-" . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Genera las 12 fases automáticamente basado en el seeder de ProcessPhase
+     */
+    private function generateAutomaticSchedule(JobPosting $jobPosting, $startDate)
+    {
+        $phases = ProcessPhase::orderBy('order')->get();
+        
+        $currentDate = $startDate instanceof \Carbon\Carbon ? $startDate : \Carbon\Carbon::parse($startDate);
+
+        foreach ($phases as $phase) {
+            // Lógica de duración por fase
+            $daysDuration = match($phase->order) {
+                3 => 2, // Registro de postulantes
+                6 => 3, // Evaluación curricular
+                8 => 2, // Entrevista
+                default => 1
+            };
+
+            // Calcular fecha fin
+            // Si dura 1 día, se suma 0 días, por lo que start y end son iguales.
+            $endDate = (clone $currentDate)->addDays($daysDuration - 1);
+
+            $jobPosting->schedules()->create([
+                'process_phase_id' => $phase->id,
+                'start_date' => $currentDate,
+                
+                // CORRECCIÓN AQUÍ: Quitamos el condicional ternario.
+                // Siempre enviamos fecha de fin, aunque sea igual a la de inicio.
+                'end_date' => $endDate, 
+                
+                'status' => 'PENDING',
+                'notify_before' => true,
+                'location' => 'Portal Institucional',
+            ]);
+
+            // La siguiente fase empieza al día siguiente de que termina esta
+            $currentDate = (clone $endDate)->addDay();
+        }
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                              MÉTODOS DE ESTADÍSTICA                        */
+    /* -------------------------------------------------------------------------- */
+
     public function getStatistics(?int $year = null): array
     {
         $query = JobPosting::query();
@@ -308,9 +397,6 @@ class JobPostingService
         ];
     }
 
-    /**
-     * Distribución por mes
-     */
     protected function getMonthlyDistribution(?int $year): array
     {
         $query = JobPosting::query()
@@ -332,9 +418,6 @@ class JobPostingService
         return $distribution;
     }
 
-    /**
-     * Obtener años disponibles
-     */
     public function getAvailableYears()
     {
         return JobPosting::query()
@@ -344,9 +427,6 @@ class JobPostingService
             ->pluck('year');
     }
 
-    /**
-     * Obtener convocatorias próximas a vencer
-     */
     public function getNearingEnd(int $days = 7)
     {
         return JobPosting::query()
@@ -357,9 +437,6 @@ class JobPostingService
             ->get();
     }
 
-    /**
-     * Obtener convocatorias retrasadas
-     */
     public function getDelayed()
     {
         return JobPosting::query()

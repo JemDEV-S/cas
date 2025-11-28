@@ -233,7 +233,7 @@
                     <div>
                         <div class="flex items-center justify-between mb-4">
                             <h3 class="text-base font-medium text-gray-800">Cronograma</h3>
-                            <a href="{{ route('jobposting.schedule', $jobPosting) }}" 
+                            <a href="{{ route('jobposting.schedule.edit', $jobPosting) }}" 
                                class="px-4 py-2 bg-purple-500 text-white rounded-lg text-sm font-medium hover:bg-purple-600 transition-colors">
                                 Gestionar Cronograma
                             </a>
