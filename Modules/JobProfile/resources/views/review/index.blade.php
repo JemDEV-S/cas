@@ -87,7 +87,7 @@
                                 </td>
                                 <td class="px-3 py-4 text-sm">
                                     <div class="font-medium text-gray-900">{{ $profile->title }}</div>
-                                    @if($profile->position Code)
+                                    @if($profile->positionCode)
                                         <div class="text-xs text-gray-500 mt-1">{{ $profile->positionCode->name }}</div>
                                     @endif
                                 </td>
@@ -100,7 +100,7 @@
                                     </span>
                                 </td>
                                 <td class="px-3 py-4 text-sm">
-                                    <div class="font-medium text-gray-900">{{ $profile->requestedBy->name ?? 'N/A' }}</div>
+                                    <div class="font-medium text-gray-900">{{ $profile->requestedBy->first_name ?? 'N/A' }}</div>
                                     <div class="text-xs text-gray-500">{{ $profile->requestedBy->email ?? '' }}</div>
                                 </td>
                                 <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
