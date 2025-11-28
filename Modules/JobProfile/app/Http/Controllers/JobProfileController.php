@@ -8,6 +8,9 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 use Modules\JobProfile\Services\JobProfileService;
 use Modules\Core\Exceptions\BusinessRuleException;
+use Modules\JobProfile\Http\Requests\StoreJobProfileRequest;
+use Modules\JobProfile\Enums\EducationLevelEnum;
+
 
 class JobProfileController extends Controller
 {
@@ -65,19 +68,21 @@ class JobProfileController extends Controller
                 $userOrganizationalUnit = $userOrgUnit->organization_unit_id;
             }
         }
+        $educationOptions = EducationLevelEnum::selectOptions();
 
         return view('jobprofile::create', compact(
             'organizationalUnits',
             'positionCodes',
             'isAreaUser',
-            'userOrganizationalUnit'
+            'userOrganizationalUnit',
+            'educationOptions'
         ));
     }
 
     /**
      * Store a newly created job profile.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(StoreJobProfileRequest $request): RedirectResponse
     {
         try {
             $jobProfile = $this->jobProfileService->create(
@@ -87,7 +92,7 @@ class JobProfileController extends Controller
             );
 
             return redirect()
-                ->route('jobprofile.show', $jobProfile->id)
+                ->route('jobprofile.profiles.show', $jobProfile->id)
                 ->with('success', 'Perfil de puesto creado exitosamente.');
         } catch (BusinessRuleException $e) {
             return back()->withInput()->with('error', $e->getMessage());
@@ -148,7 +153,7 @@ class JobProfileController extends Controller
             }
 
             return redirect()
-                ->route('jobprofile.show', $jobProfile->id)
+                ->route('jobprofile.profiles.show', $jobProfile->id)
                 ->with('success', 'Perfil de puesto actualizado exitosamente.');
         } catch (BusinessRuleException $e) {
             return back()->withInput()->with('error', $e->getMessage());

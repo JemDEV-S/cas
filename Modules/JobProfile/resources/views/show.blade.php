@@ -266,7 +266,7 @@
                 <div class="space-y-4">
                     <div>
                         <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Solicitado por</p>
-                        <p class="mt-1 text-sm text-gray-900">{{ $jobProfile->requestedBy->name ?? 'N/A' }}</p>
+                        <p class="mt-1 text-sm text-gray-900">{{ optional($jobProfile->requestedBy)->first_name . ' ' . optional($jobProfile->requestedBy)->last_name ?? 'N/A' }}</p>
                         <p class="mt-1 text-xs text-gray-500">{{ $jobProfile->requested_at?->format('d/m/Y H:i') ?? 'N/A' }}</p>
                     </div>
 

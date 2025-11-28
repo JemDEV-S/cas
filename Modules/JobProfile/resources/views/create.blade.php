@@ -185,14 +185,7 @@
                 <x-form.select
                     name="education_level"
                     label="Nivel Educativo"
-                    :options="[
-                        'secondary' => 'Secundaria Completa',
-                        'technical' => 'Técnico',
-                        'bachelor' => 'Bachiller',
-                        'graduate' => 'Titulado',
-                        'master' => 'Maestría',
-                        'doctorate' => 'Doctorado'
-                    ]"
+                    :options="$educationOptions"
                     :selected="old('education_level')"
                     required
                 />

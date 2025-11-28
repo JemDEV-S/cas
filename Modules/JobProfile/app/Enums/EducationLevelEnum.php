@@ -53,4 +53,12 @@ enum EducationLevelEnum: string
             'level' => $case->level(),
         ], self::cases());
     }
+
+    public static function selectOptions(): array
+    {
+        return collect(self::cases())
+            ->mapWithKeys(fn($case) => [$case->value => $case->label()])
+            ->toArray();
+    }
+
 }

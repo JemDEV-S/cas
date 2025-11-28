@@ -4,6 +4,7 @@ namespace Modules\JobProfile\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Modules\JobProfile\Enums\EducationLevelEnum;
 
 class StoreJobProfileRequest extends FormRequest
 {
@@ -33,7 +34,7 @@ class StoreJobProfileRequest extends FormRequest
             'education_level' => [
                 'required',
                 'string',
-                Rule::in(['secondary', 'technical', 'bachelor', 'graduate', 'master', 'doctorate'])
+                Rule::in(EducationLevelEnum::values())
             ],
             'career_field' => 'nullable|string|max:255',
             'title_required' => 'nullable|string|max:255',
