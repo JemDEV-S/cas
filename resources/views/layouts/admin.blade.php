@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ config('app.name', 'Sistema CAS') }} - @yield('title')</title>
+    <title>{{ config('app.name', 'Sistema CAS') }} - @yield('title', 'Dashboard')</title>
 
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
@@ -16,20 +16,16 @@
 </head>
 <body class="font-sans antialiased bg-gray-50">
     <div class="min-h-screen">
-        @include('layouts.partials.admin-sidebar')
+        @include('layouts.partials.navigation')
 
-        <div class="lg:pl-64">
-            @include('layouts.partials.admin-header')
+        <!-- Page Content -->
+        <main>
+            @include('layouts.partials.alerts')
 
-            <main class="py-6">
-                <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                    @include('layouts.partials.breadcrumb')
-                    @include('layouts.partials.alerts')
+            @yield('content')
+        </main>
 
-                    @yield('content')
-                </div>
-            </main>
-        </div>
+        @include('layouts.partials.footer')
     </div>
 
     @stack('scripts')

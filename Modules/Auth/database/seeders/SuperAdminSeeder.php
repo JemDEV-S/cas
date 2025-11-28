@@ -25,7 +25,7 @@ class SuperAdminSeeder extends Seeder
                 'email' => 'admin@cas.com',
                 'first_name' => 'Super',
                 'last_name' => 'Administrador',
-                'password' => Hash::make('AdminCAS2025!'),
+                'password' => Hash::make('password'),
                 'phone' => null,
                 'is_active' => true,
                 'email_verified_at' => now(),
@@ -39,6 +39,6 @@ class SuperAdminSeeder extends Seeder
         $this->command->info("✅ SuperAdmin creado:");
         $this->command->line("   DNI: 12345678");
         $this->command->line("   Email: admin@cas.com");
-        $this->command->line("   Contraseña: AdminCAS2025!");
+        $this->command->line("   Contraseña: password");
     }
 }
