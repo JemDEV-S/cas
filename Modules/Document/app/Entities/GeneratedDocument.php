@@ -136,7 +136,7 @@ class GeneratedDocument extends BaseSoftDelete
     public function canBeSignedBy(string $userId): bool
     {
         return $this->current_signer_id === $userId &&
-               $this->signature_status === 'pending';
+               $this->signature_status === 'in_progress';
     }
 
     // Accessors

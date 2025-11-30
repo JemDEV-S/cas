@@ -10,6 +10,7 @@ use Modules\Document\Entities\GeneratedDocument;
 use Modules\Document\Entities\DigitalSignature;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Cache;
 
 class DocumentSignatureController extends Controller
 {
@@ -47,6 +48,33 @@ class DocumentSignatureController extends Controller
     }
 
     /**
+     * Inicia el proceso de firma digital (guarda token en cache)
+     */
+    public function startSignature(GeneratedDocument $document, Request $request)
+    {
+        $this->authorize('sign', $document);
+
+        $request->validate([
+            'signature_token' => 'required|string',
+            'document_id' => 'required|string',
+            'signature_id' => 'required|string',
+        ]);
+
+        $token = $request->input('signature_token');
+        $documentId = $request->input('document_id');
+        $signatureId = $request->input('signature_id');
+
+        // Guardar en cache (TTL: 10 minutos) para que FIRMA PERÚ pueda acceder
+        Cache::put("firmaperu_doc_{$token}", $documentId, now()->addMinutes(10));
+        Cache::put("firmaperu_sig_{$token}", $signatureId, now()->addMinutes(10));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Firma iniciada correctamente',
+        ]);
+    }
+
+    /**
      * API: Obtiene los parámetros de firma para FIRMA PERÚ
      * Este endpoint es llamado por el componente web de FIRMA PERÚ
      */
@@ -59,12 +87,12 @@ class DocumentSignatureController extends Controller
             return response()->json(['error' => 'Token no válido'], 401);
         }
 
-        // Obtener el ID del documento y firma desde la sesión o cache
-        $documentId = session("signature_doc_{$token}");
-        $signatureId = session("signature_sig_{$token}");
+        // Obtener el ID del documento y firma desde el cache
+        $documentId = Cache::get("firmaperu_doc_{$token}");
+        $signatureId = Cache::get("firmaperu_sig_{$token}");
 
         if (!$documentId || !$signatureId) {
-            return response()->json(['error' => 'Sesión expirada'], 401);
+            return response()->json(['error' => 'Token expirado o inválido'], 401);
         }
 
         $document = GeneratedDocument::findOrFail($documentId);
@@ -74,9 +102,11 @@ class DocumentSignatureController extends Controller
         $params = $this->firmaPeruService->prepareSignatureParams($document, $signature);
 
         // Retornar parámetros codificados en Base64
-        return response()->json(
-            base64_encode(json_encode($params))
-        );
+        // FIRMA PERÚ espera texto plano con el base64, no JSON
+        $base64Params = base64_encode(json_encode($params));
+
+        return response($base64Params, 200)
+            ->header('Content-Type', 'text/plain');
     }
 
     /**
@@ -90,7 +120,14 @@ class DocumentSignatureController extends Controller
         // Validar token
         $validDocId = $this->firmaPeruService->validateDownloadToken($token);
 
-        if ($validDocId !== $document->id) {
+        if (!$validDocId || $validDocId != $document->id) {
+            \Log::error('Download token validation failed', [
+                'token' => $token,
+                'expected_doc_id' => $document->id,
+                'expected_type' => gettype($document->id),
+                'cached_doc_id' => $validDocId,
+                'cached_type' => gettype($validDocId),
+            ]);
             abort(403, 'Token no válido');
         }
 
@@ -98,6 +135,10 @@ class DocumentSignatureController extends Controller
         $path = $document->pdf_path;
 
         if (!$path || !Storage::disk('private')->exists($path)) {
+            \Log::error('PDF file not found', [
+                'document_id' => $document->id,
+                'pdf_path' => $path,
+            ]);
             abort(404, 'Documento no encontrado');
         }
 

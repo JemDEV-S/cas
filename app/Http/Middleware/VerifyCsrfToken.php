@@ -12,6 +12,7 @@ class VerifyCsrfToken extends Middleware
      * @var array<int, string>
      */
     protected $except = [
-        //
+        // Rutas de FIRMA PERÚ (llamadas desde componente local, no desde navegador)
+        'api/*',
     ];
 }

@@ -41,10 +41,11 @@ class RouteServiceProvider extends ServiceProvider
     /**
      * Define the "api" routes for the application.
      *
-     * These routes are typically stateless.
+     * NOTA: Las rutas de FIRMA PERÚ usan middleware 'web' y están bajo /api
+     * pero SIN el middleware group 'api' porque necesitan sesión
      */
     protected function mapApiRoutes(): void
     {
-        Route::middleware('api')->prefix('api')->name('api.')->group(module_path($this->name, '/routes/api.php'));
+        Route::prefix('api')->name('api.')->group(module_path($this->name, '/routes/api.php'));
     }
 }

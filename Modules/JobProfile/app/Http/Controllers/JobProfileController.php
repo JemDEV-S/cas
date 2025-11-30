@@ -143,8 +143,58 @@ class JobProfileController extends Controller
             abort(403, 'No se puede editar este perfil en su estado actual.');
         }
 
-        return view('jobprofile::edit', compact('jobProfile'));
+        $user = auth()->user();
+
+        // Unidades Organizacionales
+        $organizationalUnits = \Modules\Organization\Entities\OrganizationalUnit::where('is_active', true)
+            ->orderBy('name')
+            ->get()
+            ->pluck('name', 'id')
+            ->toArray();
+
+        // Position Codes
+        $positionCodes = \Modules\JobProfile\Entities\PositionCode::where('is_active', true)
+            ->orderBy('code')
+            ->get()
+            ->mapWithKeys(fn($pc) => [$pc->id => $pc->code . ' - ' . $pc->title])
+            ->toArray();
+
+        // ¿Es usuário de área?
+        $isAreaUser = $user->hasRole('area-user');
+
+        // Unidad organizacional primaria del usuario
+        $userOrganizationalUnit = null;
+        if ($isAreaUser) {
+            $userOrgUnit = \Modules\User\Entities\UserOrganizationUnit::where('user_id', $user->id)
+                ->where('is_active', true)
+                ->where('is_primary', true)
+                ->first();
+
+            if ($userOrgUnit) {
+                $userOrganizationalUnit = $userOrgUnit->organization_unit_id;
+            }
+        }
+
+        // Opciones de educación
+        $educationOptions = EducationLevelEnum::selectOptions();
+
+        // Convocatoria (job posting)
+        $jobPosting = null;
+        if ($jobProfile->job_posting_id) {
+            $jobPosting = \Modules\JobPosting\Entities\JobPosting::find($jobProfile->job_posting_id);
+        }
+
+        return view('jobprofile::edit', compact(
+            'jobProfile',
+            'organizationalUnits',
+            'positionCodes',
+            'isAreaUser',
+            'userOrganizationalUnit',
+            'educationOptions',
+            'jobPosting'
+        ));
     }
+
 
     /**
      * Update the specified job profile.

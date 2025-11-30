@@ -59,10 +59,12 @@ class FirmaPeruService
         // Generar nuevo token
         $credentials = $this->getCredentials();
 
-        $response = Http::asForm()->post($credentials['token_url'], [
-            'client_id' => $credentials['client_id'],
-            'client_secret' => $credentials['client_secret'],
-        ]);
+        $response = Http::asForm()
+            ->withOptions(['verify' => false]) // Deshabilitar verificación SSL (solo desarrollo)
+            ->post($credentials['token_url'], [
+                'client_id' => $credentials['client_id'],
+                'client_secret' => $credentials['client_secret'],
+            ]);
 
         if (!$response->successful()) {
             throw new \Exception('Error al generar token FIRMA PERÚ: ' . $response->body());

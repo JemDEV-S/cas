@@ -16,5 +16,6 @@ Route::middleware(['auth', 'verified'])->prefix('documents')->name('documents.')
 
     // Firma digital
     Route::get('/{document}/sign', [DocumentSignatureController::class, 'index'])->name('sign');
+    Route::post('/{document}/sign', [DocumentSignatureController::class, 'startSignature'])->name('sign.start');
     Route::post('/{document}/sign/cancel', [DocumentSignatureController::class, 'cancel'])->name('sign.cancel');
 });
