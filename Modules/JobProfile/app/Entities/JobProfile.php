@@ -193,6 +193,33 @@ class JobProfile extends BaseSoftDelete
         return $query->where('work_regime', $workRegime);
     }
 
+    /**
+     * Scope para filtrar solo los perfiles solicitados por el usuario
+     */
+    public function scopeOwnedBy($query, $userId)
+    {
+        return $query->where('requested_by', $userId);
+    }
+
+    /**
+     * Scope para filtrar perfiles según permisos del usuario
+     */
+    public function scopeVisibleFor($query, $user)
+    {
+        // Si tiene permiso para ver todos, no filtrar
+        if ($user->hasPermission('jobprofile.view.profiles')) {
+            return $query;
+        }
+
+        // Si solo puede ver los propios, filtrar por requested_by
+        if ($user->hasPermission('jobprofile.view.own')) {
+            return $query->where('requested_by', $user->id);
+        }
+
+        // Si no tiene ningún permiso, no mostrar nada
+        return $query->whereRaw('1 = 0');
+    }
+
     // Métodos de estado
     public function isDraft(): bool
     {

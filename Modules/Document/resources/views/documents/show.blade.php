@@ -15,11 +15,26 @@
                         <i class="fas fa-arrow-left mr-2"></i> Volver
                     </x-button>
                 </a>
-                <a href="{{ route('documents.download', $document) }}" target="_blank">
-                    <x-button variant="secondary">
-                        <i class="fas fa-download mr-2"></i> Descargar PDF
-                    </x-button>
-                </a>
+
+                @if($document->hasAnySignature())
+                    <a href="{{ route('documents.download', ['document' => $document, 'signed' => true]) }}" target="_blank">
+                        <x-button variant="success">
+                            <i class="fas fa-certificate mr-2"></i> Descargar Firmado
+                        </x-button>
+                    </a>
+                    <a href="{{ route('documents.download', $document) }}" target="_blank">
+                        <x-button variant="outline">
+                            <i class="fas fa-download mr-2"></i> Descargar Original
+                        </x-button>
+                    </a>
+                @else
+                    <a href="{{ route('documents.download', $document) }}" target="_blank">
+                        <x-button variant="secondary">
+                            <i class="fas fa-download mr-2"></i> Descargar PDF
+                        </x-button>
+                    </a>
+                @endif
+
                 @if($document->canBeSignedBy(auth()->id()))
                     <a href="{{ route('documents.sign', $document) }}">
                         <x-button variant="primary">
@@ -188,24 +203,48 @@
             <x-card>
                 <h3 class="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">
                     <i class="fas fa-file-pdf mr-2"></i> Vista Previa
+                    @if($document->hasAnySignature())
+                        <span class="ml-2 text-xs px-2 py-1 bg-green-100 text-green-800 rounded-full">
+                            <i class="fas fa-certificate"></i> {{ $document->isFullySigned() ? 'Firmado' : 'Parcialmente Firmado' }}
+                        </span>
+                    @endif
                 </h3>
+
+                @if($document->hasAnySignature())
+                    <!-- Tabs para cambiar entre versiones -->
+                    <div class="mb-4 flex border-b border-gray-200">
+                        <button
+                            onclick="changeDocumentVersion(false)"
+                            id="tab-original"
+                            class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:border-gray-300 border-b-2 border-transparent transition-colors">
+                            Original
+                        </button>
+                        <button
+                            onclick="changeDocumentVersion(true)"
+                            id="tab-signed"
+                            class="px-4 py-2 text-sm font-medium text-blue-600 border-b-2 border-blue-500 transition-colors">
+                            <i class="fas fa-certificate mr-1"></i> Con Firmas ({{ $document->signatures_completed }}/{{ $document->total_signatures_required }})
+                        </button>
+                    </div>
+                @endif
 
                 <div class="aspect-[3/4] bg-gray-100 rounded-lg overflow-hidden">
                     <iframe
-                        src="{{ route('documents.view', $document) }}"
+                        id="pdf-viewer"
+                        src="{{ route('documents.view', ['document' => $document, 'signed' => $document->hasAnySignature() ? true : false]) }}"
                         class="w-full h-full"
                         frameborder="0"
                     ></iframe>
                 </div>
 
                 <div class="mt-4 space-y-2">
-                    <a href="{{ route('documents.view', $document) }}" target="_blank" class="block">
+                    <a href="{{ route('documents.view', ['document' => $document, 'signed' => $document->hasAnySignature() ? true : false]) }}" target="_blank" class="block" id="open-new-tab">
                         <x-button variant="outline" class="w-full">
                             <i class="fas fa-external-link-alt mr-2"></i> Abrir en nueva pestaña
                         </x-button>
                     </a>
 
-                    @if($document->signed_pdf_path)
+                    @if($document->hasAnySignature())
                         <a href="{{ route('documents.download', ['document' => $document, 'signed' => true]) }}" class="block">
                             <x-button variant="secondary" class="w-full">
                                 <i class="fas fa-download mr-2"></i> Descargar Versión Firmada
@@ -215,6 +254,36 @@
                 </div>
             </x-card>
 
+            @if($document->hasAnySignature())
+                <script>
+                    let currentVersion = true; // Empieza mostrando la versión firmada
+
+                    function changeDocumentVersion(signed) {
+                        currentVersion = signed;
+                        const iframe = document.getElementById('pdf-viewer');
+                        const openNewTab = document.getElementById('open-new-tab');
+                        const tabOriginal = document.getElementById('tab-original');
+                        const tabSigned = document.getElementById('tab-signed');
+
+                        // Cambiar iframe
+                        const baseUrl = '{{ route('documents.view', $document) }}';
+                        iframe.src = baseUrl + (signed ? '?signed=1' : '');
+
+                        // Actualizar link de abrir en nueva pestaña
+                        openNewTab.href = baseUrl + (signed ? '?signed=1' : '');
+
+                        // Actualizar estilos de tabs
+                        if (signed) {
+                            tabOriginal.className = 'px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:border-gray-300 border-b-2 border-transparent transition-colors';
+                            tabSigned.className = 'px-4 py-2 text-sm font-medium text-blue-600 border-b-2 border-blue-500 transition-colors';
+                        } else {
+                            tabOriginal.className = 'px-4 py-2 text-sm font-medium text-blue-600 border-b-2 border-blue-500 transition-colors';
+                            tabSigned.className = 'px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:border-gray-300 border-b-2 border-transparent transition-colors';
+                        }
+                    }
+                </script>
+            @endif
+
             <!-- Acciones Rápidas -->
             @can('update', $document)
                 <x-card>
@@ -223,12 +292,21 @@
                     </h3>
 
                     <div class="space-y-2">
-                        <form action="{{ route('documents.regenerate', $document) }}" method="POST">
-                            @csrf
-                            <x-button variant="outline" class="w-full" type="submit">
-                                <i class="fas fa-sync mr-2"></i> Regenerar PDF
-                            </x-button>
-                        </form>
+                        @if($document->status !== 'signed' && !$document->hasAnySignature())
+                            <form action="{{ route('documents.regenerate', $document) }}" method="POST">
+                                @csrf
+                                <x-button variant="outline" class="w-full" type="submit">
+                                    <i class="fas fa-sync mr-2"></i> Regenerar PDF
+                                </x-button>
+                            </form>
+                        @else
+                            <div class="text-center py-3 px-4 bg-gray-50 rounded-lg border border-gray-200">
+                                <i class="fas fa-lock text-gray-400 text-lg mb-2"></i>
+                                <p class="text-xs text-gray-600">
+                                    No se puede regenerar un<br>documento con firmas
+                                </p>
+                            </div>
+                        @endif
 
                         @can('delete', $document)
                             <form action="{{ route('documents.destroy', $document) }}" method="POST"

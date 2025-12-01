@@ -236,23 +236,14 @@ class FirmaPeruService
 
         Storage::disk('private')->put($path, file_get_contents($signedFile->getRealPath()));
 
-        // Actualizar la firma digital
+        // Actualizar solo la ruta del documento firmado
+        // El estado se actualizará en SignatureService::processSignature
         $signature->update([
             'signed_document_path' => $path,
-            'signed_at' => now(),
-            'status' => 'signed',
-            'ip_address' => request()->ip(),
-            'user_agent' => request()->userAgent(),
         ]);
 
-        // Si es la última firma, actualizar el documento principal
-        if ($document->isFullySigned()) {
-            $document->update([
-                'signed_pdf_path' => $path,
-                'status' => 'signed',
-                'signature_status' => 'completed',
-            ]);
-        }
+        // NOTA: No actualizamos signed_pdf_path aquí porque signatures_completed
+        // aún no se ha incrementado. Esto se hace en SignatureService::advanceWorkflow()
     }
 
     /**

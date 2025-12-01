@@ -41,44 +41,74 @@
         @endif
 
         <!-- Información General -->
-        <x-card title="Información General">
+        <x-card title="📋 Información General">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <x-form.input
-                    type="text"
-                    name="title"
-                    label="Título del Puesto"
-                    :value="old('title')"
-                    required
-                    placeholder="Ej: Especialista en Recursos Humanos"
-                />
+                <div class="md:col-span-2">
+                    <x-form.input
+                        type="text"
+                        name="title"
+                        label="Título del Puesto"
+                        :value="old('title')"
+                        required
+                        placeholder="Ej: Especialista en Recursos Humanos"
+                    />
+                </div>
 
                 <x-form.input
                     type="text"
                     name="profile_name"
                     label="Nombre del Perfil"
                     :value="old('profile_name')"
-                    placeholder="Nombre interno del perfil"
+                    placeholder="Nombre interno del perfil (opcional)"
                 />
+
+                <!-- Código de Posición - Mejorado con autocompletado -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Código de Posición <span class="text-red-500">*</span>
+                    </label>
+                    <select
+                        id="position_code_id"
+                        name="position_code_id"
+                        class="border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm w-full"
+                        onchange="autoFillFromPositionCode()">
+                        <option value="">Seleccione un código</option>
+                        @foreach($positionCodes ?? [] as $id => $name)
+                            <option value="{{ $id }}" {{ old('position_code_id') == $id ? 'selected' : '' }}>
+                                {{ $name }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <p class="mt-1 text-xs text-gray-500">
+                        <i class="fas fa-magic"></i> Al seleccionar un código, se autocompletarán algunos requisitos
+                    </p>
+                    @error('position_code_id')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
 
                 @if($isAreaUser ?? false)
                     <!-- Campo bloqueado para area-user -->
-                    <div>
+                    <div class="md:col-span-2">
                         <label class="block text-sm font-medium text-gray-700 mb-1">
                             Unidad Organizacional <span class="text-red-500">*</span>
                         </label>
-                        <select
-                            name="organizational_unit_id"
-                            class="border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm w-full bg-gray-100"
-                            required
-                            disabled>
-                            @foreach($organizationalUnits ?? [] as $id => $name)
-                                @if($id == $userOrganizationalUnit)
-                                    <option value="{{ $id }}" selected>{{ $name }}</option>
-                                @endif
-                            @endforeach
-                        </select>
+                        <div class="relative">
+                            <select
+                                class="border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm w-full bg-gray-100 cursor-not-allowed"
+                                disabled>
+                                @foreach($organizationalUnits ?? [] as $id => $name)
+                                    @if($id == $userOrganizationalUnit)
+                                        <option value="{{ $id }}" selected>{{ $name }}</option>
+                                    @endif
+                                @endforeach
+                            </select>
+                            <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                <i class="fas fa-lock text-gray-400"></i>
+                            </div>
+                        </div>
                         <input type="hidden" name="organizational_unit_id" value="{{ $userOrganizationalUnit }}">
-                        <p class="mt-1 text-xs text-gray-500">
+                        <p class="mt-1 text-xs text-blue-600">
                             <i class="fas fa-info-circle"></i> Este campo está bloqueado con su unidad organizacional
                         </p>
                         @error('organizational_unit_id')
@@ -86,27 +116,21 @@
                         @enderror
                     </div>
                 @else
-                    <x-form.select
-                        name="organizational_unit_id"
-                        label="Unidad Organizacional"
-                        :options="$organizationalUnits ?? []"
-                        :selected="old('organizational_unit_id')"
-                        required
-                        placeholder="Seleccione una unidad"
-                    />
+                    <div class="md:col-span-2">
+                        <x-form.select
+                            name="organizational_unit_id"
+                            label="Unidad Organizacional"
+                            :options="$organizationalUnits ?? []"
+                            :selected="old('organizational_unit_id')"
+                            required
+                            placeholder="Seleccione una unidad"
+                        />
+                    </div>
                 @endif
-
-                <x-form.select
-                    name="position_code_id"
-                    label="Código de Posición"
-                    :options="$positionCodes ?? []"
-                    :selected="old('position_code_id')"
-                    placeholder="Seleccione un código"
-                />
 
                 @if(!request('job_posting_id'))
                 <!-- Campo para seleccionar convocatoria (solo si no viene pre-seleccionada) -->
-                <div>
+                <div class="md:col-span-2">
                     <label class="block text-sm font-medium text-gray-700 mb-1">
                         Convocatoria (Opcional)
                     </label>
@@ -147,7 +171,7 @@
                     <input
                         type="text"
                         value="CAS - Contrato Administrativo de Servicios (D.L. 1057)"
-                        class="border-gray-300 bg-gray-100 rounded-md shadow-sm w-full"
+                        class="border-gray-300 bg-gray-100 rounded-md shadow-sm w-full cursor-not-allowed"
                         disabled
                         readonly>
                     <p class="mt-1 text-xs text-gray-500">
@@ -165,63 +189,87 @@
                 />
             </div>
 
-            <div class="mt-4">
-                <label for="description" class="block text-sm font-medium text-gray-700 mb-1">
-                    Descripción del Puesto
-                </label>
-                <textarea
-                    name="description"
-                    id="description"
-                    rows="3"
-                    class="border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm w-full"
-                    placeholder="Descripción general del puesto">{{ old('description') }}</textarea>
-                @error('description')
-                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                @enderror
-            </div>
+            <div class="mt-6 space-y-4">
+                <div>
+                    <label for="description" class="block text-sm font-medium text-gray-700 mb-1">
+                        Descripción del Puesto
+                    </label>
+                    <textarea
+                        name="description"
+                        id="description"
+                        rows="3"
+                        class="border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm w-full"
+                        placeholder="Descripción general del puesto y sus objetivos">{{ old('description') }}</textarea>
+                    @error('description')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
 
-            <div class="mt-4">
-                <label for="mission" class="block text-sm font-medium text-gray-700 mb-1">
-                    Misión del Puesto
-                </label>
-                <textarea
-                    name="mission"
-                    id="mission"
-                    rows="3"
-                    class="border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm w-full"
-                    placeholder="Razón de ser del puesto">{{ old('mission') }}</textarea>
-                @error('mission')
-                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                @enderror
-            </div>
+                <div>
+                    <label for="mission" class="block text-sm font-medium text-gray-700 mb-1">
+                        Misión del Puesto
+                    </label>
+                    <textarea
+                        name="mission"
+                        id="mission"
+                        rows="3"
+                        class="border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm w-full"
+                        placeholder="Razón de ser del puesto dentro de la organización">{{ old('mission') }}</textarea>
+                    @error('mission')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
 
-            <div class="mt-4">
-                <label for="justification" class="block text-sm font-medium text-gray-700 mb-1">
-                    Justificación <span class="text-red-500">*</span>
-                </label>
-                <textarea
-                    name="justification"
-                    id="justification"
-                    rows="3"
-                    required
-                    class="border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm w-full"
-                    placeholder="Justifique la necesidad de este perfil de puesto">{{ old('justification') }}</textarea>
-                @error('justification')
-                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                @enderror
+                <div>
+                    <label for="justification" class="block text-sm font-medium text-gray-700 mb-1">
+                        Justificación <span class="text-red-500">*</span>
+                    </label>
+                    <textarea
+                        name="justification"
+                        id="justification"
+                        rows="3"
+                        required
+                        class="border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm w-full"
+                        placeholder="Justifique la necesidad de este perfil de puesto">{{ old('justification') }}</textarea>
+                    @error('justification')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
             </div>
         </x-card>
 
         <!-- Requisitos Académicos -->
-        <x-card title="Requisitos Académicos">
+        <x-card title="🎓 Requisitos Académicos">
+            <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
+                <p class="text-sm text-blue-700">
+                    <i class="fas fa-lightbulb"></i> <strong>Tip:</strong> Estos campos se autocompletarán al seleccionar un Código de Posición
+                </p>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <x-form.select
-                    name="education_level"
-                    label="Nivel Educativo"
-                    :options="$educationOptions"
-                    :selected="old('education_level')"
-                    required
-                />
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Nivel Educativo <span class="text-red-500">*</span>
+                    </label>
+                    <select
+                        id="education_level"
+                        name="education_level"
+                        class="border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm w-full"
+                        required>
+                        <option value="">Seleccione un nivel</option>
+                        @foreach($educationOptions as $value => $label)
+                            <option value="{{ $value }}" {{ old('education_level') == $value ? 'selected' : '' }}>
+                                {{ $label }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <span id="education_level_indicator" class="hidden text-xs text-green-600 mt-1">
+                        <i class="fas fa-check-circle"></i> Autocompletado desde Código de Posición
+                    </span>
+                    @error('education_level')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
 
                 <x-form.input
                     type="text"
@@ -231,49 +279,91 @@
                     placeholder="Ej: Administración, Ingeniería, Derecho"
                 />
 
-                <x-form.input
-                    type="text"
-                    name="title_required"
-                    label="Título Requerido"
-                    :value="old('title_required')"
-                    placeholder="Ej: Licenciado en Administración"
-                />
+                <div>
+                    <label for="title_required" class="block text-sm font-medium text-gray-700 mb-1">
+                        Título Requerido
+                    </label>
+                    <input
+                        type="text"
+                        id="title_required"
+                        name="title_required"
+                        value="{{ old('title_required') }}"
+                        class="border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm w-full"
+                        placeholder="Ej: Licenciado en Administración">
+                    <span id="title_required_indicator" class="hidden text-xs text-green-600 mt-1">
+                        <i class="fas fa-check-circle"></i> Autocompletado desde Código de Posición
+                    </span>
+                    @error('title_required')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
 
                 <div class="flex items-center mt-6">
                     <input
                         type="checkbox"
-                        name="colegiatura_required"
                         id="colegiatura_required"
+                        name="colegiatura_required"
                         value="1"
                         {{ old('colegiatura_required') ? 'checked' : '' }}
                         class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
                     <label for="colegiatura_required" class="ml-2 block text-sm text-gray-900">
                         Colegiatura Requerida
                     </label>
+                    <span id="colegiatura_indicator" class="hidden text-xs text-green-600 ml-2">
+                        <i class="fas fa-check-circle"></i> Autocompletado
+                    </span>
                 </div>
             </div>
         </x-card>
 
         <!-- Experiencia Laboral -->
-        <x-card title="Experiencia Laboral">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <x-form.input
-                    type="number"
-                    name="general_experience_years"
-                    label="Experiencia General (años)"
-                    :value="old('general_experience_years', 0)"
-                    step="0.5"
-                    min="0"
-                />
+        <x-card title="💼 Experiencia Laboral">
+            <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
+                <p class="text-sm text-blue-700">
+                    <i class="fas fa-lightbulb"></i> <strong>Tip:</strong> Los años de experiencia se autocompletarán según el Código de Posición
+                </p>
+            </div>
 
-                <x-form.input
-                    type="number"
-                    name="specific_experience_years"
-                    label="Experiencia Específica (años)"
-                    :value="old('specific_experience_years', 0)"
-                    step="0.5"
-                    min="0"
-                />
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="general_experience_years" class="block text-sm font-medium text-gray-700 mb-1">
+                        Experiencia General (años)
+                    </label>
+                    <input
+                        type="number"
+                        id="general_experience_years"
+                        name="general_experience_years"
+                        value="{{ old('general_experience_years', 0) }}"
+                        step="0.5"
+                        min="0"
+                        class="border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm w-full">
+                    <span id="general_experience_indicator" class="hidden text-xs text-green-600 mt-1">
+                        <i class="fas fa-check-circle"></i> Autocompletado desde Código de Posición
+                    </span>
+                    @error('general_experience_years')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <div>
+                    <label for="specific_experience_years" class="block text-sm font-medium text-gray-700 mb-1">
+                        Experiencia Específica (años)
+                    </label>
+                    <input
+                        type="number"
+                        id="specific_experience_years"
+                        name="specific_experience_years"
+                        value="{{ old('specific_experience_years', 0) }}"
+                        step="0.5"
+                        min="0"
+                        class="border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm w-full">
+                    <span id="specific_experience_indicator" class="hidden text-xs text-green-600 mt-1">
+                        <i class="fas fa-check-circle"></i> Autocompletado desde Código de Posición
+                    </span>
+                    @error('specific_experience_years')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
             </div>
 
             <div class="mt-4">
@@ -285,7 +375,7 @@
                     id="specific_experience_description"
                     rows="3"
                     class="border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm w-full"
-                    placeholder="Describa la experiencia específica requerida">{{ old('specific_experience_description') }}</textarea>
+                    placeholder="Describa la experiencia específica requerida (sector, funciones, logros esperados)">{{ old('specific_experience_description') }}</textarea>
                 @error('specific_experience_description')
                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                 @enderror
@@ -293,7 +383,7 @@
         </x-card>
 
         <!-- Capacitación y Cursos -->
-        <x-card title="Capacitación y Cursos Requeridos">
+        <x-card title="📚 Capacitación y Cursos Requeridos">
             <div id="courses-container" class="space-y-3">
                 @if(old('required_courses'))
                     @foreach(old('required_courses') as $index => $course)
@@ -304,7 +394,7 @@
                                 value="{{ $course }}"
                                 class="flex-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm"
                                 placeholder="Ej: Curso de Gestión Pública">
-                            <button type="button" onclick="removeCourse(this)" class="px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600">
+                            <button type="button" onclick="removeCourse(this)" class="px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
@@ -315,8 +405,8 @@
                             type="text"
                             name="required_courses[]"
                             class="flex-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm"
-                            placeholder="Ej: Curso de Gestión Pública">
-                        <button type="button" onclick="removeCourse(this)" class="px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600">
+                            placeholder="Ej: Curso de Gestión Pública, Administración del Estado">
+                        <button type="button" onclick="removeCourse(this)" class="px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
@@ -330,7 +420,7 @@
         </x-card>
 
         <!-- Conocimientos y Áreas de Conocimiento -->
-        <x-card title="Conocimientos Técnicos y Áreas de Conocimiento">
+        <x-card title="🧠 Conocimientos Técnicos y Áreas de Conocimiento">
             <div id="knowledge-container" class="space-y-3">
                 @if(old('knowledge_areas'))
                     @foreach(old('knowledge_areas') as $index => $knowledge)
@@ -341,7 +431,7 @@
                                 value="{{ $knowledge }}"
                                 class="flex-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm"
                                 placeholder="Ej: Microsoft Office Avanzado, Conocimiento en legislación laboral">
-                            <button type="button" onclick="removeKnowledge(this)" class="px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600">
+                            <button type="button" onclick="removeKnowledge(this)" class="px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
@@ -353,7 +443,7 @@
                             name="knowledge_areas[]"
                             class="flex-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm"
                             placeholder="Ej: Microsoft Office Avanzado, Conocimiento en legislación laboral">
-                        <button type="button" onclick="removeKnowledge(this)" class="px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600">
+                        <button type="button" onclick="removeKnowledge(this)" class="px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
@@ -367,7 +457,7 @@
         </x-card>
 
         <!-- Competencias Requeridas -->
-        <x-card title="Competencias Requeridas">
+        <x-card title="⭐ Competencias Requeridas">
             <div id="competencies-container" class="space-y-3">
                 @if(old('required_competencies'))
                     @foreach(old('required_competencies') as $index => $competency)
@@ -378,7 +468,7 @@
                                 value="{{ $competency }}"
                                 class="flex-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm"
                                 placeholder="Ej: Trabajo en equipo, Liderazgo, Orientación a resultados">
-                            <button type="button" onclick="removeCompetency(this)" class="px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600">
+                            <button type="button" onclick="removeCompetency(this)" class="px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
@@ -390,7 +480,7 @@
                             name="required_competencies[]"
                             class="flex-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm"
                             placeholder="Ej: Trabajo en equipo, Liderazgo, Orientación a resultados">
-                        <button type="button" onclick="removeCompetency(this)" class="px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600">
+                        <button type="button" onclick="removeCompetency(this)" class="px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
@@ -404,7 +494,7 @@
         </x-card>
 
         <!-- Funciones Principales -->
-        <x-card title="Funciones Principales del Puesto">
+        <x-card title="📝 Funciones Principales del Puesto">
             <div id="functions-container" class="space-y-3">
                 @if(old('main_functions'))
                     @foreach(old('main_functions') as $index => $function)
@@ -415,7 +505,7 @@
                                 value="{{ $function }}"
                                 class="flex-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm"
                                 placeholder="Descripción de la función">
-                            <button type="button" onclick="removeFunction(this)" class="px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600">
+                            <button type="button" onclick="removeFunction(this)" class="px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
@@ -426,8 +516,8 @@
                             type="text"
                             name="main_functions[]"
                             class="flex-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm"
-                            placeholder="Descripción de la función">
-                        <button type="button" onclick="removeFunction(this)" class="px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600">
+                            placeholder="Descripción de la función principal del puesto">
+                        <button type="button" onclick="removeFunction(this)" class="px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
@@ -441,7 +531,7 @@
         </x-card>
 
         <!-- Condiciones de Trabajo -->
-        <x-card title="Condiciones de Trabajo">
+        <x-card title="🏢 Condiciones de Trabajo">
             <div>
                 <label for="working_conditions" class="block text-sm font-medium text-gray-700 mb-1">
                     Condiciones de Trabajo
@@ -451,7 +541,7 @@
                     id="working_conditions"
                     rows="3"
                     class="border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm w-full"
-                    placeholder="Describa las condiciones especiales del trabajo (horario, ubicación, etc.)">{{ old('working_conditions') }}</textarea>
+                    placeholder="Describa las condiciones especiales del trabajo (horario, ubicación, modalidad presencial/remota, etc.)">{{ old('working_conditions') }}</textarea>
                 @error('working_conditions')
                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                 @enderror
@@ -462,7 +552,7 @@
         <div class="flex justify-end gap-4">
             <a href="{{ route('jobprofile.index') }}">
                 <x-button type="button" variant="secondary">
-                    Cancelar
+                    <i class="fas fa-times mr-2"></i> Cancelar
                 </x-button>
             </a>
             <x-button type="submit" variant="primary">
@@ -474,6 +564,101 @@
 
 @push('scripts')
 <script>
+// Datos de position codes para autocompletado
+const positionCodesData = @json($positionCodesData ?? []);
+
+// Función para autocompletar campos desde Position Code
+function autoFillFromPositionCode() {
+    const positionCodeId = document.getElementById('position_code_id').value;
+
+    if (!positionCodeId || !positionCodesData[positionCodeId]) {
+        // Ocultar todos los indicadores si no hay selección
+        hideAllIndicators();
+        return;
+    }
+
+    const data = positionCodesData[positionCodeId];
+
+    // Autocompletar Nivel Educativo
+    if (data.education_level) {
+        document.getElementById('education_level').value = data.education_level;
+        showIndicator('education_level_indicator');
+    }
+
+    // Autocompletar Título Requerido (checkbox → texto)
+    if (data.title_required !== null && data.title_required !== undefined) {
+        const titleField = document.getElementById('title_required');
+        if (data.title_required) {
+            titleField.placeholder = 'Título profesional requerido (especifique)';
+            showIndicator('title_required_indicator');
+        }
+    }
+
+    // Autocompletar Colegiatura Requerida
+    if (data.colegiatura_required !== null && data.colegiatura_required !== undefined) {
+        document.getElementById('colegiatura_required').checked = data.colegiatura_required;
+        if (data.colegiatura_required) {
+            showIndicator('colegiatura_indicator');
+        }
+    }
+
+    // Autocompletar Experiencia General
+    if (data.general_experience_years !== null && data.general_experience_years !== undefined) {
+        document.getElementById('general_experience_years').value = data.general_experience_years;
+        showIndicator('general_experience_indicator');
+    }
+
+    // Autocompletar Experiencia Específica
+    if (data.specific_experience_years !== null && data.specific_experience_years !== undefined) {
+        document.getElementById('specific_experience_years').value = data.specific_experience_years;
+        showIndicator('specific_experience_indicator');
+    }
+
+    // Mostrar notificación de éxito
+    showSuccessNotification();
+}
+
+function showIndicator(indicatorId) {
+    const indicator = document.getElementById(indicatorId);
+    if (indicator) {
+        indicator.classList.remove('hidden');
+        indicator.classList.add('inline-block');
+    }
+}
+
+function hideAllIndicators() {
+    const indicators = [
+        'education_level_indicator',
+        'title_required_indicator',
+        'colegiatura_indicator',
+        'general_experience_indicator',
+        'specific_experience_indicator'
+    ];
+
+    indicators.forEach(id => {
+        const indicator = document.getElementById(id);
+        if (indicator) {
+            indicator.classList.add('hidden');
+            indicator.classList.remove('inline-block');
+        }
+    });
+}
+
+function showSuccessNotification() {
+    // Crear notificación temporal
+    const notification = document.createElement('div');
+    notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in';
+    notification.innerHTML = '<i class="fas fa-check-circle mr-2"></i> Campos autocompletados desde el Código de Posición';
+    document.body.appendChild(notification);
+
+    // Remover después de 3 segundos
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transition = 'opacity 0.5s';
+        setTimeout(() => notification.remove(), 500);
+    }, 3000);
+}
+
 // Funciones Principales
 function addFunction() {
     const container = document.getElementById('functions-container');
@@ -484,8 +669,8 @@ function addFunction() {
             type="text"
             name="main_functions[]"
             class="flex-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm"
-            placeholder="Descripción de la función">
-        <button type="button" onclick="removeFunction(this)" class="px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600">
+            placeholder="Descripción de la función principal del puesto">
+        <button type="button" onclick="removeFunction(this)" class="px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition">
             <i class="fas fa-trash"></i>
         </button>
     `;
@@ -512,8 +697,8 @@ function addCourse() {
             type="text"
             name="required_courses[]"
             class="flex-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm"
-            placeholder="Ej: Curso de Gestión Pública">
-        <button type="button" onclick="removeCourse(this)" class="px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600">
+            placeholder="Ej: Curso de Gestión Pública, Administración del Estado">
+        <button type="button" onclick="removeCourse(this)" class="px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition">
             <i class="fas fa-trash"></i>
         </button>
     `;
@@ -539,7 +724,7 @@ function addKnowledge() {
             name="knowledge_areas[]"
             class="flex-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm"
             placeholder="Ej: Microsoft Office Avanzado, Conocimiento en legislación laboral">
-        <button type="button" onclick="removeKnowledge(this)" class="px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600">
+        <button type="button" onclick="removeKnowledge(this)" class="px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition">
             <i class="fas fa-trash"></i>
         </button>
     `;
@@ -565,7 +750,7 @@ function addCompetency() {
             name="required_competencies[]"
             class="flex-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm"
             placeholder="Ej: Trabajo en equipo, Liderazgo, Orientación a resultados">
-        <button type="button" onclick="removeCompetency(this)" class="px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600">
+        <button type="button" onclick="removeCompetency(this)" class="px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition">
             <i class="fas fa-trash"></i>
         </button>
     `;
@@ -580,5 +765,15 @@ function removeCompetency(button) {
     }
 }
 </script>
+
+<style>
+@keyframes fade-in {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+    animation: fade-in 0.3s ease-in-out;
+}
+</style>
 @endpush
 @endsection

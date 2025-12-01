@@ -151,16 +151,29 @@ class SignatureService
         // Si ya se completaron todas las firmas
         if ($document->isFullySigned()) {
             $workflow->markAsCompleted();
+
+            // Obtener la última firma (la que acaba de completarse)
+            // NOTA: Usamos Collection methods porque la relación signatures()
+            // tiene un orderBy por defecto que no se puede sobrescribir fácilmente
+            $document->refresh(); // Refrescar relaciones
+            $lastSignedPath = $document->signatures
+                ->where('status', 'signed')
+                ->whereNotNull('signed_document_path')
+                ->sortByDesc('signature_order')
+                ->first()
+                ?->signed_document_path;
+
             $document->update([
                 'status' => 'signed',
                 'signature_status' => 'completed',
                 'current_signer_id' => null,
+                'signed_pdf_path' => $lastSignedPath, // PDF con todas las firmas
             ]);
 
             DocumentAudit::log(
                 $document->id,
                 'fully_signed',
-                auth()->id(),
+                $document->current_signer_id ?? auth()->id(),
                 'Documento completamente firmado'
             );
 
@@ -182,7 +195,7 @@ class SignatureService
             DocumentAudit::log(
                 $document->id,
                 'workflow_advanced',
-                auth()->id(),
+                $nextSigner['user_id'],
                 "Flujo avanzado al paso {$workflow->current_step}"
             );
         }

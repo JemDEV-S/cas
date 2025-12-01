@@ -24,6 +24,9 @@ class JobProfileController extends Controller
      */
     public function index(Request $request): View
     {
+        // Verificar que tenga algún permiso de visualización
+        $this->authorize('viewAny', \Modules\JobProfile\Entities\JobProfile::class);
+
         $status = $request->get('status');
 
         $jobProfiles = $status
@@ -50,22 +53,38 @@ class JobProfileController extends Controller
         $positionCodes = \Modules\JobProfile\Entities\PositionCode::where('is_active', true)
             ->orderBy('code')
             ->get()
-            ->mapWithKeys(fn($pc) => [$pc->id => $pc->code . ' - ' . $pc->title])
+            ->mapWithKeys(fn($pc) => [$pc->id => $pc->code . ' - ' . $pc->name])
             ->toArray();
 
-        // Verificar si el usuario es area-user
-        $isAreaUser = $user->hasRole('area-user');
+        // Obtener datos completos de position codes para autocompletado
+        $positionCodesData = \Modules\JobProfile\Entities\PositionCode::where('is_active', true)
+            ->orderBy('code')
+            ->get()
+            ->keyBy('id')
+            ->map(function($pc) {
+                return [
+                    'education_level' => $pc->education_level_required,
+                    'title_required' => $pc->requires_professional_title,
+                    'colegiatura_required' => $pc->requires_professional_license,
+                    'general_experience_years' => $pc->min_professional_experience,
+                    'specific_experience_years' => $pc->min_specific_experience,
+                ];
+            })
+            ->toArray();
 
+        // Cargar roles del usuario para verificación
+        if (!$user->relationLoaded('roles')) {
+            $user->load('roles');
+        }
+
+        // Verificar si el usuario es area-user de forma más directa
+        $isAreaUser = $user->roles()->where('slug', 'area-user')->exists();
         // Obtener la unidad organizacional del usuario (la primaria y activa)
         $userOrganizationalUnit = null;
         if ($isAreaUser) {
-            $userOrgUnit = \Modules\User\Entities\UserOrganizationUnit::where('user_id', $user->id)
-                ->where('is_active', true)
-                ->where('is_primary', true)
-                ->first();
-
-            if ($userOrgUnit) {
-                $userOrganizationalUnit = $userOrgUnit->organization_unit_id;
+            $primaryUnit = $user->primaryOrganizationUnit();
+            if ($primaryUnit) {
+                $userOrganizationalUnit = $primaryUnit->id;
             }
         }
         $educationOptions = EducationLevelEnum::selectOptions();
@@ -85,6 +104,7 @@ class JobProfileController extends Controller
         return view('jobprofile::create', compact(
             'organizationalUnits',
             'positionCodes',
+            'positionCodesData',
             'isAreaUser',
             'userOrganizationalUnit',
             'educationOptions',
@@ -116,30 +136,40 @@ class JobProfileController extends Controller
 
     /**
      * Display the specified job profile.
+     * El Route Model Binding ya aplica el scope de visibilidad automáticamente
      */
-    public function show(string $id): View
+    public function show(\Modules\JobProfile\Entities\JobProfile $profile): View
     {
-        $jobProfile = $this->jobProfileService->findById($id);
+        // El Route Model Binding ya verificó los permisos, pero agregamos authorize por seguridad
+        $this->authorize('view', $profile);
 
-        if (!$jobProfile) {
-            abort(404, 'Perfil de puesto no encontrado.');
-        }
+        // Cargar relaciones necesarias
+        $profile->load([
+            'positionCode',
+            'organizationalUnit',
+            'requestingUnit',
+            'requestedBy',
+            'reviewedBy',
+            'approvedBy',
+            'requirements',
+            'responsibilities',
+            'vacancies',
+            'history'
+        ]);
 
-        return view('jobprofile::show', compact('jobProfile'));
+        return view('jobprofile::show', ['jobProfile' => $profile]);
     }
 
     /**
      * Show the form for editing the specified job profile.
+     * El Route Model Binding ya aplica el scope de visibilidad automáticamente
      */
-    public function edit(string $id): View
+    public function edit(\Modules\JobProfile\Entities\JobProfile $profile): View
     {
-        $jobProfile = $this->jobProfileService->findById($id);
+        // Verificar que el usuario tenga permiso para editar este perfil
+        $this->authorize('update', $profile);
 
-        if (!$jobProfile) {
-            abort(404, 'Perfil de puesto no encontrado.');
-        }
-
-        if (!$jobProfile->canEdit()) {
+        if (!$profile->canEdit()) {
             abort(403, 'No se puede editar este perfil en su estado actual.');
         }
 
@@ -156,8 +186,27 @@ class JobProfileController extends Controller
         $positionCodes = \Modules\JobProfile\Entities\PositionCode::where('is_active', true)
             ->orderBy('code')
             ->get()
-            ->mapWithKeys(fn($pc) => [$pc->id => $pc->code . ' - ' . $pc->title])
+            ->mapWithKeys(fn($pc) => [$pc->id => $pc->code . ' - ' . $pc->name])
             ->toArray();
+
+        // Obtener datos completos de position codes para autocompletado
+        $positionCodesData = \Modules\JobProfile\Entities\PositionCode::where('is_active', true)
+            ->orderBy('code')
+            ->get()
+            ->keyBy('id')
+            ->map(function($pc) {
+                return [
+                    'education_level' => $pc->education_level_required,
+                    'title_required' => $pc->requires_professional_title,
+                    'colegiatura_required' => $pc->requires_professional_license,
+                    'general_experience_years' => $pc->min_professional_experience,
+                    'specific_experience_years' => $pc->min_specific_experience,
+                ];
+            })
+            ->toArray();
+
+        // Cargar roles del usuario para verificación
+        $user->load('roles');
 
         // ¿Es usuário de área?
         $isAreaUser = $user->hasRole('area-user');
@@ -165,13 +214,9 @@ class JobProfileController extends Controller
         // Unidad organizacional primaria del usuario
         $userOrganizationalUnit = null;
         if ($isAreaUser) {
-            $userOrgUnit = \Modules\User\Entities\UserOrganizationUnit::where('user_id', $user->id)
-                ->where('is_active', true)
-                ->where('is_primary', true)
-                ->first();
-
-            if ($userOrgUnit) {
-                $userOrganizationalUnit = $userOrgUnit->organization_unit_id;
+            $primaryUnit = $user->primaryOrganizationUnit();
+            if ($primaryUnit) {
+                $userOrganizationalUnit = $primaryUnit->id;
             }
         }
 
@@ -180,43 +225,48 @@ class JobProfileController extends Controller
 
         // Convocatoria (job posting)
         $jobPosting = null;
-        if ($jobProfile->job_posting_id) {
-            $jobPosting = \Modules\JobPosting\Entities\JobPosting::find($jobProfile->job_posting_id);
+        if ($profile->job_posting_id) {
+            $jobPosting = \Modules\JobPosting\Entities\JobPosting::find($profile->job_posting_id);
         }
 
-        return view('jobprofile::edit', compact(
-            'jobProfile',
-            'organizationalUnits',
-            'positionCodes',
-            'isAreaUser',
-            'userOrganizationalUnit',
-            'educationOptions',
-            'jobPosting'
-        ));
+        return view('jobprofile::edit', [
+            'jobProfile' => $profile,
+            'organizationalUnits' => $organizationalUnits,
+            'positionCodes' => $positionCodes,
+            'positionCodesData' => $positionCodesData,
+            'isAreaUser' => $isAreaUser,
+            'userOrganizationalUnit' => $userOrganizationalUnit,
+            'educationOptions' => $educationOptions,
+            'jobPosting' => $jobPosting
+        ]);
     }
 
 
     /**
      * Update the specified job profile.
+     * El Route Model Binding ya aplica el scope de visibilidad automáticamente
      */
-    public function update(Request $request, string $id): RedirectResponse
+    public function update(Request $request, \Modules\JobProfile\Entities\JobProfile $profile): RedirectResponse
     {
+        // Verificar que el usuario tenga permiso para actualizar este perfil
+        $this->authorize('update', $profile);
+
         try {
-            $jobProfile = $this->jobProfileService->update(
-                $id,
+            $updatedProfile = $this->jobProfileService->update(
+                $profile->id,
                 $request->except(['requirements', 'responsibilities'])
             );
 
             if ($request->has('requirements')) {
-                $this->jobProfileService->updateRequirements($id, $request->get('requirements'));
+                $this->jobProfileService->updateRequirements($profile->id, $request->get('requirements'));
             }
 
             if ($request->has('responsibilities')) {
-                $this->jobProfileService->updateResponsibilities($id, $request->get('responsibilities'));
+                $this->jobProfileService->updateResponsibilities($profile->id, $request->get('responsibilities'));
             }
 
             return redirect()
-                ->route('jobprofile.profiles.show', $jobProfile->id)
+                ->route('jobprofile.profiles.show', $updatedProfile->id)
                 ->with('success', 'Perfil de puesto actualizado exitosamente.');
         } catch (BusinessRuleException $e) {
             return back()->withInput()->with('error', $e->getMessage());
@@ -227,11 +277,15 @@ class JobProfileController extends Controller
 
     /**
      * Remove the specified job profile.
+     * El Route Model Binding ya aplica el scope de visibilidad automáticamente
      */
-    public function destroy(string $id): RedirectResponse
+    public function destroy(\Modules\JobProfile\Entities\JobProfile $profile): RedirectResponse
     {
+        // Verificar que el usuario tenga permiso para eliminar este perfil
+        $this->authorize('delete', $profile);
+
         try {
-            $this->jobProfileService->delete($id);
+            $this->jobProfileService->delete($profile->id);
 
             return redirect()
                 ->route('jobprofile.index')
@@ -245,24 +299,19 @@ class JobProfileController extends Controller
 
     /**
      * Submit a job profile for review.
+     * El Route Model Binding ya aplica el scope de visibilidad automáticamente
      */
-    public function submitForReview(string $id): RedirectResponse
+    public function submitForReview(\Modules\JobProfile\Entities\JobProfile $profile): RedirectResponse
     {
-        $jobProfile = $this->jobProfileService->findById($id);
-
-        if (!$jobProfile) {
-            abort(404, 'Perfil de puesto no encontrado.');
-        }
-
         // Verificar autorización usando policy
-        $this->authorize('submitForReview', $jobProfile);
+        $this->authorize('submitForReview', $profile);
 
         try {
             $userId = auth()->id();
-            $this->reviewService->submitForReview($id, $userId);
+            $this->reviewService->submitForReview($profile->id, $userId);
 
             return redirect()
-                ->route('jobprofile.profiles.show', $id)
+                ->route('jobprofile.profiles.show', $profile->id)
                 ->with('success', 'Perfil enviado a revisión exitosamente. El equipo de RRHH lo revisará pronto.');
         } catch (BusinessRuleException $e) {
             return back()->with('error', $e->getMessage());

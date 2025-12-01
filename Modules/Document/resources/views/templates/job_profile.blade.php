@@ -4,57 +4,136 @@
     <meta charset="UTF-8">
     <title>{{ $title }}</title>
     <style>
-        body { font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.5; }
-        .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 10px; }
-        .section { margin-bottom: 20px; }
-        .section-title { font-weight: bold; font-size: 12pt; color: #333; margin-top: 15px; margin-bottom: 10px; border-bottom: 1px solid #ccc; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        table, th, td { border: 1px solid #333; }
-        th, td { padding: 8px; text-align: left; }
-        th { background-color: #f0f0f0; }
-        .footer { margin-top: 50px; font-size: 9pt; text-align: center; border-top: 1px solid #ccc; padding-top: 10px; }
-        ul { margin: 5px 0; padding-left: 20px; }
+        @page { margin: 2cm 1.5cm; }
+        body {
+            font-family: 'Arial', 'Helvetica', sans-serif;
+            font-size: 10pt;
+            line-height: 1.4;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #2c3e50;
+            padding-bottom: 15px;
+        }
+        .header h2 {
+            font-size: 16pt;
+            margin: 0 0 10px 0;
+            color: #2c3e50;
+            font-weight: bold;
+        }
+        .header .subtitle {
+            font-size: 11pt;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+        .header .code {
+            font-size: 10pt;
+            color: #666;
+            margin-top: 8px;
+        }
+        .section {
+            margin-bottom: 15px;
+            page-break-inside: avoid;
+        }
+        .section-title {
+            font-weight: bold;
+            font-size: 11pt;
+            color: #fff;
+            background-color: #2c3e50;
+            padding: 6px 10px;
+            margin: 12px 0 8px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 5px;
+            font-size: 9.5pt;
+        }
+        table, th, td {
+            border: 1px solid #bdc3c7;
+        }
+        th, td {
+            padding: 6px 10px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background-color: #ecf0f1;
+            font-weight: bold;
+            color: #2c3e50;
+            width: 35%;
+        }
+        td {
+            background-color: #fff;
+        }
+        .footer {
+            margin-top: 40px;
+            font-size: 8.5pt;
+            text-align: center;
+            border-top: 1px solid #bdc3c7;
+            padding-top: 10px;
+            color: #7f8c8d;
+        }
+        ul {
+            margin: 3px 0;
+            padding-left: 25px;
+            line-height: 1.6;
+        }
+        ul li {
+            margin-bottom: 4px;
+        }
+        .content-text {
+            padding: 5px 10px;
+            line-height: 1.6;
+        }
+        .two-column {
+            display: flex;
+            gap: 15px;
+        }
+        .two-column .column {
+            flex: 1;
+        }
     </style>
 </head>
 <body>
     <!-- Encabezado -->
     <div class="header">
-        <h2>PERFIL DEL PUESTO</h2>
-        <p><strong>{{ $profile_title }}</strong></p>
-        <p>Código: {{ $code }}</p>
+        <h2>ANEXO N° 2</h2>
+        <div class="subtitle">Formato para Perfil del Puesto Solicitado</div>
+        <div class="code">Código del Documento: {{ $code }}</div>
     </div>
 
     <!-- Datos Generales -->
     <div class="section">
-        <div class="section-title">I. DATOS GENERALES</div>
+        <div class="section-title">I. IDENTIFICACIÓN DEL PUESTO</div>
         <table>
+            @if(isset($parent_organizational_unit) && $parent_organizational_unit)
             <tr>
-                <th width="30%">Código del Puesto</th>
-                <td>{{ $position_code }}</td>
+                <th>Unidad Organizacional</th>
+                <td>{{ $parent_organizational_unit }}</td>
+            </tr>
+            @endif
+            <tr>
+                <th>Unidad Solicitante</th>
+                <td>{{ $requesting_unit }}</td>
             </tr>
             <tr>
                 <th>Denominación del Puesto</th>
                 <td>{{ $profile_name }}</td>
             </tr>
             <tr>
-                <th>Unidad Organizacional</th>
-                <td>{{ $organizational_unit }}</td>
+                <th>Cargo Requerido</th>
+                <td><strong>{{ $required_position }}</strong></td>
             </tr>
             <tr>
-                <th>Unidad Solicitante</th>
-                <td>{{ $requesting_unit }}</td>
-            </tr>
-            <tr>
-                <th>Nivel del Puesto</th>
-                <td>{{ $job_level }}</td>
-            </tr>
-            <tr>
-                <th>Tipo de Contrato</th>
-                <td>{{ $contract_type }}</td>
-            </tr>
-            <tr>
-                <th>Rango Salarial</th>
-                <td>{{ $salary_range }}</td>
+                <th>Código del Puesto</th>
+                <td>{{ $position_code }}</td>
             </tr>
             <tr>
                 <th>Régimen Laboral</th>
@@ -67,32 +146,26 @@
         </table>
     </div>
 
-    <!-- Misión del Puesto -->
-    @if($mission)
-    <div class="section">
-        <div class="section-title">II. MISIÓN DEL PUESTO</div>
-        <p>{{ $mission }}</p>
-    </div>
-    @endif
-
     <!-- Funciones Principales -->
     @if(!empty($main_functions))
     <div class="section">
-        <div class="section-title">III. FUNCIONES PRINCIPALES</div>
-        <ul>
-            @foreach($main_functions as $function)
-            <li>{{ $function }}</li>
-            @endforeach
-        </ul>
+        <div class="section-title">II. FUNCIONES ESPECÍFICAS A REALIZAR</div>
+        <div class="content-text">
+            <ul>
+                @foreach($main_functions as $function)
+                <li>{{ $function }}</li>
+                @endforeach
+            </ul>
+        </div>
     </div>
     @endif
 
     <!-- Requisitos Académicos -->
     <div class="section">
-        <div class="section-title">IV. REQUISITOS ACADÉMICOS</div>
+        <div class="section-title">III. REQUISITOS ACADÉMICOS</div>
         <table>
             <tr>
-                <th width="30%">Nivel Educativo</th>
+                <th>Nivel Educativo</th>
                 <td>{{ $education_level }}</td>
             </tr>
             <tr>
@@ -112,19 +185,19 @@
 
     <!-- Experiencia -->
     <div class="section">
-        <div class="section-title">V. EXPERIENCIA</div>
+        <div class="section-title">IV. EXPERIENCIA</div>
         <table>
             <tr>
-                <th width="30%">Experiencia General</th>
-                <td>{{ $general_experience_years }} años</td>
+                <th>Experiencia General</th>
+                <td>{{ $general_experience_years }} {{ $general_experience_years == 1 ? 'año' : 'años' }}</td>
             </tr>
             <tr>
                 <th>Experiencia Específica</th>
-                <td>{{ $specific_experience_years }} años</td>
+                <td>{{ $specific_experience_years }} {{ $specific_experience_years == 1 ? 'año' : 'años' }}</td>
             </tr>
-            @if($specific_experience_description)
+            @if(isset($specific_experience_description) && $specific_experience_description)
             <tr>
-                <th>Descripción</th>
+                <th>Descripción de la Experiencia</th>
                 <td>{{ $specific_experience_description }}</td>
             </tr>
             @endif
@@ -134,70 +207,80 @@
     <!-- Conocimientos y Competencias -->
     @if(!empty($knowledge_areas) || !empty($required_competencies))
     <div class="section">
-        <div class="section-title">VI. CONOCIMIENTOS Y COMPETENCIAS</div>
+        <div class="section-title">V. CONOCIMIENTOS Y COMPETENCIAS</div>
+        <div class="content-text">
+            @if(!empty($knowledge_areas))
+            <p style="margin: 8px 0 3px 0;"><strong>Conocimientos Requeridos:</strong></p>
+            <ul>
+                @foreach($knowledge_areas as $knowledge)
+                <li>{{ $knowledge }}</li>
+                @endforeach
+            </ul>
+            @endif
 
-        @if(!empty($knowledge_areas))
-        <p><strong>Conocimientos:</strong></p>
-        <ul>
-            @foreach($knowledge_areas as $knowledge)
-            <li>{{ $knowledge }}</li>
-            @endforeach
-        </ul>
-        @endif
-
-        @if(!empty($required_competencies))
-        <p><strong>Competencias Requeridas:</strong></p>
-        <ul>
-            @foreach($required_competencies as $competency)
-            <li>{{ $competency }}</li>
-            @endforeach
-        </ul>
-        @endif
+            @if(!empty($required_competencies))
+            <p style="margin: 12px 0 3px 0;"><strong>Competencias Requeridas:</strong></p>
+            <ul>
+                @foreach($required_competencies as $competency)
+                <li>{{ $competency }}</li>
+                @endforeach
+            </ul>
+            @endif
+        </div>
     </div>
     @endif
 
     <!-- Condiciones de Trabajo -->
-    @if($working_conditions)
+    @if(isset($working_conditions) && $working_conditions)
     <div class="section">
-        <div class="section-title">VII. CONDICIONES DE TRABAJO</div>
-        <p>{{ $working_conditions }}</p>
+        <div class="section-title">VI. CONDICIONES DE TRABAJO</div>
+        <div class="content-text">
+            <p style="margin: 0;">{{ $working_conditions }}</p>
+        </div>
     </div>
     @endif
 
     <!-- Justificación -->
-    @if($justification)
+    @if(isset($justification) && $justification)
     <div class="section">
-        <div class="section-title">VIII. JUSTIFICACIÓN</div>
-        <p>{{ $justification }}</p>
+        <div class="section-title">VII. JUSTIFICACIÓN</div>
+        <div class="content-text">
+            <p style="margin: 0;">{{ $justification }}</p>
+        </div>
     </div>
     @endif
 
     <!-- Aprobaciones -->
     <div class="section">
-        <div class="section-title">IX. APROBACIONES</div>
+        <div class="section-title">VIII. APROBACIONES Y VALIDACIONES</div>
         <table>
             <tr>
-                <th width="30%">Solicitado por</th>
-                <td>{{ $requested_by }}</td>
-                <td>{{ $requested_at }}</td>
+                <th width="25%">Solicitado por</th>
+                <th width="35%">Nombre</th>
+                <th width="40%">Fecha</th>
             </tr>
             <tr>
-                <th>Revisado por</th>
-                <td>{{ $reviewed_by }}</td>
-                <td>{{ $reviewed_at }}</td>
+                <td><strong>Jefe de Área</strong></td>
+                <td>{{ $requested_by ?? '___________________________' }}</td>
+                <td>{{ $requested_at ?? '_______________' }}</td>
             </tr>
             <tr>
-                <th>Aprobado por</th>
-                <td>{{ $approved_by }}</td>
-                <td>{{ $approved_at }}</td>
+                <td><strong>Recursos Humanos</strong></td>
+                <td>{{ $reviewed_by ?? '___________________________' }}</td>
+                <td>{{ $reviewed_at ?? '_______________' }}</td>
+            </tr>
+            <tr>
+                <td><strong>Gerencia General</strong></td>
+                <td>{{ $approved_by ?? '___________________________' }}</td>
+                <td>{{ $approved_at ?? '_______________' }}</td>
             </tr>
         </table>
     </div>
 
     <!-- Pie de página -->
     <div class="footer">
-        <p>Documento generado el {{ $generation_date }} a las {{ $generation_time }}</p>
-        <p>Código de Documento: {{ $code }}</p>
+        <p>Documento generado automáticamente el {{ $generation_date }} a las {{ $generation_time }}</p>
+        <p>Código de Documento: <strong>{{ $code }}</strong></p>
     </div>
 </body>
 </html>

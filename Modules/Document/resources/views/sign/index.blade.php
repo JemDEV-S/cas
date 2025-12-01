@@ -42,17 +42,25 @@
                     <div class="lg:col-span-8">
                         <div class="border-2 border-gray-200 rounded-xl overflow-hidden shadow-inner h-[700px]">
                             <div class="bg-gray-50 px-4 py-2 border-b border-gray-200 flex items-center justify-between">
-                                <span class="text-sm font-medium text-gray-700">Vista Previa del Documento</span>
-                                <a href="{{ route('documents.download', $document) }}"
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-sm font-medium text-gray-700">Vista Previa del Documento</span>
+                                    @if($document->hasAnySignature())
+                                        <span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-semibold">
+                                            <i class="fas fa-certificate mr-1"></i>
+                                            {{ $document->signatures_completed }}/{{ $document->total_signatures_required }} firmadas
+                                        </span>
+                                    @endif
+                                </div>
+                                <a href="{{ route('documents.download', ['document' => $document, 'signed' => $document->hasAnySignature()]) }}"
                                    class="text-sm text-blue-600 hover:text-blue-700 flex items-center space-x-1">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                                     </svg>
-                                    <span>Descargar</span>
+                                    <span>Descargar {{ $document->hasAnySignature() ? 'con Firmas' : '' }}</span>
                                 </a>
                             </div>
                             <iframe
-                                src="{{ route('documents.view', $document) }}"
+                                src="{{ route('documents.view', ['document' => $document, 'signed' => $document->hasAnySignature()]) }}"
                                 class="w-full h-full"
                                 frameborder="0">
                             </iframe>

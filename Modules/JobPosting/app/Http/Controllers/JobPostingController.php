@@ -98,6 +98,11 @@ class JobPostingController extends Controller
      */
     public function show(JobPosting $jobPosting): View
     {
+        // Verificar permiso de visualización
+        if (!auth()->user()->hasPermission('jobposting.view.posting')) {
+            abort(403, 'No tiene permisos para ver esta convocatoria.');
+        }
+
         $jobPosting->load([
             'publisher',
             'schedules.phase', // Cargamos la relación con la fase
@@ -145,6 +150,11 @@ class JobPostingController extends Controller
      */
     public function edit(JobPosting $jobPosting): View
     {
+        // Verificar permiso de actualización
+        if (!auth()->user()->hasPermission('jobposting.update.posting')) {
+            abort(403, 'No tiene permisos para editar convocatorias.');
+        }
+
         if (!$jobPosting->canBeEdited()) {
             abort(403, 'Esta convocatoria no puede ser editada en su estado actual.');
         }
@@ -166,6 +176,11 @@ class JobPostingController extends Controller
      */
     public function update(UpdateJobPostingRequest $request, JobPosting $jobPosting): RedirectResponse
     {
+        // Verificar permiso de actualización
+        if (!auth()->user()->hasPermission('jobposting.update.posting')) {
+            abort(403, 'No tiene permisos para actualizar convocatorias.');
+        }
+
         if (!$jobPosting->canBeEdited()) {
             return back()->with('error', '❌ Esta convocatoria no puede ser editada en su estado actual.');
         }
@@ -192,6 +207,11 @@ class JobPostingController extends Controller
      */
     public function destroy(JobPosting $jobPosting): RedirectResponse
     {
+        // Verificar permiso de eliminación
+        if (!auth()->user()->hasPermission('jobposting.delete.posting')) {
+            abort(403, 'No tiene permisos para eliminar convocatorias.');
+        }
+
         try {
             $this->jobPostingService->delete($jobPosting, auth()->user());
 
@@ -208,6 +228,11 @@ class JobPostingController extends Controller
      */
     public function publish(JobPosting $jobPosting): RedirectResponse
     {
+        // Verificar permiso de publicación
+        if (!auth()->user()->hasPermission('jobposting.publish.posting')) {
+            abort(403, 'No tiene permisos para publicar convocatorias.');
+        }
+
         try {
             $this->jobPostingService->publish($jobPosting, auth()->user());
 

@@ -5,6 +5,7 @@ namespace Modules\Auth\Entities;
 use Modules\Core\Entities\BaseSoftDelete;
 use Modules\Core\Traits\HasUuid;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Modules\User\Entities\User;
 
 /**
  * Role Entity
@@ -81,5 +82,15 @@ class Role extends BaseSoftDelete
     public function syncPermissions(array $permissionIds): void
     {
         $this->permissions()->sync($permissionIds);
+    }
+
+    public function users(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            User::class,
+            'user_role',
+            'role_id',
+            'user_id'
+        )->withTimestamps();
     }
 }

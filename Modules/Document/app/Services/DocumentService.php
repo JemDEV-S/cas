@@ -113,6 +113,16 @@ class DocumentService
      */
     public function regeneratePDF(GeneratedDocument $document): string
     {
+        // Validar que el documento no tenga ninguna firma (completa o parcial)
+        if ($document->hasAnySignature()) {
+            throw new \Exception('No se puede regenerar un documento que tiene firmas. Los documentos con firmas deben mantener su integridad.');
+        }
+
+        // Validar que no tenga firmas en proceso
+        if ($document->signature_status === 'in_progress') {
+            throw new \Exception('No se puede regenerar un documento con firmas en proceso. Cancele el flujo de firmas primero.');
+        }
+
         $template = $document->template;
         $data = json_decode($document->content, true);
 
@@ -137,9 +147,12 @@ class DocumentService
      */
     public function download(GeneratedDocument $document, bool $signed = false)
     {
-        $path = $signed && $document->signed_pdf_path
-            ? $document->signed_pdf_path
-            : $document->pdf_path;
+        // Determinar qué versión descargar
+        if ($signed) {
+            $path = $document->getLatestSignedPath() ?? $document->pdf_path;
+        } else {
+            $path = $document->pdf_path;
+        }
 
         if (!$path || !Storage::disk('private')->exists($path)) {
             throw new \Exception('El archivo PDF no existe');
@@ -160,9 +173,12 @@ class DocumentService
      */
     public function view(GeneratedDocument $document, bool $signed = false)
     {
-        $path = $signed && $document->signed_pdf_path
-            ? $document->signed_pdf_path
-            : $document->pdf_path;
+        // Determinar qué versión mostrar
+        if ($signed) {
+            $path = $document->getLatestSignedPath() ?? $document->pdf_path;
+        } else {
+            $path = $document->pdf_path;
+        }
 
         if (!$path || !Storage::disk('private')->exists($path)) {
             throw new \Exception('El archivo PDF no existe');

@@ -12,7 +12,9 @@ class JobProfilePolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->hasPermission('jobprofile.view.profiles');
+        // Puede ver listado si tiene cualquiera de los dos permisos
+        return $user->hasPermission('jobprofile.view.profiles')
+            || $user->hasPermission('jobprofile.view.own');
     }
 
     /**

@@ -180,10 +180,9 @@ class RolePermissionsSeeder extends Seeder
                 'organization.view.units',
                 'organization.view.unit',
 
-                // JobProfile
-                'jobprofile.view.profiles',
-                'jobprofile.view.profile',
-                'jobprofile.view.own',
+                // JobProfile - SOLO VER LOS PROPIOS
+                'jobprofile.view.own',        // Ver listado de sus propios perfiles
+                'jobprofile.view.profile',    // Ver detalle (se valida en Policy)
                 'jobprofile.create.profile',
                 'jobprofile.update.own',
                 'jobprofile.submit.profile',
@@ -191,6 +190,10 @@ class RolePermissionsSeeder extends Seeder
                 // JobPosting
                 'jobposting.view.postings',
                 'jobposting.view.posting',
+
+                // Document - Ver documentos relacionados con sus perfiles
+                'document.view.document',
+                'document.download.document',
 
                 // Notification
                 'notification.view.own',

@@ -100,9 +100,9 @@
                                     </x-button>
                                 </a>
 
-                                <a href="{{ route('documents.view', $document) }}" target="_blank">
+                                <a href="{{ route('documents.view', ['document' => $document, 'signed' => $document->hasAnySignature()]) }}" target="_blank">
                                     <x-button variant="outline">
-                                        <i class="fas fa-file-pdf mr-2"></i> Ver PDF
+                                        <i class="fas fa-file-pdf mr-2"></i> Ver PDF {{ $document->hasAnySignature() ? 'con Firmas' : '' }}
                                     </x-button>
                                 </a>
                             </div>
@@ -111,8 +111,15 @@
                         <!-- Vista previa pequeña -->
                         <div class="hidden lg:block w-48 flex-shrink-0">
                             <div class="aspect-[3/4] bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
+                                @if($document->hasAnySignature())
+                                    <div class="absolute top-2 right-2 z-10">
+                                        <span class="px-2 py-1 bg-green-500 text-white text-xs rounded-full">
+                                            {{ $document->signatures_completed }}/{{ $document->total_signatures_required }}
+                                        </span>
+                                    </div>
+                                @endif
                                 <iframe
-                                    src="{{ route('documents.view', $document) }}"
+                                    src="{{ route('documents.view', ['document' => $document, 'signed' => $document->hasAnySignature()]) }}"
                                     class="w-full h-full"
                                     frameborder="0"
                                 ></iframe>

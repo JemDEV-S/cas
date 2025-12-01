@@ -26,6 +26,8 @@ class DocumentServiceProvider extends ServiceProvider
         $this->registerTranslations();
         $this->registerConfig();
         $this->registerViews();
+        $this->registerPolicies();
+        $this->registerRouteModelBindings();
         $this->loadMigrationsFrom(module_path($this->name, 'database/migrations'));
     }
 
@@ -36,6 +38,51 @@ class DocumentServiceProvider extends ServiceProvider
     {
         $this->app->register(EventServiceProvider::class);
         $this->app->register(RouteServiceProvider::class);
+    }
+
+    /**
+     * Register policies
+     */
+    protected function registerPolicies(): void
+    {
+        \Illuminate\Support\Facades\Gate::policy(
+            \Modules\Document\Entities\GeneratedDocument::class,
+            \Modules\Document\Policies\GeneratedDocumentPolicy::class
+        );
+    }
+
+    /**
+     * Register Route Model Bindings
+     * Aplica scopes automáticos según permisos del usuario
+     */
+    protected function registerRouteModelBindings(): void
+    {
+        \Illuminate\Support\Facades\Route::bind('document', function ($value) {
+            $user = auth()->user();
+
+            if (!$user) {
+                abort(403, 'No autorizado.');
+            }
+
+            // Si el usuario tiene permiso global, puede acceder a cualquier documento
+            if ($user->hasPermission('document.view.documents')) {
+                return \Modules\Document\Entities\GeneratedDocument::findOrFail($value);
+            }
+
+            // Sin permiso global, solo puede ver documentos donde:
+            // - Es el generador
+            // - Es firmante
+            // - Es el firmante actual
+            return \Modules\Document\Entities\GeneratedDocument::where('id', $value)
+                ->where(function($query) use ($user) {
+                    $query->where('generated_by', $user->id)
+                          ->orWhere('current_signer_id', $user->id)
+                          ->orWhereHas('signatures', function($sq) use ($user) {
+                              $sq->where('user_id', $user->id);
+                          });
+                })
+                ->firstOrFail();
+        });
     }
 
     /**

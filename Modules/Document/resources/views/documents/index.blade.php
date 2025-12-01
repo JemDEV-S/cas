@@ -157,12 +157,18 @@
                                     </a>
                                     
                                     <!-- Descargar PDF -->
-                                    <a href="{{ route('documents.download', $document) }}" 
-                                    class="inline-flex items-center justify-center w-8 h-8 rounded-full text-green-600 hover:bg-green-50 hover:text-green-900 transition-colors" 
-                                    title="Descargar PDF">
+                                    <a href="{{ route('documents.download', ['document' => $document, 'signed' => $document->hasAnySignature()]) }}"
+                                    class="inline-flex items-center justify-center w-8 h-8 rounded-full {{ $document->hasAnySignature() ? 'text-green-600 hover:bg-green-50 hover:text-green-900' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }} transition-colors"
+                                    title="Descargar PDF{{ $document->hasAnySignature() ? ' Firmado' : '' }}">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                         </svg>
+                                        @if($document->hasAnySignature())
+                                            <span class="absolute -top-1 -right-1 flex h-3 w-3">
+                                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                                <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                                            </span>
+                                        @endif
                                     </a>
                                     
                                     <!-- Firmar (condicional) -->

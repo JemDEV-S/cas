@@ -18,21 +18,27 @@ class JobProfileService extends BaseService
     }
 
     /**
-     * Obtiene todos los perfiles
+     * Obtiene todos los perfiles visibles para el usuario actual
      */
     public function getAll(): Collection
     {
-        return JobProfile::with(['positionCode', 'organizationalUnit', 'requestedBy'])
+        $user = auth()->user();
+
+        return JobProfile::visibleFor($user)
+            ->with(['positionCode', 'organizationalUnit', 'requestedBy'])
             ->orderBy('created_at', 'desc')
             ->get();
     }
 
     /**
-     * Obtiene perfiles por estado
+     * Obtiene perfiles por estado visibles para el usuario actual
      */
     public function getByStatus(string $status): Collection
     {
+        $user = auth()->user();
+
         return JobProfile::byStatus($status)
+            ->visibleFor($user)
             ->with(['positionCode', 'organizationalUnit', 'requestedBy'])
             ->orderBy('created_at', 'desc')
             ->get();

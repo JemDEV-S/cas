@@ -13,12 +13,20 @@ class PositionCode extends BaseSoftDelete
 
     protected $fillable = [
         'code',
-        'name',
+        'name', // Este es el cargo
         'description',
         'base_salary',
         'essalud_percentage',
         'contract_months',
         'is_active',
+        
+        // Nuevos campos desde el JSON
+        'min_professional_experience',
+        'min_specific_experience',
+        'requires_professional_title',
+        'requires_professional_license',
+        'education_level_required',
+        
         'metadata',
     ];
 
@@ -30,6 +38,10 @@ class PositionCode extends BaseSoftDelete
         'quarterly_total' => 'decimal:2',
         'contract_months' => 'integer',
         'is_active' => 'boolean',
+        'min_professional_experience' => 'decimal:1',
+        'min_specific_experience' => 'decimal:1',
+        'requires_professional_title' => 'boolean',
+        'requires_professional_license' => 'boolean',
         'metadata' => 'array',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
@@ -104,27 +116,35 @@ class PositionCode extends BaseSoftDelete
         return $this->is_active === true;
     }
 
-    /**
-     * Calcula el monto de EsSalud manualmente (aunque está calculado en BD)
-     */
     public function calculateEssalud(): float
     {
         return round($this->base_salary * ($this->essalud_percentage / 100), 2);
     }
 
-    /**
-     * Calcula el total mensual manualmente
-     */
     public function calculateMonthlyTotal(): float
     {
         return round($this->base_salary + $this->calculateEssalud(), 2);
     }
 
-    /**
-     * Calcula el total por periodo de contrato manualmente
-     */
     public function calculateQuarterlyTotal(): float
     {
         return round($this->calculateMonthlyTotal() * $this->contract_months, 2);
+    }
+
+    /**
+     * Obtiene los datos para autocompletar el JobProfile
+     */
+    public function getJobProfileDefaults(): array
+    {
+        return [
+            // profile_name se mantiene libre, no se autocompleta
+            'salary_min' => $this->base_salary,
+            'salary_max' => $this->base_salary, // Solo el salario base
+            'education_level' => $this->education_level_required,
+            'title_required' => $this->requires_professional_title,
+            'colegiatura_required' => $this->requires_professional_license,
+            'general_experience_years' => $this->min_professional_experience,
+            'specific_experience_years' => $this->min_specific_experience,
+        ];
     }
 }

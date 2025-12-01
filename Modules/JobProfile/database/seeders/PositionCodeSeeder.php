@@ -14,101 +14,194 @@ class PositionCodeSeeder extends Seeder
     {
         $positions = [
             [
-                'code' => 'PP II',
-                'name' => 'PROFESIONAL DE PLANTA',
-                'description' => 'Profesional de planta nivel II',
-                'base_salary' => 3000.00,
-                'essalud_percentage' => 8.83, // 265/3000 * 100 ≈ 8.83
+                'code' => 'PA I',
+                'name' => 'PROFESIONAL EXPERTO',
+                'description' => 'Profesional experto nivel I - Título profesional afín al cargo con habilitación profesional vigente',
+                'base_salary' => 5000.00,
+                'essalud_percentage' => 9.00,
                 'contract_months' => 3,
                 'is_active' => true,
-            ],
-            [
-                'code' => 'TEC I',
-                'name' => 'TECNICO ADMINISTRATIVO',
-                'description' => 'Técnico administrativo nivel I',
-                'base_salary' => 2500.00,
-                'essalud_percentage' => 9.00, // 225/2500 * 100 = 9.00
-                'contract_months' => 3,
-                'is_active' => true,
-            ],
-            [
-                'code' => 'TEC II',
-                'name' => 'TECNICO DE SOPORTE',
-                'description' => 'Técnico de soporte nivel II',
-                'base_salary' => 2000.00,
-                'essalud_percentage' => 9.00, // 180/2000 * 100 = 9.00
-                'contract_months' => 3,
-                'is_active' => true,
-            ],
-            [
-                'code' => 'AA I',
-                'name' => 'ASISTENTE ADMINISTRATIVO',
-                'description' => 'Asistente administrativo nivel I',
-                'base_salary' => 2800.00,
-                'essalud_percentage' => 9.00, // 252/2800 * 100 = 9.00
-                'contract_months' => 3,
-                'is_active' => true,
-            ],
-            [
-                'code' => 'ESP I',
-                'name' => 'PROFESIONAL ESPECIALISTA',
-                'description' => 'Profesional especialista nivel I',
-                'base_salary' => 3800.00,
-                'essalud_percentage' => 6.97, // 265/3800 * 100 ≈ 6.97
-                'contract_months' => 3,
-                'is_active' => true,
+                // Nuevos campos
+                'min_professional_experience' => 7.0,
+                'min_specific_experience' => 3.0,
+                'requires_professional_title' => true,
+                'requires_professional_license' => true,
+                'education_level_required' => 'universitario',
             ],
             [
                 'code' => 'PA II',
                 'name' => 'PROFESIONAL EXPERTO',
-                'description' => 'Profesional experto nivel II',
+                'description' => 'Profesional experto nivel II - Título profesional afín al cargo con habilitación profesional vigente',
                 'base_salary' => 4500.00,
-                'essalud_percentage' => 5.89, // 265/4500 * 100 ≈ 5.89
+                'essalud_percentage' => 9.00,
                 'contract_months' => 3,
                 'is_active' => true,
+                // Nuevos campos
+                'min_professional_experience' => 6.0,
+                'min_specific_experience' => 2.0,
+                'requires_professional_title' => true,
+                'requires_professional_license' => true,
+                'education_level_required' => 'universitario',
+            ],
+            [
+                'code' => 'ESP I',
+                'name' => 'PROFESIONAL ESPECIALISTA',
+                'description' => 'Profesional especialista nivel I - Título profesional afín al cargo con habilitación profesional vigente',
+                'base_salary' => 3800.00,
+                'essalud_percentage' => 9.00,
+                'contract_months' => 3,
+                'is_active' => true,
+                // Nuevos campos
+                'min_professional_experience' => 5.0,
+                'min_specific_experience' => 1.0,
+                'requires_professional_title' => true,
+                'requires_professional_license' => true,
+                'education_level_required' => 'universitario',
             ],
             [
                 'code' => 'PP I',
                 'name' => 'PROFESIONAL DE PLANTA',
-                'description' => 'Profesional de planta nivel I',
+                'description' => 'Profesional de planta nivel I - Título profesional afín al cargo con habilitación profesional vigente',
                 'base_salary' => 3300.00,
-                'essalud_percentage' => 8.03, // 265/3300 * 100 ≈ 8.03
+                'essalud_percentage' => 9.00,
                 'contract_months' => 3,
                 'is_active' => true,
+                // Nuevos campos
+                'min_professional_experience' => 4.0,
+                'min_specific_experience' => 0.0,
+                'requires_professional_title' => true,
+                'requires_professional_license' => true,
+                'education_level_required' => 'universitario',
+            ],
+            [
+                'code' => 'PP II',
+                'name' => 'PROFESIONAL DE PLANTA',
+                'description' => 'Profesional de planta nivel II - Grado de Bachiller o Título profesional afín al cargo',
+                'base_salary' => 3000.00,
+                'essalud_percentage' => 9.00,
+                'contract_months' => 3,
+                'is_active' => true,
+                // Nuevos campos
+                'min_professional_experience' => 3.0,
+                'min_specific_experience' => 0.0,
+                'requires_professional_title' => false, // Puede ser bachiller
+                'requires_professional_license' => false,
+                'education_level_required' => 'universitario', // Nivel universitario (incluye bachiller y título)
             ],
             [
                 'code' => 'PP III',
                 'name' => 'PROFESIONAL DE PLANTA',
-                'description' => 'Profesional de planta nivel III',
+                'description' => 'Profesional de planta nivel III - Grado de Bachiller o Título profesional afín al cargo',
                 'base_salary' => 2900.00,
-                'essalud_percentage' => 9.00, // 261/2900 * 100 = 9.00
+                'essalud_percentage' => 9.00,
                 'contract_months' => 3,
                 'is_active' => true,
+                // Nuevos campos
+                'min_professional_experience' => 2.0,
+                'min_specific_experience' => 0.0,
+                'requires_professional_title' => false, // Puede ser bachiller
+                'requires_professional_license' => false,
+                'education_level_required' => 'universitario',
             ],
             [
-                'code' => 'AAI',
+                'code' => 'AA I',
+                'name' => 'ASISTENTE ADMINISTRATIVO',
+                'description' => 'Asistente administrativo nivel I - Título Técnico afín al cargo y/o grado de bachiller',
+                'base_salary' => 2800.00,
+                'essalud_percentage' => 9.00,
+                'contract_months' => 3,
+                'is_active' => true,
+                // Nuevos campos
+                'min_professional_experience' => 1.0,
+                'min_specific_experience' => 0.0,
+                'requires_professional_title' => false,
+                'requires_professional_license' => false,
+                'education_level_required' => 'tecnico', // Título técnico o bachiller
+            ],
+            [
+                'code' => 'TEC I',
+                'name' => 'TECNICO ADMINISTRATIVO',
+                'description' => 'Técnico administrativo nivel I - Egresado universitario y/o egresado de instituto superior',
+                'base_salary' => 2500.00,
+                'essalud_percentage' => 9.00,
+                'contract_months' => 3,
+                'is_active' => true,
+                // Nuevos campos
+                'min_professional_experience' => 1.0,
+                'min_specific_experience' => 0.0,
+                'requires_professional_title' => false,
+                'requires_professional_license' => false,
+                'education_level_required' => 'tecnico', // Egresado nivel técnico/superior
+            ],
+            [
+                'code' => 'TEC II',
+                'name' => 'TECNICO DE SOPORTE',
+                'description' => 'Técnico de soporte nivel II - Egresado universitario y/o egresado de instituto superior',
+                'base_salary' => 2000.00,
+                'essalud_percentage' => 9.00,
+                'contract_months' => 3,
+                'is_active' => true,
+                // Nuevos campos
+                'min_professional_experience' => 0.5,
+                'min_specific_experience' => 0.0,
+                'requires_professional_title' => false,
+                'requires_professional_license' => false,
+                'education_level_required' => 'tecnico', // Egresado
+            ],
+            [
+                'code' => 'AUXI',
                 'name' => 'AUXILIAR',
-                'description' => 'Auxiliar administrativo',
+                'description' => 'Auxiliar nivel I - Estudios universitarios y/o estudios técnicos',
                 'base_salary' => 1500.00,
-                'essalud_percentage' => 9.00, // 135/1500 * 100 = 9.00
+                'essalud_percentage' => 9.00,
                 'contract_months' => 3,
                 'is_active' => true,
+                // Nuevos campos
+                'min_professional_experience' => 0.5,
+                'min_specific_experience' => 0.0,
+                'requires_professional_title' => false,
+                'requires_professional_license' => false,
+                'education_level_required' => 'tecnico', // Estudios técnicos
             ],
             [
-                'code' => 'PA I',
-                'name' => 'PROFESIONAL EXPERTO',
-                'description' => 'Profesional experto nivel I',
-                'base_salary' => 5000.00,
-                'essalud_percentage' => 5.30, // 265/5000 * 100 = 5.30
+                'code' => 'AUXII',
+                'name' => 'AUXILIAR',
+                'description' => 'Auxiliar nivel II - Estudios universitarios y/o estudios técnicos',
+                'base_salary' => 1400.00,
+                'essalud_percentage' => 9.00,
                 'contract_months' => 3,
                 'is_active' => true,
+                // Nuevos campos
+                'min_professional_experience' => 0.0,
+                'min_specific_experience' => 0.0,
+                'requires_professional_title' => false,
+                'requires_professional_license' => false,
+                'education_level_required' => 'tecnico', // Estudios técnicos
+            ],
+            [
+                'code' => 'AUXIII',
+                'name' => 'AUXILIAR',
+                'description' => 'Auxiliar nivel III - Secundaria completa',
+                'base_salary' => 1200.00,
+                'essalud_percentage' => 9.00,
+                'contract_months' => 3,
+                'is_active' => true,
+                // Nuevos campos
+                'min_professional_experience' => 0.0,
+                'min_specific_experience' => 0.0,
+                'requires_professional_title' => false,
+                'requires_professional_license' => false,
+                'education_level_required' => 'secundaria', // Secundaria completa
             ],
         ];
 
         foreach ($positions as $position) {
-            PositionCode::create($position);
+            PositionCode::updateOrCreate(
+                ['code' => $position['code']],
+                $position
+            );
         }
 
-        $this->command->info('Position codes seeded successfully!');
+        $this->command->info('Position codes seeded successfully with complete data!');
     }
 }

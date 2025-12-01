@@ -19,7 +19,10 @@ class DocumentController extends Controller
      */
     public function index(Request $request)
     {
-        $query = GeneratedDocument::with(['template', 'generatedBy', 'documentable']);
+        $user = auth()->user();
+
+        $query = GeneratedDocument::visibleFor($user)
+            ->with(['template', 'generatedBy', 'documentable']);
 
         // Filtros
         if ($request->has('status')) {
@@ -34,9 +37,9 @@ class DocumentController extends Controller
             $query->where('document_template_id', $request->template);
         }
 
-        // Filtrar por usuario
+        // Filtro adicional solo para mis documentos (opcional ahora)
         if ($request->has('my_documents')) {
-            $query->where('generated_by', auth()->id());
+            $query->where('generated_by', $user->id);
         }
 
         $documents = $query->orderBy('created_at', 'desc')->paginate(20);

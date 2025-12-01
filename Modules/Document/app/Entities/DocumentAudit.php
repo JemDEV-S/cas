@@ -66,7 +66,7 @@ class DocumentAudit extends BaseModel
     public static function log(
         string $documentId,
         string $action,
-        string $userId,
+        ?string $userId,
         string $description,
         ?array $oldValues = null,
         ?array $newValues = null

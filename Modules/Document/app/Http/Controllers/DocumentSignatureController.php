@@ -131,16 +131,26 @@ class DocumentSignatureController extends Controller
             abort(403, 'Token no válido');
         }
 
-        // Retornar el PDF
-        $path = $document->pdf_path;
+        // Retornar el PDF con las firmas más recientes (si existen) o el original
+        // CRÍTICO: El segundo firmante debe firmar sobre el PDF que ya tiene la primera firma
+        $path = $document->getLatestSignedPath() ?? $document->pdf_path;
 
         if (!$path || !Storage::disk('private')->exists($path)) {
             \Log::error('PDF file not found', [
                 'document_id' => $document->id,
                 'pdf_path' => $path,
+                'latest_signed_path' => $document->getLatestSignedPath(),
+                'original_path' => $document->pdf_path,
             ]);
             abort(404, 'Documento no encontrado');
         }
+
+        \Log::info('Documento descargado para firma', [
+            'document_id' => $document->id,
+            'path' => $path,
+            'has_signatures' => $document->hasAnySignature(),
+            'signatures_completed' => $document->signatures_completed,
+        ]);
 
         return Storage::disk('private')->response($path, $document->code . '.pdf', [
             'Content-Type' => 'application/pdf',
@@ -179,7 +189,8 @@ class DocumentSignatureController extends Controller
         $this->firmaPeruService->processSignedDocument($document, $signature, $signedFile);
 
         // Procesar la firma en el workflow
-        $this->signatureService->processSignature($signature);
+        // Los datos del certificado ya están en el PDF firmado por FIRMA PERÚ
+        $this->signatureService->processSignature($signature, []);
 
         return response()->json([
             'success' => true,

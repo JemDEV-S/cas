@@ -200,10 +200,12 @@
                                 </svg>
                                 Cronograma
                             </h3>
+                            @can('jobposting.manage.schedule')
                             <a href="{{ route('jobposting.schedule.edit', $jobPosting) }}"
                                class="px-4 py-2 bg-white/20 backdrop-blur-md text-white rounded-xl font-bold hover:bg-white/30 transition-all shadow-lg">
                                 Ver Completo
                             </a>
+                            @endcan
                         </div>
                     </div>
                     <div class="p-6">
@@ -379,13 +381,16 @@
                         </h3>
                     </div>
                     <div class="p-6 space-y-4">
+                        @can('jobposting.update.posting')
                         @if($jobPosting->canBeEdited())
                         <a href="{{ route('jobposting.edit', $jobPosting) }}"
                            class="block w-full px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-xl font-bold hover:from-amber-600 hover:to-orange-700 transition-all shadow-lg hover:shadow-xl text-center">
                             ✏️ Editar Convocatoria
                         </a>
                         @endif
+                        @endcan
 
+                        @can('jobposting.publish.posting')
                         @if($jobPosting->canBePublished())
                         <form action="{{ route('jobposting.publish', $jobPosting) }}" method="POST">
                             @csrf
@@ -396,11 +401,14 @@
                             </button>
                         </form>
                         @endif
+                        @endcan
 
+                        @can('jobposting.manage.schedule')
                         <a href="{{ route('jobposting.schedule.edit', $jobPosting) }}"
                            class="block w-full px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-xl font-bold hover:from-purple-600 hover:to-pink-700 transition-all shadow-lg hover:shadow-xl text-center">
                             📅 Gestionar Cronograma
                         </a>
+                        @endcan
 
                         @can('jobposting.manage.profiles')
                         @if($jobPosting->isDraft())
@@ -411,11 +419,14 @@
                         @endif
                         @endcan
 
+                        @can('jobposting.view.posting')
                         <a href="{{ route('jobposting.history', $jobPosting) }}"
                            class="block w-full px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-xl font-bold hover:from-cyan-600 hover:to-blue-700 transition-all shadow-lg hover:shadow-xl text-center">
                             📊 Ver Historial
                         </a>
+                        @endcan
 
+                        @can('jobposting.create.posting')
                         <form action="{{ route('jobposting.clone', $jobPosting) }}" method="POST">
                             @csrf
                             <button type="submit"
@@ -424,17 +435,21 @@
                                 🐑 Clonar Convocatoria
                             </button>
                         </form>
+                        @endcan
 
+                        @can('jobposting.cancel.posting')
                         @if($jobPosting->canBeCancelled())
                         <button onclick="showCancelModal()"
                                 class="w-full px-6 py-3 bg-gradient-to-r from-red-500 to-pink-600 text-white rounded-xl font-bold hover:from-red-600 hover:to-pink-700 transition-all shadow-lg hover:shadow-xl">
                             ❌ Cancelar Convocatoria
                         </button>
                         @endif
+                        @endcan
                     </div>
                 </div>
 
                 {{-- Zona de Peligro --}}
+                @can('jobposting.delete.posting')
                 @if($jobPosting->canBeEdited())
                 <div class="bg-gradient-to-br from-red-50 to-pink-50 rounded-2xl shadow-xl p-6 border-2 border-red-200">
                     <h3 class="text-lg font-bold text-red-800 mb-4 flex items-center">
@@ -457,6 +472,7 @@
                     </form>
                 </div>
                 @endif
+                @endcan
             </div>
         </div>
     </div>

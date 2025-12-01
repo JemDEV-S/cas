@@ -84,7 +84,9 @@ class GenerateJobProfileDocument
 
             // Unidad organizacional
             'organizational_unit' => $jobProfile->organizationalUnit?->name,
+            'parent_organizational_unit' => $jobProfile->requestingUnit?->parent?->name,
             'requesting_unit' => $jobProfile->requestingUnit?->name,
+            'required_position' => $jobProfile->positionCode?->name,
 
             // Datos del puesto
             'job_level' => $jobProfile->job_level,

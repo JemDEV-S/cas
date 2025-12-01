@@ -92,7 +92,7 @@
                     @endif
 
                     <!-- Perfiles de Puesto -->
-                    @if(auth()->user()->hasAnyPermission(['jobprofile.view.profiles', 'jobprofile.create.request']))
+                    @if(auth()->user()->hasAnyPermission(['jobprofile.view.profiles', 'jobprofile.view.own', 'jobprofile.create.profile']))
                     <div class="relative" @mouseenter="open = 'perfiles'" @mouseleave="open = null">
                         <button class="inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition-all
                                      {{ request()->routeIs('jobprofile.*')
@@ -114,17 +114,29 @@
                              class="absolute left-0 mt-2 w-56 rounded-xl shadow-lg bg-white ring-1 ring-gray-200 overflow-hidden"
                              style="display: none;">
                             <div class="py-1">
+                                {{-- Ver todos los perfiles (Permiso global) --}}
                                 @can('jobprofile.view.profiles')
                                 <a href="{{ route('jobprofile.index') }}"
                                    class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 transition-all group">
                                     <svg class="w-5 h-5 mr-3 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
                                     </svg>
-                                    <span class="font-medium group-hover:text-purple-500">Ver Perfiles</span>
+                                    <span class="font-medium group-hover:text-purple-500">Todos los Perfiles</span>
                                 </a>
+                                @else
+                                    {{-- Ver solo mis perfiles (Permiso limitado) --}}
+                                    @can('jobprofile.view.own')
+                                    <a href="{{ route('jobprofile.index') }}"
+                                       class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 transition-all group">
+                                        <svg class="w-5 h-5 mr-3 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                        </svg>
+                                        <span class="font-medium group-hover:text-purple-500">Mis Perfiles</span>
+                                    </a>
+                                    @endcan
                                 @endcan
 
-                                @can('jobprofile.create.request')
+                                @can('jobprofile.create.profile')
                                 <a href="{{ route('jobprofile.profiles.create') }}"
                                    class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all group">
                                     <svg class="w-5 h-5 mr-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -134,7 +146,7 @@
                                 </a>
                                 @endcan
 
-                                @can('jobprofile.review.profiles')
+                                @can('jobprofile.review.profile')
                                 <div class="border-t border-gray-200 my-1"></div>
                                 <a href="{{ route('jobprofile.review.index') }}"
                                    class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-amber-50 hover:to-orange-50 transition-all group">

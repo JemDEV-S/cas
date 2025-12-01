@@ -9,10 +9,12 @@ use Modules\JobProfile\Http\Controllers\VacancyController;
 
 Route::middleware(['auth', 'verified'])->prefix('jobprofile')->name('jobprofile.')->group(function () {
 
-    // Job Profiles CRUD
-    Route::resource('profiles', JobProfileController::class)->except(['index']);
+    // Job Profiles CRUD - Usa Route Model Binding con scope automático
     Route::get('/', [JobProfileController::class, 'index'])->name('index');
-    Route::post('/profiles/{id}/submit', [JobProfileController::class, 'submitForReview'])->name('profiles.submit');
+    Route::resource('profiles', JobProfileController::class)->except(['index'])->parameters([
+        'profiles' => 'profile' // Esto hace que use {profile} en lugar de {profiles}
+    ]);
+    Route::post('/profiles/{profile}/submit', [JobProfileController::class, 'submitForReview'])->name('profiles.submit');
 
     // Position Codes
     Route::prefix('positions')->name('positions.')->group(function () {

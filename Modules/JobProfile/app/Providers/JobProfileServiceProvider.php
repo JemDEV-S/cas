@@ -28,6 +28,7 @@ class JobProfileServiceProvider extends ServiceProvider
         $this->registerViews();
         $this->registerObservers();
         $this->registerPolicies();
+        $this->registerRouteModelBindings();
         $this->loadMigrationsFrom(module_path($this->name, 'database/migrations'));
     }
 
@@ -45,6 +46,32 @@ class JobProfileServiceProvider extends ServiceProvider
             \Modules\JobProfile\Entities\PositionCode::class,
             \Modules\JobProfile\Policies\PositionCodePolicy::class
         );
+    }
+
+    /**
+     * Register Route Model Bindings
+     * Aplica scopes automáticos según permisos del usuario
+     */
+    protected function registerRouteModelBindings(): void
+    {
+        \Illuminate\Support\Facades\Route::bind('profile', function ($value) {
+            $user = auth()->user();
+
+            // Si el usuario tiene permiso global, puede acceder a cualquier perfil
+            if ($user && $user->hasPermission('jobprofile.view.profiles')) {
+                return \Modules\JobProfile\Entities\JobProfile::findOrFail($value);
+            }
+
+            // Si solo puede ver los propios, aplicar filtro
+            if ($user && $user->hasPermission('jobprofile.view.own')) {
+                return \Modules\JobProfile\Entities\JobProfile::where('id', $value)
+                    ->where('requested_by', $user->id)
+                    ->firstOrFail();
+            }
+
+            // Si no tiene permisos, denegar acceso
+            abort(403, 'No tiene permisos para acceder a este perfil.');
+        });
     }
 
     /**
