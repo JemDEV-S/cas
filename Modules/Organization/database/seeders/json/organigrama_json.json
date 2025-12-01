@@ -1,0 +1,400 @@
+{
+    "organizacion": "ALCALDIA",
+    "nivel": 1,
+    "codigo": "00001",
+    "padre": "EDILICIO MUNICIPAL",
+    "responsable": null,
+    "hijos": [
+      {
+        "dependencia": "GERENCIA MUNICIPAL",
+        "nivel": 2,
+        "codigo": "00002",
+        "padre": "ALCALDIA",
+        "local": "PALACIO MUNICIPAL",
+        "responsable": "GERENTE MUNICIPAL",
+        "hijos": [
+          {
+              "dependencia": "OFICINA GENERAL DE ADMINISTRACIÓN",
+              "nivel": 3,
+              "codigo": "00007",
+              "padre": "GERENCIA MUNICIPAL",
+              "local": "PALACIO MUNICIPAL",
+              "responsable": "DIRECTOR",
+              "sub_unidades": [
+                  {
+                      "dependencia": "OFICINA DE RECURSOS HUMANOS",
+                      "nivel": 4,
+                      "codigo": "00020",
+                      "local": "PALACIO MUNICIPAL",
+                      "responsable": "DIRECTOR"
+                  },
+                  {
+                      "dependencia": "OFICINA DE ABASTECIMIENTO",
+                      "nivel": 4,
+                      "codigo": "00021",
+                      "local": "PALACIO MUNICIPAL",
+                      "responsable": "DIRECTOR"
+                  },
+                  {
+                      "dependencia": "OFICINA DE CONTABILIDAD",
+                      "nivel": 4,
+                      "codigo": "00022",
+                      "local": "PALACIO MUNICIPAL",
+                      "responsable": "DIRECTOR"
+                  },
+                  {
+                      "dependencia": "OFICINA DE GESTIÓN PATRIMONIAL",
+                      "nivel": 4,
+                      "codigo": "00023",
+                      "local": "CASA CABILDO",
+                      "responsable": "DIRECTOR"
+                  },
+                  {
+                      "dependencia": "OFICINA DE TESORERÍA",
+                      "nivel": 4,
+                      "codigo": "00024",
+                      "local": "PALACIO MUNICIPAL",
+                      "responsable": "DIRECTOR"
+                  }
+              ]
+          },
+          {
+              "dependencia": "OFICINA GENERAL DE SUPERVISIÓN Y LIQUIDACIÓN DE INVERSIONES",
+              "nivel": 3,
+              "codigo": "00015",
+              "padre": "GERENCIA MUNICIPAL",
+              "local": "CASA DE LA CULTURA",
+              "responsable": "DIRECTOR GENERAL",
+              "hijos": []
+          },
+          {
+              "dependencia": "OFICINA GENERAL DE PLANEAMIENTO Y PRESUPUESTO",
+              "nivel": 3,
+              "codigo": "00013",
+              "padre": "GERENCIA MUNICIPAL",
+              "local": "PALACIO MUNICIPAL",
+              "responsable": "DIRECTOR GENERAL",
+              "sub_unidades": [
+                  {
+                      "dependencia": "OFICINA DE PRESUPUESTO",
+                      "nivel": 4,
+                      "codigo": "00032",
+                      "local": "PALACIO MUNICIPAL",
+                      "responsable": "DIRECTOR"
+                  },
+                  {
+                      "dependencia": "OFICINA DE PLANEAMIENTO Y MODERNIZACIÓN",
+                      "nivel": 4,
+                      "codigo": "00029",
+                      "local": "PALACIO MUNICIPAL",
+                      "responsable": "DIRECTOR"
+                  },
+                  {
+                      "dependencia": "OFICINA DE TECNOLOGÍAS DE LA INFORMACIÓN",
+                      "nivel": 4,
+                      "codigo": "00025",
+                      "local": "PALACIO MUNICIPAL",
+                      "responsable": "DIRECTOR"
+                  },
+                  {
+                      "dependencia": "OFICINA DE COOPERACIÓN TÉCNICA NACIONAL E INTERNACIONAL",
+                      "nivel": 4,
+                      "codigo": "00018",
+                      "local": "PALACIO MUNICIPAL",
+                      "responsable": "DIRECTOR"
+                  },
+                  {
+                      "dependencia": "OFICINA DE PROGRAMACIÓN MULTIANUAL DE INVERSIONES",
+                      "nivel": 4,
+                      "codigo": "00026",
+                      "local": "PALACIO MUNICIPAL",
+                      "responsable": "DIRECTOR"
+                  }
+              ]
+          },
+          {
+              "dependencia": "OFICINA GENERAL DE ASESORÍA JURÍDICA",
+              "nivel": 3,
+              "codigo": "00008",
+              "padre": "GERENCIA MUNICIPAL",
+              "local": "PALACIO MUNICIPAL",
+              "responsable": "DIRECTOR GENERAL",
+              "hijos": []
+          },
+          {
+              "dependencia": "GERENCIA DE GESTIÓN DE INVERSIONES",
+              "nivel": 3,
+              "codigo": "00016",
+              "padre": "GERENCIA MUNICIPAL",
+              "local": "CASA DE LA CULTURA",
+              "responsable": "DIRECTOR GENERAL",
+              "sub_unidades": [
+                  {
+                      "dependencia": "OFICINA DE FORMULACIÓN Y EVALUACIÓN DE INVERSIONES",
+                      "nivel": 4,
+                      "codigo": "00040",
+                      "local": "PALACIO MUNICIPAL",
+                      "responsable": "DIRECTOR"
+                  },
+                  {
+                      "dependencia": "OFICINA DE ELABORACIÓN DE EXPEDIENTES TÉCNICOS",
+                      "nivel": 4,
+                      "codigo": "00041",
+                      "local": "PALACIO MUNICIPAL",
+                      "responsable": "DIRECTOR"
+                  }
+              ]
+          },
+          {
+              "dependencia": "GERENCIA DE ADMINISTRACIÓN TRIBUTARIA",
+              "nivel": 3,
+              "codigo": "00034",
+              "padre": "GERENCIA MUNICIPAL",
+              "local": "CASA CABILDO",
+              "responsable": "RECAUDADOR DE CONTROL DE DEUDA",
+              "sub_unidades": [
+                  {
+                      "dependencia": "SUBGERENCIA DE RENTAS",
+                      "nivel": 4,
+                      "codigo": "00035",
+                      "padre": "GERENCIA DE ADMINISTRACIÓN TRIBUTARIA",
+                      "local": "PALACIO ANTIGUO",
+                      "responsable": "DIRECTOR"
+                  },
+                  {
+                      "dependencia": "SUBGERENCIA DE REGISTRO CIVIL Y CEMENTERIOS",
+                      "nivel": 4,
+                      "codigo": "00033",
+                      "padre": "GERENCIA DE ADMINISTRACIÓN TRIBUTARIA",
+                      "local": "PALACIO ANTIGUO",
+                      "responsable": "SUBGERENTE"
+                  },
+                  {
+                      "dependencia": "SUBGERENCIA DE FISCALIZACIÓN TRIBUTARIA",
+                      "nivel": 4,
+                      "codigo": "00036",
+                      "padre": "GERENCIA DE ADMINISTRACIÓN TRIBUTARIA",
+                      "local": "PALACIO ANTIGUO",
+                      "responsable": "SUBGERENTE"
+                  }
+              ]
+          },
+          {
+              "dependencia": "GERENCIA DE INFRAESTRUCTURA",
+              "nivel": 3,
+              "codigo": "00017",
+              "padre": "GERENCIA MUNICIPAL",
+              "local": "CASA DE LA CULTURA",
+              "responsable": "GERENTE",
+              "sub_unidades": [
+                  {
+                      "dependencia": "SUBGERENNCIA DE EJECUCIÓN DE INVERSIONES",
+                      "nivel": 4,
+                      "codigo": "00037",
+                      "padre": "GERENCIA DE INFRAESTRUCTURA",
+                      "local": "CASA DE LA CULTURA",
+                      "responsable": "SUBGERENTE"
+                  },
+                  {
+                      "dependencia": "SUBGERENCIA DE MANTENIMIENTO",
+                      "nivel": 4,
+                      "codigo": "00038",
+                      "padre": "GERENCIA DE INFRAESTRUCTURA",
+                      "local": "CASA DE LA CULTURA",
+                      "responsable": "SUBGERENTE"
+                  },
+                  {
+                      "dependencia": "SUBGERENCIA DE EQUIPO MECÁNICO",
+                      "nivel": 4,
+                      "codigo": "00039",
+                      "padre": "GERENCIA DE INFRAESTRUCTURA",
+                      "local": "CASA DE LA CULTURA",
+                      "responsable": "SUBGERENTE"
+                  }
+              ]
+          },
+          {
+              "dependencia": "GERENCIA DE DESARROLLO URBANO Y RURAL",
+              "nivel": 3,
+              "codigo": "00010",
+              "padre": "GERENCIA MUNICIPAL",
+              "local": "CASA DE LA CULTURA",
+              "responsable": "GERENTE",
+              "sub_unidades": [
+                  {
+                      "dependencia": "SUBGERENCIA DE ORDENAMIENTO TERRITORIAL Y TRÁNSITO",
+                      "nivel": 4,
+                      "codigo": "00042",
+                      "padre": "GERENCIA DE DESARROLLO URBANO Y RURAL",
+                      "local": "CASA DE LA CULTURA",
+                      "responsable": "SUBGERENTE"
+                  },
+                  {
+                      "dependencia": "SUBGERENCIA DE GESTIÓN DE EDIFICACIONES",
+                      "nivel": 4,
+                      "codigo": "00043",
+                      "padre": "GERENCIA DE DESARROLLO URBANO Y RURAL",
+                      "local": "CASA DE LA CULTURA",
+                      "responsable": "SUBGERENTE"
+                  },
+                  {
+                      "dependencia": "SUBGERENCIA DE CATASTRO Y SANEAMIENTO FÍSICO LEGAL",
+                      "nivel": 4,
+                      "codigo": "00044",
+                      "padre": "GERENCIA DE DESARROLLO URBANO Y RURAL",
+                      "local": "CASA DE LA CULTURA",
+                      "responsable": "SUBGERENTE"
+                  }
+              ]
+          },
+          {
+              "dependencia": "GERENCIA DE DESARROLLO ECONÓMICO LOCAL",
+              "nivel": 3,
+              "codigo": "00014",
+              "padre": "GERENCIA MUNICIPAL",
+              "local": "PALACIO ANTIGUO",
+              "responsable": "GERENTE",
+              "sub_unidades": [
+                  {
+                      "dependencia": "SUBGERENCIA DE COMPETITIIDAD EMPRESARIAL, AGRARIA Y TURISMO",
+                      "nivel": 4,
+                      "codigo": "00045",
+                      "padre": "GERENCIA DE DESARROLLO ECONÓMICO LOCAL",
+                      "local": "CASA DE LA CULTURA",
+                      "responsable": "SUBGERENTE"
+                  },
+                  {
+                      "dependencia": "SUBGERENCIA DE COMERCIO, MERCADOS Y POLICIA MUNICIPA",
+                      "nivel": 4,
+                      "codigo": "00046",
+                      "padre": "GERENCIA DE DESARROLLO ECONÓMICO LOCAL",
+                      "local": "CASA DE LA CULTURA",
+                      "responsable": "SUBGERENTE"
+                  },
+                  {
+                      "dependencia": "SUBGERENCIA DE CONTROL SANITARIO Y CAMAL MUNICIPAL",
+                      "nivel": 4,
+                      "codigo": "00047",
+                      "padre": "GERENCIA DE DESARROLLO ECONÓMICO LOCAL",
+                      "local": "CASA DE LA CULTURA",
+                      "responsable": "SUBGERENTE"
+                  },
+                  {
+                      "dependencia": "SUBGERENCIA DE SEGURIDAD CIUDADANA",
+                      "nivel": 4,
+                      "codigo": "00048",
+                      "padre": "GERENCIA DE DESARROLLO ECONÓMICO LOCAL",
+                      "local": "CASA DE LA CULTURA",
+                      "responsable": "SUBGERENTE"
+                  }
+              ]
+          },
+          {
+              "dependencia": "GERENCIA DE DESARROLLO SOCIAL",
+              "nivel": 3,
+              "codigo": "00011",
+              "padre": "GERENCIA MUNICIPAL",
+              "local": "PALACIO MUNICIPAL",
+              "responsable": "GERENTE",
+              "sub_unidades":[
+                  {
+                      "dependencia": "SUBGERENCIA EDUCACIÓN, CULTURA Y DEPORTE",
+                      "nivel": 4,
+                      "codigo": "00049",
+                      "padre": "GERENCIA DE DESARROLLO SOCIAL",
+                      "local": "CASA DE LA CULTURA",
+                      "responsable": "SUBGERENTE"
+                  },
+                  {
+                      "dependencia": "SUBGERENCIA DE PROGRAMAS SOCIALES Y PARTICIPACIÓN CIUDADANA",
+                      "nivel": 4,
+                      "codigo": "00050",
+                      "padre": "GERENCIA DE DESARROLLO SOCIAL",
+                      "local": "CASA DE LA CULTURA",
+                      "responsable": "SUBGERENTE"
+                  }
+              ]
+          },
+          {
+              "dependencia": "GERENCIA DE GESTIÓN AMBIENTAL",
+              "nivel": 3,
+              "codigo": "00012",
+              "padre": "GERENCIA MUNICIPAL",
+              "local": "PALACIO ANTIGUO",
+              "responsable": "GERENTE",
+              "sub_unidades":[
+                  {
+                      "dependencia": "SUBGERENCIA DE GESTIÓN DE RESIDUOS SOLIDOS",
+                      "nivel": 4,
+                      "codigo": "00051",
+                      "padre": "GERENCIA DE GESTIÓN AMBIENTAL",
+                      "local": "CASA DE LA CULTURA",
+                      "responsable": "SUBGERENTE"
+                  },
+                  {
+                      "dependencia": "SUBGERENCIA DE SANEAMIENTO BÁSICO Y ÁREA TÉCNICA MUNICIPAL",
+                      "nivel": 4,
+                      "codigo": "00052",
+                      "padre": "GERENCIA DE GESTIÓN AMBIENTAL",
+                      "local": "CASA DE LA CULTURA",
+                      "responsable": "SUBGERENTE"
+                  },
+                  {
+                      "dependencia": "SUBGERENCIA DE MEDIO AMBIENTE",
+                      "nivel": 4,
+                      "codigo": "00053",
+                      "padre": "GERENCIA DE GESTIÓN AMBIENTAL",
+                      "local": "CASA DE LA CULTURA",
+                      "responsable": "SUBGERENTE"
+                  }
+              ]
+          },
+          {
+            "dependencia": "OFICINA MUNICIPAL DE ATENCIÓN AL USUARIO",
+            "nivel": 4,
+            "codigo": "00009",
+            "padre": "GERENCIA MUNICIPAL",
+            "local": "PALACIO MUNICIPAL",
+            "responsable": "JEFE",
+            "hijos": []
+          }
+        ]
+      },
+      {
+          "dependencia": "OFICINA DE SECRETARÍA GENERAL Y GESTIÓN DOCUMENTARIA",
+          "nivel": 4,
+          "codigo": "00019",
+          "padre": "GERENCIA MUNICIPAL",
+          "local": "PALACIO MUNICIPAL",
+          "responsable": "SECRETARIA",
+          "hijos": []
+      },
+      {
+          "dependencia": "OFICINA DE IMÁGEN INSTITUCIONAL Y COMUNICACIONES",
+          "nivel": 4,
+          "codigo": "00004",
+          "padre": "GERENCIA MUNICIPAL",
+          "local": "CASA CABILDO",
+          "responsable": "JEFE DE OFICINA",
+          "hijos": []
+      },
+      {
+          "dependencia": "OFICINA DE EJECUCIÓN COACTIVA",
+          "nivel": 4,
+          "codigo": "00005",
+          "padre": "GERENCIA MUNICIPAL",
+          "local": "CASA CABILDO",
+          "responsable": "EJECUTOR COACTIVO",
+          "hijos": []
+      },
+      {
+          "dependencia": "OFICINA EJECUTOR DE RIESGO DE DESASTRES",
+          "nivel": 4,
+          "codigo": "00006",
+          "padre": "GERENCIA MUNICIPAL",
+          "local": "CASA DE LA CULTURA",
+          "responsable": "DIRECTOR",
+          "hijos": []
+      }
+    ]
+  }

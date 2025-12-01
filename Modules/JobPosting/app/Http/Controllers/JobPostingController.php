@@ -5,6 +5,7 @@ namespace Modules\JobPosting\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
 use Modules\JobPosting\Entities\{JobPosting, ProcessPhase};
 use Modules\JobPosting\Services\{JobPostingService, ScheduleService};
@@ -64,16 +65,12 @@ class JobPostingController extends Controller
     }
 
     /**
-     * Guardar convocatoria (CORREGIDO)
+     * Guardar convocatoria
      */
     public function store(StoreJobPostingRequest $request): RedirectResponse
     {
         try {
-            // Delegamos toda la lógica al servicio.
-            // El servicio se encargará de:
-            // 1. Generar el código único (respetando eliminados)
-            // 2. Crear el registro
-            // 3. Generar el cronograma automático si auto_schedule es true
+            // Delegamos toda la lógica al servicio
             $jobPosting = $this->jobPostingService->create(
                 $request->validated(),
                 auth()->user()
@@ -84,7 +81,6 @@ class JobPostingController extends Controller
                 ->with('success', '✅ Convocatoria creada exitosamente con código: ' . $jobPosting->code);
 
         } catch (\Exception $e) {
-            // Loguear el error para depuración interna
             \Log::error('Error creando convocatoria: ' . $e->getMessage());
 
             return back()
@@ -105,29 +101,25 @@ class JobPostingController extends Controller
 
         $jobPosting->load([
             'publisher',
-            'schedules.phase', // Cargamos la relación con la fase
+            'schedules.phase',
             'schedules.responsibleUnit',
             'history.user',
-            'jobProfiles' // Cargamos los perfiles asociados
+            'jobProfiles'
         ]);
 
-        // 1. CORRECCIÓN IMPORTANTE: Ordenar los horarios por el número de fase (1 al 12)
-        // Esto arregla la lista desordenada en la vista
+        // Ordenar los horarios por el número de fase
         $sortedSchedules = $jobPosting->schedules->sortBy('phase.phase_number');
         $jobPosting->setRelation('schedules', $sortedSchedules);
 
-        // 2. CORRECCIÓN PRÓXIMA FASE: 
-        // Buscamos la primera fase que NO esté completada, basándonos en el orden lógico (1, 2, 3...)
-        // y no solo en la fecha.
+        // Próxima fase: la primera que NO esté completada
         $nextPhase = $sortedSchedules->first(function ($schedule) {
-            return $schedule->status !== \Modules\JobPosting\Enums\ScheduleStatusEnum::COMPLETED 
-                && $schedule->status !== 'COMPLETED'; // Por si acaso es string
+            return $schedule->status !== \Modules\JobPosting\Enums\ScheduleStatusEnum::COMPLETED
+                && $schedule->status !== 'COMPLETED';
         });
 
         // Fase actual (la que está en progreso)
         $currentPhase = $sortedSchedules->firstWhere('status', 'IN_PROGRESS');
 
-        // Si no hay ninguna en progreso, la "actual" visualmente puede ser la "siguiente"
         if (!$currentPhase) {
             $currentPhase = $nextPhase;
         }
@@ -296,7 +288,6 @@ class JobPostingController extends Controller
     public function clone(JobPosting $jobPosting): RedirectResponse
     {
         try {
-            // El servicio genera el nuevo código único automáticamente
             $newJobPosting = $this->jobPostingService->clone($jobPosting, auth()->user());
 
             return redirect()
@@ -414,5 +405,272 @@ class JobPostingController extends Controller
         }
 
         return $result;
+    }
+
+    /* ========================================================================== */
+    /*                          🔍 API DE BÚSQUEDA DINÁMICA                      */
+    /* ========================================================================== */
+
+    /**
+     * API: Buscar Unidades Organizacionales
+     * Endpoint: GET /api/search/organizational-units
+     */
+    public function searchOrganizationalUnits(Request $request): JsonResponse
+    {
+        $query = $request->input('q', '');
+        $limit = $request->input('limit', 20);
+
+        $units = OrganizationalUnit::query()
+            ->where('is_active', true)
+            ->when($query, function($q) use ($query) {
+                $q->where(function($q2) use ($query) {
+                    $q2->where('name', 'like', "%{$query}%")
+                       ->orWhere('code', 'like', "%{$query}%");
+                });
+            })
+            ->orderBy('name', 'asc')
+            ->limit($limit)
+            ->get(['id', 'name', 'code', 'type']);
+
+        return response()->json([
+            'success' => true,
+            'data' => $units->map(function($unit) {
+                return [
+                    'id' => $unit->id,
+                    'text' => "{$unit->code} - {$unit->name}",
+                    'name' => $unit->name,
+                    'code' => $unit->code,
+                    'type' => $unit->type,
+                ];
+            }),
+            'total' => $units->count()
+        ]);
+    }
+
+    /**
+     * API: Buscar Fases del Proceso
+     * Endpoint: GET /api/search/process-phases
+     */
+    public function searchProcessPhases(Request $request): JsonResponse
+    {
+        $query = $request->input('q', '');
+        $limit = $request->input('limit', 20);
+        $excludeIds = $request->input('exclude', []); // IDs a excluir
+
+        $phases = ProcessPhase::query()
+            ->where('is_active', true)
+            ->when($query, function($q) use ($query) {
+                $q->where(function($q2) use ($query) {
+                    $q2->where('name', 'like', "%{$query}%")
+                       ->orWhere('code', 'like', "%{$query}%");
+                });
+            })
+            ->when(!empty($excludeIds), function($q) use ($excludeIds) {
+                $q->whereNotIn('id', $excludeIds);
+            })
+            ->orderBy('phase_number', 'asc')
+            ->limit($limit)
+            ->get(['id', 'name', 'code', 'phase_number', 'requires_evaluation']);
+
+        return response()->json([
+            'success' => true,
+            'data' => $phases->map(function($phase) {
+                return [
+                    'id' => $phase->id,
+                    'text' => "Fase {$phase->phase_number}: {$phase->name}",
+                    'name' => $phase->name,
+                    'code' => $phase->code,
+                    'phase_number' => $phase->phase_number,
+                    'requires_evaluation' => $phase->requires_evaluation,
+                ];
+            }),
+            'total' => $phases->count()
+        ]);
+    }
+
+    /**
+     * API: Buscar Convocatorias
+     * Endpoint: GET /api/search/job-postings
+     */
+    public function searchJobPostings(Request $request): JsonResponse
+    {
+        $query = $request->input('q', '');
+        $year = $request->input('year', null);
+        $status = $request->input('status', null);
+        $limit = $request->input('limit', 20);
+
+        $jobPostings = JobPosting::query()
+            ->when($query, function($q) use ($query) {
+                $q->where(function($q2) use ($query) {
+                    $q2->where('title', 'like', "%{$query}%")
+                       ->orWhere('code', 'like', "%{$query}%");
+                });
+            })
+            ->when($year, function($q) use ($year) {
+                $q->where('year', $year);
+            })
+            ->when($status, function($q) use ($status) {
+                $q->where('status', $status);
+            })
+            ->orderBy('created_at', 'desc')
+            ->limit($limit)
+            ->get(['id', 'code', 'title', 'year', 'status']);
+
+        return response()->json([
+            'success' => true,
+            'data' => $jobPostings->map(function($posting) {
+                return [
+                    'id' => $posting->id,
+                    'text' => "{$posting->code} - {$posting->title}",
+                    'code' => $posting->code,
+                    'title' => $posting->title,
+                    'year' => $posting->year,
+                    'status' => $posting->status->label(),
+                ];
+            }),
+            'total' => $jobPostings->count()
+        ]);
+    }
+
+    /**
+     * API: Validar código único
+     * Endpoint: GET /api/validate/job-posting-code
+     */
+    public function validateCode(Request $request): JsonResponse
+    {
+        $code = $request->input('code');
+        $excludeId = $request->input('exclude_id', null);
+
+        $exists = JobPosting::query()
+            ->where('code', $code)
+            ->when($excludeId, function($q) use ($excludeId) {
+                $q->where('id', '!=', $excludeId);
+            })
+            ->exists();
+
+        return response()->json([
+            'valid' => !$exists,
+            'message' => $exists ? 'El código ya existe' : 'Código disponible',
+        ]);
+    }
+
+    /**
+     * API: Obtener siguiente código disponible
+     * Endpoint: GET /api/generate/job-posting-code
+     */
+    public function generateCode(Request $request): JsonResponse
+    {
+        $year = $request->input('year', now()->year);
+
+        // Reutilizar la lógica del servicio
+        $lastPosting = JobPosting::withTrashed()
+            ->where('year', $year)
+            ->where('code', 'LIKE', "CONV-{$year}-%")
+            ->orderBy('code', 'desc')
+            ->first();
+
+        if (!$lastPosting) {
+            $nextCode = "CONV-{$year}-001";
+        } else {
+            $parts = explode('-', $lastPosting->code);
+            $lastNumber = (int) end($parts);
+            $nextNumber = $lastNumber + 1;
+            $nextCode = "CONV-{$year}-" . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+        }
+
+        return response()->json([
+            'success' => true,
+            'code' => $nextCode,
+            'year' => $year,
+        ]);
+    }
+
+    /**
+     * API: Vista previa de cronograma antes de crear
+     * Endpoint: POST /api/preview/schedule
+     */
+    public function previewSchedule(Request $request): JsonResponse
+    {
+        $startDate = $request->input('start_date', now());
+
+        $phases = ProcessPhase::where('is_active', true)
+            ->orderBy('phase_number', 'asc')
+            ->get();
+
+        $currentDate = \Carbon\Carbon::parse($startDate);
+        $preview = [];
+
+        foreach ($phases as $phase) {
+            $daysDuration = $phase->default_duration_days ?? match($phase->phase_number) {
+                3 => 2,
+                6 => 3,
+                8 => 2,
+                default => 1
+            };
+
+            $endDate = (clone $currentDate)->addDays($daysDuration - 1);
+
+            $preview[] = [
+                'phase_number' => $phase->phase_number,
+                'phase_name' => $phase->name,
+                'start_date' => $currentDate->format('Y-m-d'),
+                'end_date' => $endDate->format('Y-m-d'),
+                'duration_days' => $daysDuration,
+            ];
+
+            $currentDate = (clone $endDate)->addDay();
+        }
+
+        return response()->json([
+            'success' => true,
+            'preview' => $preview,
+            'total_phases' => count($preview),
+            'start_date' => $startDate,
+            'end_date' => $currentDate->subDay()->format('Y-m-d'),
+        ]);
+    }
+
+    /**
+     * API: Verificar duplicados en cronograma
+     * Endpoint: GET /api/check/duplicate-phase
+     */
+    public function checkDuplicatePhase(Request $request): JsonResponse
+    {
+        $jobPostingId = $request->input('job_posting_id');
+        $phaseId = $request->input('phase_id');
+
+        $exists = \Modules\JobPosting\Entities\JobPostingSchedule::where('job_posting_id', $jobPostingId)
+            ->where('process_phase_id', $phaseId)
+            ->exists();
+
+        return response()->json([
+            'duplicate' => $exists,
+            'message' => $exists ? 'Esta fase ya está en el cronograma' : 'Fase disponible',
+        ]);
+    }
+
+    /**
+     * API: Regenerar cronograma completo
+     * Endpoint: POST /api/regenerate/schedule/{jobPosting}
+     */
+    public function regenerateSchedule(Request $request, JobPosting $jobPosting): JsonResponse
+    {
+        try {
+            $startDate = $request->input('start_date', now());
+
+            $updated = $this->jobPostingService->regenerateSchedule($jobPosting, $startDate);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Cronograma regenerado exitosamente',
+                'total_phases' => $updated->schedules->count(),
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al regenerar: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 }
