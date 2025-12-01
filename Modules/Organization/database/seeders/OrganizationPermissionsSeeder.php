@@ -10,7 +10,6 @@ class OrganizationPermissionsSeeder extends Seeder
 {
     public function run(): void
     {
-        // Lista de permisos
         $permissions = [
             'organization.view.units',
             'organization.view.unit',
@@ -28,30 +27,23 @@ class OrganizationPermissionsSeeder extends Seeder
         $created = 0;
         $skipped = 0;
 
-        foreach ($permissions as $permissionName) {
-            // Verificar si ya existe
-            $exists = DB::table('permissions')
-                ->where('name', $permissionName)
-                ->exists();
+        foreach ($permissions as $name) {
+            $exists = DB::table('permissions')->where('name', $name)->exists();
 
             if (!$exists) {
-                // Generar slug desde el name
-                $slug = Str::slug($permissionName);
-
-                // Insertar con TODOS los campos requeridos
                 DB::table('permissions')->insert([
                     'id' => (string) Str::uuid(),
-                    'name' => $permissionName,
-                    'slug' => $slug,
-                    'module' => 'organization', // ⭐ Agregar module
+                    'name' => $name,
+                    'slug' => Str::slug($name),
+                    'module' => 'organization',
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
                 $created++;
-                $this->command->line("  ✓ Creado: {$permissionName}");
+                $this->command->line("  ✓ Creado: {$name}");
             } else {
                 $skipped++;
-                $this->command->line("  - Ya existe: {$permissionName}");
+                $this->command->line("  - Ya existe: {$name}");
             }
         }
 

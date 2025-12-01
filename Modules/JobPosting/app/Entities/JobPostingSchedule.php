@@ -55,6 +55,13 @@ class JobPostingSchedule extends Model
             }
         });
     }
+    public function getDaysRemaining(): int
+    {
+        $end = \Carbon\Carbon::parse($this->end_date);
+        $now = now();
+
+        return $end->isFuture() ? $now->diffInDays($end) : 0;
+    }
 
     /**
      * Convocatoria

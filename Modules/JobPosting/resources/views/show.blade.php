@@ -120,7 +120,7 @@
                                 Fase {{ $currentPhase->phase->phase_number }}
                             </span>
                             <div class="mt-2 text-3xl font-bold text-green-600">
-                                {{ $currentPhase->getDaysRemaining() }}d
+                                {{ $currentPhase->getDaysRemaining() }} días
                             </div>
                             <div class="text-xs text-green-600">restantes</div>
                         </div>
