@@ -27,15 +27,12 @@ Route::middleware(['auth', 'verified'])->prefix('convocatorias')->name('jobposti
     Route::post('/{jobPosting}/finalizar', [JobPostingController::class, 'finalize'])->name('finalize');
     Route::post('/{jobPosting}/cancelar', [JobPostingController::class, 'cancel'])->name('cancel');
     Route::post('/{jobPosting}/clonar', [JobPostingController::class, 'clone'])->name('clone');
-    
+
     // RUTAS DEL CRONOGRAMA
-    // Ver/Editar cronograma
     Route::get('/{jobPosting}/cronograma', [ScheduleController::class, 'edit'])->name('schedule.edit');
-    // Guardar cambios
     Route::put('/{jobPosting}/cronograma', [ScheduleController::class, 'update'])->name('schedule.update');
-    // Generar automático (botón mágico)
     Route::post('/{jobPosting}/cronograma/init', [ScheduleController::class, 'initialize'])->name('schedule.init');
-    
+
     // Historial
     Route::get('/{jobPosting}/historial', [JobPostingController::class, 'history'])->name('history');
 });

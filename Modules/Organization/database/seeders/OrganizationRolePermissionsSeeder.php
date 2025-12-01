@@ -9,7 +9,6 @@ class OrganizationRolePermissionsSeeder extends Seeder
 {
     public function run(): void
     {
-        // Obtener todos los roles disponibles
         $roles = DB::table('roles')->get();
 
         if ($roles->isEmpty()) {
@@ -23,9 +22,8 @@ class OrganizationRolePermissionsSeeder extends Seeder
             $this->command->line("  - {$role->name}");
         }
 
-        // Obtener permisos del módulo Organization
         $orgPermissions = DB::table('permissions')
-            ->where('name', 'like', 'organization.%')
+            ->where('module', 'organization')
             ->pluck('id', 'name');
 
         if ($orgPermissions->isEmpty()) {
@@ -33,75 +31,56 @@ class OrganizationRolePermissionsSeeder extends Seeder
             return;
         }
 
-        // Permisos de solo lectura
-        $readPermissions = [
+        $read = [
             'organization.view.units',
             'organization.view.unit',
             'organization.view.tree',
         ];
 
-        // Permisos para manager
-        $managerPermissions = [
-            'organization.view.units',
-            'organization.view.unit',
-            'organization.view.tree',
+        $manager = [
+            ...$read,
             'organization.create.unit',
             'organization.update.unit',
             'organization.move.unit',
             'organization.export.data',
         ];
 
-        // Asignar permisos según el rol
         foreach ($roles as $role) {
             $roleName = strtolower($role->name);
-            $permissionsToAssign = [];
+            $toAssign = [];
 
-            // Determinar qué permisos asignar según el nombre del rol
-            if (in_array($roleName, ['admin', 'administrador', 'administrator'])) {
-                // Admin: todos los permisos
-                $permissionsToAssign = $orgPermissions->keys()->toArray();
-            } elseif (in_array($roleName, ['manager', 'gerente', 'jefe'])) {
-                // Manager: crear, leer, actualizar
-                $permissionsToAssign = $managerPermissions;
-            } elseif (in_array($roleName, ['user', 'usuario', 'empleado'])) {
-                // User: solo lectura
-                $permissionsToAssign = $readPermissions;
+            if (str_contains($roleName, 'admin')) {
+                $toAssign = $orgPermissions->keys()->toArray();
+            } elseif (str_contains($roleName, 'jefe') || str_contains($roleName, 'gerente')) {
+                $toAssign = $manager;
             } else {
-                // Otros roles: solo lectura por defecto
-                $permissionsToAssign = $readPermissions;
+                $toAssign = $read;
             }
 
-            // Asignar permisos
             $assigned = 0;
-            foreach ($permissionsToAssign as $permissionName) {
-                if (isset($orgPermissions[$permissionName])) {
-                    $permissionId = $orgPermissions[$permissionName];
 
-                    // Verificar si ya existe la relación
-                    $exists = DB::table('role_permission')
-                        ->where('role_id', $role->id)
-                        ->where('permission_id', $permissionId)
-                        ->exists();
+            foreach ($toAssign as $perm) {
+                if (!isset($orgPermissions[$perm])) continue;
 
-                    if (!$exists) {
-                        DB::table('role_permission')->insert([
-                            'role_id' => $role->id,
-                            'permission_id' => $permissionId,
-                            'created_at' => now(),
-                            'updated_at' => now(),
-                        ]);
-                        $assigned++;
-                    }
+                $exists = DB::table('role_permission')
+                    ->where('role_id', $role->id)
+                    ->where('permission_id', $orgPermissions[$perm])
+                    ->exists();
+
+                if (!$exists) {
+                    DB::table('role_permission')->insert([
+                        'role_id' => $role->id,
+                        'permission_id' => $orgPermissions[$perm],
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                    $assigned++;
                 }
             }
 
-            if ($assigned > 0) {
-                $this->command->info("✓ Asignados {$assigned} permisos al rol: {$role->name}");
-            } else {
-                $this->command->line("  Ya tenía permisos asignados: {$role->name}");
-            }
+            $this->command->info("✓ Rol {$role->name}: {$assigned} permisos asignados");
         }
 
-        $this->command->info('✓ Proceso de asignación completado');
+        $this->command->info('✅ Asignación de permisos completada');
     }
 }

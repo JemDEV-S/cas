@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
-use Modules\JobPosting\Entities\{JobPosting, JobPostingHistory, ProcessPhase};
+use Modules\JobPosting\Entities\{JobPosting, JobPostingHistory, ProcessPhase, JobPostingSchedule};
 use Modules\User\Entities\User;
 
 class JobPostingService
@@ -58,14 +58,14 @@ class JobPostingService
 
     /**
      * Crear nueva convocatoria
-     * Incluye generación de código único y cronograma automático.
+     * MEJORADO: Incluye generación de código único y prevención de duplicados
      */
     public function create(array $data, ?User $user = null): JobPosting
     {
         return DB::transaction(function() use ($data, $user) {
             // 1. Generar código único (soluciona el error de duplicidad)
             $data['code'] = $this->generateNextCode($data['year']);
-            
+
             // 2. Establecer estado inicial
             $data['status'] = 'BORRADOR';
 
@@ -73,10 +73,13 @@ class JobPostingService
             $jobPosting = JobPosting::create($data);
 
             // 4. Generar cronograma automático si se solicitó
-            // Verificamos si vino 'auto_schedule' (desde el request preparado) o 'create_schedule'
             if (!empty($data['auto_schedule']) && $data['auto_schedule'] == true) {
                 $startDate = $data['schedule_start_date'] ?? now();
-                $this->generateAutomaticSchedule($jobPosting, $startDate);
+
+                // MEJORA: Verificar si ya existe cronograma para evitar duplicados
+                if ($jobPosting->schedules()->count() === 0) {
+                    $this->generateAutomaticSchedule($jobPosting, $startDate);
+                }
             }
 
             // 5. Registrar en historial
@@ -131,7 +134,7 @@ class JobPostingService
 
         return DB::transaction(function() use ($jobPosting, $user) {
             $oldStatus = $jobPosting->status->value;
-            
+
             $jobPosting->publish($user);
 
             JobPostingHistory::log(
@@ -158,7 +161,7 @@ class JobPostingService
 
         return DB::transaction(function() use ($jobPosting, $user) {
             $oldStatus = $jobPosting->status->value;
-            
+
             $jobPosting->startProcess();
 
             JobPostingHistory::log(
@@ -185,7 +188,7 @@ class JobPostingService
 
         return DB::transaction(function() use ($jobPosting, $user) {
             $oldStatus = $jobPosting->status->value;
-            
+
             $jobPosting->finalize($user);
 
             JobPostingHistory::log(
@@ -212,7 +215,7 @@ class JobPostingService
 
         return DB::transaction(function() use ($jobPosting, $reason, $user) {
             $oldStatus = $jobPosting->status->value;
-            
+
             $jobPosting->cancel($user, $reason);
 
             JobPostingHistory::log(
@@ -261,7 +264,7 @@ class JobPostingService
                 'start_date',
                 'end_date',
             ]);
-            
+
             // Asignar al año actual
             $data['year'] = now()->year;
             // Generar NUEVO código para el año actual
@@ -270,20 +273,8 @@ class JobPostingService
 
             $newJobPosting = JobPosting::create($data);
 
-            // Clonar cronograma
-            foreach ($original->schedules as $schedule) {
-                $newJobPosting->schedules()->create([
-                    'process_phase_id' => $schedule->process_phase_id,
-                    'start_date' => $schedule->start_date, // Opcional: Podrías recalcular fechas
-                    'end_date' => $schedule->end_date,
-                    'start_time' => $schedule->start_time,
-                    'end_time' => $schedule->end_time,
-                    'location' => $schedule->location,
-                    'responsible_unit_id' => $schedule->responsible_unit_id,
-                    'notes' => $schedule->notes,
-                    'status' => 'PENDING'
-                ]);
-            }
+            // Clonar cronograma SIN duplicados
+            $this->cloneSchedule($original, $newJobPosting);
 
             JobPostingHistory::log(
                 $newJobPosting,
@@ -299,12 +290,12 @@ class JobPostingService
     }
 
     /* -------------------------------------------------------------------------- */
-    /*                              MÉTODOS PRIVADOS                              */
+    /*                              MÉTODOS PRIVADOS MEJORADOS                    */
     /* -------------------------------------------------------------------------- */
 
     /**
      * Genera el siguiente código disponible: CONV-2025-001
-     * Considera registros eliminados para evitar colisiones.
+     * MEJORADO: Considera registros eliminados para evitar colisiones
      */
     private function generateNextCode(int $year): string
     {
@@ -312,8 +303,7 @@ class JobPostingService
         $lastPosting = JobPosting::withTrashed()
             ->where('year', $year)
             ->where('code', 'LIKE', "CONV-{$year}-%")
-            // CORRECCIÓN: No ordenar por ID (es UUID), ordenar por el código mismo
-            ->orderBy('code', 'desc') 
+            ->orderBy('code', 'desc')
             ->first();
 
         if (!$lastPosting) {
@@ -327,22 +317,37 @@ class JobPostingService
         // Incrementar
         $nextNumber = $lastNumber + 1;
 
-        // Formatear
+        // Formatear con ceros a la izquierda
         return "CONV-{$year}-" . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
     }
 
     /**
-     * Genera las 12 fases automáticamente basado en el seeder de ProcessPhase
+     * Genera las 12 fases automáticamente SIN DUPLICADOS
+     * MEJORADO: Usa updateOrCreate y validaciones
      */
-    private function generateAutomaticSchedule(JobPosting $jobPosting, $startDate)
+    private function generateAutomaticSchedule(JobPosting $jobPosting, $startDate): void
     {
-        $phases = ProcessPhase::orderBy('order')->get();
-        
+        // MEJORA: Verificar que no exista cronograma previo
+        $existingCount = $jobPosting->schedules()->count();
+        if ($existingCount > 0) {
+            \Log::warning("Intento de generar cronograma duplicado para JobPosting ID: {$jobPosting->id}");
+            return; // No generar si ya existe
+        }
+
+        // Obtener fases activas ordenadas por phase_number
+        $phases = ProcessPhase::where('is_active', true)
+                    ->orderBy('phase_number', 'asc')
+                    ->get();
+
+        if ($phases->isEmpty()) {
+            throw new \Exception('No hay fases activas configuradas en el sistema.');
+        }
+
         $currentDate = $startDate instanceof \Carbon\Carbon ? $startDate : \Carbon\Carbon::parse($startDate);
 
         foreach ($phases as $phase) {
-            // Lógica de duración por fase
-            $daysDuration = match($phase->order) {
+            // Lógica de duración por fase (mejorada)
+            $daysDuration = $phase->default_duration_days ?? match($phase->phase_number) {
                 3 => 2, // Registro de postulantes
                 6 => 3, // Evaluación curricular
                 8 => 2, // Entrevista
@@ -350,25 +355,73 @@ class JobPostingService
             };
 
             // Calcular fecha fin
-            // Si dura 1 día, se suma 0 días, por lo que start y end son iguales.
             $endDate = (clone $currentDate)->addDays($daysDuration - 1);
 
-            $jobPosting->schedules()->create([
-                'process_phase_id' => $phase->id,
-                'start_date' => $currentDate,
-                
-                // CORRECCIÓN AQUÍ: Quitamos el condicional ternario.
-                // Siempre enviamos fecha de fin, aunque sea igual a la de inicio.
-                'end_date' => $endDate, 
-                
-                'status' => 'PENDING',
-                'notify_before' => true,
-                'location' => 'Portal Institucional',
-            ]);
+            // CRÍTICO: Usar updateOrCreate para evitar duplicados
+            $jobPosting->schedules()->updateOrCreate(
+                [
+                    'process_phase_id' => $phase->id // Clave única
+                ],
+                [
+                    'start_date' => $currentDate->format('Y-m-d'),
+                    'end_date' => $endDate->format('Y-m-d'),
+                    'status' => 'PENDING',
+                    'notify_before' => true,
+                    'location' => 'Portal Institucional',
+                    'notify_days_before' => 3,
+                ]
+            );
 
-            // La siguiente fase empieza al día siguiente de que termina esta
+            // La siguiente fase empieza al día siguiente
             $currentDate = (clone $endDate)->addDay();
         }
+
+        \Log::info("Cronograma generado exitosamente para JobPosting ID: {$jobPosting->id}. Total fases: {$phases->count()}");
+    }
+
+    /**
+     * Clonar cronograma SIN duplicados
+     * NUEVO MÉTODO
+     */
+    private function cloneSchedule(JobPosting $original, JobPosting $newJobPosting): void
+    {
+        foreach ($original->schedules as $schedule) {
+            // Usar updateOrCreate para evitar duplicados
+            $newJobPosting->schedules()->updateOrCreate(
+                [
+                    'process_phase_id' => $schedule->process_phase_id
+                ],
+                [
+                    'start_date' => $schedule->start_date,
+                    'end_date' => $schedule->end_date,
+                    'start_time' => $schedule->start_time,
+                    'end_time' => $schedule->end_time,
+                    'location' => $schedule->location,
+                    'responsible_unit_id' => $schedule->responsible_unit_id,
+                    'notes' => $schedule->notes,
+                    'status' => 'PENDING',
+                    'notify_before' => true,
+                    'notify_days_before' => 3,
+                ]
+            );
+        }
+    }
+
+    /**
+     * Regenerar cronograma (elimina el anterior)
+     * NUEVO MÉTODO
+     */
+    public function regenerateSchedule(JobPosting $jobPosting, $startDate): JobPosting
+    {
+        return DB::transaction(function() use ($jobPosting, $startDate) {
+            // Eliminar cronograma existente
+            $jobPosting->schedules()->forceDelete();
+
+            // Generar nuevo cronograma
+            $this->generateAutomaticSchedule($jobPosting, $startDate);
+
+            return $jobPosting->fresh('schedules.phase');
+        });
     }
 
     /* -------------------------------------------------------------------------- */
