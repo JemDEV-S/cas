@@ -3,50 +3,42 @@
 namespace Modules\JobPosting\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Modules\JobPosting\Enums\JobPostingStatusEnum;
 
 class StoreJobPostingRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
-        return true; // La autorización se maneja en el Policy
+        return true;
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     */
     public function rules(): array
     {
         return [
             'title' => 'required|string|max:255',
-            'year' => 'nullable|integer|min:2000|max:' . (now()->year + 1),
+            'year' => 'required|integer|min:2000|max:' . (now()->year + 1),
             'description' => 'nullable|string|max:5000',
             'start_date' => 'nullable|date|after_or_equal:today',
             'end_date' => 'nullable|date|after:start_date',
             'metadata' => 'nullable|array',
+            
+            // Reglas para el cronograma automático
+            'auto_schedule' => 'nullable|boolean',
+            'schedule_start_date' => 'nullable|date|required_if:auto_schedule,true',
         ];
     }
 
-    /**
-     * Get custom attributes for validator errors.
-     */
-    public function attributes(): array
+    protected function prepareForValidation()
     {
-        return [
-            'title' => 'título',
-            'year' => 'año',
-            'description' => 'descripción',
-            'start_date' => 'fecha de inicio',
-            'end_date' => 'fecha de fin',
-        ];
+        // Si el checkbox viene como 'on' o presente, lo pasamos a true
+        // Verifica el 'name' de tu input HTML, en tu screenshot parece llamarse 'auto_schedule'
+        // pero en el controlador anterior usabas 'create_schedule'. 
+        // He unificado a 'auto_schedule' para coincidir con el servicio.
+        
+        $this->merge([
+            'auto_schedule' => $this->has('auto_schedule') || $this->has('create_schedule'),
+        ]);
     }
 
-    /**
-     * Get custom messages for validator errors.
-     */
     public function messages(): array
     {
         return [
@@ -57,6 +49,15 @@ class StoreJobPostingRequest extends FormRequest
             'year.max' => 'El año no puede ser mayor a ' . (now()->year + 1) . '.',
             'start_date.after_or_equal' => 'La fecha de inicio no puede ser anterior a hoy.',
             'end_date.after' => 'La fecha de fin debe ser posterior a la fecha de inicio.',
+        ];
+    }
+
+    public function attributes(): array
+    {
+        return [
+            'title' => 'título',
+            'year' => 'año',
+            'schedule_start_date' => 'fecha de inicio del cronograma',
         ];
     }
 }

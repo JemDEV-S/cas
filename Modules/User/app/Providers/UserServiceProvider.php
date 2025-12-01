@@ -56,6 +56,14 @@ class UserServiceProvider extends ServiceProvider
 
         // Registrar repositorios
         $this->app->singleton(\Modules\User\Repositories\UserRepository::class);
+
+        $this->app->bind(
+            \Modules\User\Repositories\Contracts\UserOrganizationUnitRepositoryInterface::class,
+            \Modules\User\Repositories\Eloquent\UserOrganizationUnitRepository::class
+        );
+
+
+
     }
 
     /**

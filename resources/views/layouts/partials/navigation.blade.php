@@ -163,6 +163,51 @@
                     </a>
                     @endcan
 
+                    <!-- Documentos -->
+                    <div class="relative" @mouseenter="open = 'documentos'" @mouseleave="open = null">
+                        <button class="inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition-all
+                                     {{ request()->routeIs('documents.*')
+                                         ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-md'
+                                         : 'text-gray-700 hover:bg-gray-100' }}">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            Documentos
+                            <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+
+                        <!-- Dropdown -->
+                        <div x-show="open === 'documentos'"
+                             x-transition:enter="transition ease-out duration-200"
+                             x-transition:enter-start="opacity-0 scale-95"
+                             x-transition:enter-end="opacity-100 scale-100"
+                             x-transition:leave="transition ease-in duration-150"
+                             x-transition:leave-start="opacity-100 scale-100"
+                             x-transition:leave-end="opacity-0 scale-95"
+                             class="absolute left-0 mt-2 w-56 rounded-xl shadow-lg bg-white ring-1 ring-gray-200 overflow-hidden"
+                             style="display: none;">
+                            <div class="py-1">
+                                <a href="{{ route('documents.index') }}"
+                                   class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all group">
+                                    <svg class="w-5 h-5 mr-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+                                    </svg>
+                                    <span class="font-medium group-hover:text-blue-500">Todos los Documentos</span>
+                                </a>
+
+                                <a href="{{ route('documents.pending-signatures') }}"
+                                   class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-yellow-50 hover:to-amber-50 transition-all group">
+                                    <svg class="w-5 h-5 mr-3 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                                    </svg>
+                                    <span class="font-medium group-hover:text-yellow-500">Pendientes de Firma</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Usuarios -->
                     @can('user.view.users')
                     <div class="relative" @mouseenter="open = 'usuarios'" @mouseleave="open = null">
@@ -201,6 +246,17 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
                                     </svg>
                                     <span class="font-medium group-hover:text-green-500">Nuevo Usuario</span>
+                                </a>
+                                @endcan
+
+                                @can('user.view.assignments')
+                                <div class="border-t border-gray-200 my-1"></div>
+                                <a href="{{ route('assignments.index') }}"
+                                   class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-teal-50 hover:to-cyan-50 transition-all group">
+                                    <svg class="w-5 h-5 mr-3 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                                    </svg>
+                                    <span class="font-medium group-hover:text-teal-500">Asignaciones</span>
                                 </a>
                                 @endcan
 
@@ -352,8 +408,15 @@
 
             @can('user.view.users')
             <a href="{{ route('users.index') }}"
-               class="block px-4 py-3 text-base font-medium text-center {{ request()->routeIs('users.*') ? 'bg-indigo-50 text-indigo-500 border-l-4 border-indigo-500' : 'text-gray-700 hover:bg-gray-50' }}">
+               class="block px-4 py-3 text-base font-medium text-center {{ request()->routeIs('users.*') && !request()->routeIs('users.assignments') ? 'bg-indigo-50 text-indigo-500 border-l-4 border-indigo-500' : 'text-gray-700 hover:bg-gray-50' }}">
                 Usuarios
+            </a>
+            @endcan
+
+            @can('user.view.assignments')
+            <a href="{{ route('assignments.index') }}"
+               class="block px-4 py-3 text-base font-medium text-center {{ request()->routeIs('assignments.*') || request()->routeIs('users.assignments') ? 'bg-teal-50 text-teal-500 border-l-4 border-teal-500' : 'text-gray-700 hover:bg-gray-50' }}">
+                Asignaciones
             </a>
             @endcan
         </div>

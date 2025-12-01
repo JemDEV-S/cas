@@ -44,9 +44,9 @@
             <div class="flex gap-2">
                 @if($jobProfile->canSubmitForReview())
                     @can('submitForReview', $jobProfile)
-                        <form action="{{ route('jobprofile.review.submit', $jobProfile->id) }}" method="POST" class="inline">
+                        <form action="{{ route('jobprofile.profiles.submit', $jobProfile->id) }}" method="POST" class="inline">
                             @csrf
-                            <x-button type="submit" variant="success" onclick="return confirm('¿Enviar a revisión?')">
+                            <x-button type="submit" variant="success" onclick="return confirm('¿Está seguro de enviar este perfil a revisión? Asegúrese de que toda la información esté completa.')">
                                 <i class="fas fa-paper-plane mr-2"></i> Enviar a Revisión
                             </x-button>
                         </form>
@@ -63,6 +63,86 @@
             </div>
         </div>
     </x-card>
+
+    <!-- Alertas de Estado -->
+    @if($jobProfile->isInReview())
+        <div class="mb-6 bg-blue-50 border-l-4 border-blue-400 p-4">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-info-circle text-blue-400"></i>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm text-blue-700">
+                        <strong>En Revisión:</strong> Este perfil está siendo revisado por el equipo de RRHH.
+                    </p>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    @if($jobProfile->isModificationRequested())
+        <div class="mb-6 bg-yellow-50 border-l-4 border-yellow-400 p-4">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-exclamation-triangle text-yellow-400"></i>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm text-yellow-700">
+                        <strong>Modificaciones Solicitadas:</strong>
+                    </p>
+                    @if($jobProfile->review_comments)
+                        <p class="mt-2 text-sm text-yellow-700 bg-white rounded p-2 border border-yellow-200">
+                            {{ $jobProfile->review_comments }}
+                        </p>
+                        <p class="mt-2 text-xs text-yellow-600">
+                            Revisado por: {{ $jobProfile->reviewedBy->name ?? 'N/A' }} - {{ $jobProfile->reviewed_at?->format('d/m/Y H:i') }}
+                        </p>
+                    @endif
+                </div>
+            </div>
+        </div>
+    @endif
+
+    @if($jobProfile->isRejected())
+        <div class="mb-6 bg-red-50 border-l-4 border-red-400 p-4">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-times-circle text-red-400"></i>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm text-red-700">
+                        <strong>Perfil Rechazado:</strong>
+                    </p>
+                    @if($jobProfile->rejection_reason)
+                        <p class="mt-2 text-sm text-red-700 bg-white rounded p-2 border border-red-200">
+                            {{ $jobProfile->rejection_reason }}
+                        </p>
+                        <p class="mt-2 text-xs text-red-600">
+                            Rechazado por: {{ $jobProfile->reviewedBy->name ?? 'N/A' }} - {{ $jobProfile->reviewed_at?->format('d/m/Y H:i') }}
+                        </p>
+                    @endif
+                </div>
+            </div>
+        </div>
+    @endif
+
+    @if($jobProfile->isApproved())
+        <div class="mb-6 bg-green-50 border-l-4 border-green-400 p-4">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-check-circle text-green-400"></i>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm text-green-700">
+                        <strong>Perfil Aprobado:</strong> Este perfil ha sido aprobado y se han generado las vacantes correspondientes.
+                    </p>
+                    <p class="mt-2 text-xs text-green-600">
+                        Aprobado por: {{ $jobProfile->approvedBy->name ?? 'N/A' }} - {{ $jobProfile->approved_at?->format('d/m/Y H:i') }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    @endif
 
     <!-- Información General -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -96,6 +176,22 @@
                         <dt class="text-sm font-medium text-gray-500">Unidad Organizacional</dt>
                         <dd class="text-sm text-gray-900 col-span-2">{{ $jobProfile->organizationalUnit->name ?? 'N/A' }}</dd>
                     </div>
+                    @if($jobProfile->jobPosting)
+                    <div class="grid grid-cols-3 gap-4 border-t border-gray-200 pt-4">
+                        <dt class="text-sm font-medium text-gray-500">Convocatoria Asociada</dt>
+                        <dd class="text-sm text-gray-900 col-span-2">
+                            <a href="{{ route('jobposting.show', $jobProfile->jobPosting->id) }}" class="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                                {{ $jobProfile->jobPosting->code }} - {{ $jobProfile->jobPosting->title }}
+                            </a>
+                            <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ $jobProfile->jobPosting->status->badgeClass() }}">
+                                {{ $jobProfile->jobPosting->status->label() }}
+                            </span>
+                        </dd>
+                    </div>
+                    @endif
                     <div class="grid grid-cols-3 gap-4 border-t border-gray-200 pt-4">
                         <dt class="text-sm font-medium text-gray-500">Descripción</dt>
                         <dd class="text-sm text-gray-900 col-span-2">{{ $jobProfile->description ?? 'Sin descripción' }}</dd>
@@ -186,7 +282,7 @@
                 <div class="space-y-4">
                     <div>
                         <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Solicitado por</p>
-                        <p class="mt-1 text-sm text-gray-900">{{ $jobProfile->requestedBy->name ?? 'N/A' }}</p>
+                        <p class="mt-1 text-sm text-gray-900">{{ optional($jobProfile->requestedBy)->first_name . ' ' . optional($jobProfile->requestedBy)->last_name ?? 'N/A' }}</p>
                         <p class="mt-1 text-xs text-gray-500">{{ $jobProfile->requested_at?->format('d/m/Y H:i') ?? 'N/A' }}</p>
                     </div>
 

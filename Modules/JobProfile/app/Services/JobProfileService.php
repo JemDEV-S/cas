@@ -74,6 +74,8 @@ class JobProfileService extends BaseService
 
             $profile = JobProfile::create($data);
 
+            // El historial se registra automáticamente mediante el Observer
+
             // Crear requisitos
             foreach ($requirements as $index => $requirement) {
                 $profile->requirements()->create([

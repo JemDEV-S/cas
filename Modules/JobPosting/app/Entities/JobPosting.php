@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\{BelongsTo, HasMany};
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Modules\Core\Traits\{HasUuid, HasMetadata};
 use Modules\JobPosting\Enums\JobPostingStatusEnum;
+use Modules\JobPosting\Enums\ScheduleStatusEnum;
 use Modules\User\Entities\User;
 
 class JobPosting extends Model
@@ -46,9 +47,9 @@ class JobPosting extends Model
         parent::boot();
 
         static::creating(function ($model) {
-            if (!$model->code) {
+           /*if (!$model->code) {
                 $model->code = self::generateCode();
-            }
+            }*/
             if (!$model->year) {
                 $model->year = now()->year;
             }
@@ -115,6 +116,14 @@ class JobPosting extends Model
     public function history(): HasMany
     {
         return $this->hasMany(JobPostingHistory::class);
+    }
+
+    /**
+     * Perfiles de puesto asociados a la convocatoria
+     */
+    public function jobProfiles(): HasMany
+    {
+        return $this->hasMany(\Modules\JobProfile\Entities\JobProfile::class);
     }
 
     /**

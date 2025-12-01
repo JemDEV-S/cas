@@ -4,148 +4,110 @@ namespace Modules\JobPosting\Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Modules\JobPosting\Entities\ProcessPhase;
-use Illuminate\Support\Str;
 
 class ProcessPhasesSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
         $phases = [
             [
-                'code' => 'PHASE_001',
-                'name' => 'Aprobación de la Convocatoria',
-                'description' => 'Aprobación interna de la convocatoria por las autoridades competentes',
+                'code' => 'PHASE_01_APPROVAL',
                 'phase_number' => 1,
-                'order' => 1,
+                'name' => 'Aprobación de la Convocatoria',
+                'description' => 'Aprobación interna de bases y perfiles',
                 'requires_evaluation' => false,
-                'is_public' => false,
-                'default_duration_days' => 3,
             ],
             [
-                'code' => 'PHASE_002',
-                'name' => 'Publicación de la Convocatoria',
-                'description' => 'Publicación oficial de la convocatoria en el portal institucional',
+                'code' => 'PHASE_02_PUBLICATION',
                 'phase_number' => 2,
-                'order' => 2,
+                'name' => 'Publicación de la Convocatoria',
+                'description' => 'Publicación en el portal de talento Perú y portal institucional',
                 'requires_evaluation' => false,
-                'is_public' => true,
-                'default_duration_days' => 1,
             ],
             [
-                'code' => 'PHASE_003',
-                'name' => 'Registro Virtual de Postulantes',
-                'description' => 'Período de inscripción y presentación de postulaciones en línea',
+                'code' => 'PHASE_03_REGISTRATION',
                 'phase_number' => 3,
-                'order' => 3,
+                'name' => 'Registro Virtual de Postulantes',
+                'description' => 'Recepción de fichas de postulación',
                 'requires_evaluation' => false,
-                'is_public' => true,
-                'default_duration_days' => 7,
             ],
             [
-                'code' => 'PHASE_004',
-                'name' => 'Publicación de Postulantes APTOS',
-                'description' => 'Publicación de lista de postulantes que cumplen requisitos mínimos',
+                'code' => 'PHASE_04_ELIGIBLE_PUB',
                 'phase_number' => 4,
-                'order' => 4,
+                'name' => 'Publicación de postulantes APTOS',
+                'description' => 'Filtro inicial de postulantes',
                 'requires_evaluation' => false,
-                'is_public' => true,
-                'default_duration_days' => 1,
             ],
             [
-                'code' => 'PHASE_005',
-                'name' => 'Presentación de CV Documentado',
-                'description' => 'Entrega física o digital del currículum con documentación sustentaria',
+                'code' => 'PHASE_05_CV_SUBMISSION',
                 'phase_number' => 5,
-                'order' => 5,
+                'name' => 'Presentación de CV documentado',
+                'description' => 'Entrega física o digital de documentos sustentatorios',
                 'requires_evaluation' => false,
-                'is_public' => true,
-                'default_duration_days' => 2,
             ],
             [
-                'code' => 'PHASE_006',
-                'name' => 'Evaluación Curricular',
-                'description' => 'Evaluación y calificación de currículums por el jurado evaluador',
+                'code' => 'PHASE_06_CV_EVALUATION',
                 'phase_number' => 6,
-                'order' => 6,
-                'requires_evaluation' => true,
-                'is_public' => false,
-                'default_duration_days' => 5,
+                'name' => 'Evaluación Curricular',
+                'description' => 'Calificación de la hoja de vida por el comité',
+                'requires_evaluation' => true, // IMPORTANTE: Esta fase lleva puntaje
             ],
             [
-                'code' => 'PHASE_007',
-                'name' => 'Publicación de Resultados Curriculares',
-                'description' => 'Publicación de puntajes y resultados de la evaluación curricular',
+                'code' => 'PHASE_07_CV_RESULTS',
                 'phase_number' => 7,
-                'order' => 7,
+                'name' => 'Publicación de resultados curriculares',
+                'description' => 'Publicación de puntajes de CV',
                 'requires_evaluation' => false,
-                'is_public' => true,
-                'default_duration_days' => 1,
             ],
             [
-                'code' => 'PHASE_008',
-                'name' => 'Entrevista Personal',
-                'description' => 'Entrevista presencial o virtual con los postulantes clasificados',
+                'code' => 'PHASE_08_INTERVIEW',
                 'phase_number' => 8,
-                'order' => 8,
-                'requires_evaluation' => true,
-                'is_public' => false,
-                'default_duration_days' => 3,
+                'name' => 'Entrevista Personal',
+                'description' => 'Entrevista presencial o virtual con el comité',
+                'requires_evaluation' => true, // IMPORTANTE: Esta fase lleva puntaje
             ],
             [
-                'code' => 'PHASE_009',
-                'name' => 'Publicación de Resultados de Entrevista',
-                'description' => 'Publicación de resultados finales y ganadores por vacante',
+                'code' => 'PHASE_09_FINAL_RESULTS',
                 'phase_number' => 9,
-                'order' => 9,
+                'name' => 'Publicación de resultados finales',
+                'description' => 'Publicación del cuadro de méritos final',
                 'requires_evaluation' => false,
-                'is_public' => true,
-                'default_duration_days' => 1,
             ],
             [
-                'code' => 'PHASE_010',
-                'name' => 'Suscripción de Contrato',
-                'description' => 'Firma del contrato CAS con los ganadores seleccionados',
+                'code' => 'PHASE_10_CONTRACT',
                 'phase_number' => 10,
-                'order' => 10,
+                'name' => 'Suscripción de contrato',
+                'description' => 'Firma del contrato administrativo de servicios',
                 'requires_evaluation' => false,
-                'is_public' => false,
-                'default_duration_days' => 5,
             ],
             [
-                'code' => 'PHASE_011',
-                'name' => 'Charla de Inducción',
-                'description' => 'Capacitación inicial y orientación para nuevos contratados',
+                'code' => 'PHASE_11_INDUCTION',
                 'phase_number' => 11,
-                'order' => 11,
+                'name' => 'Charla de Inducción',
+                'description' => 'Inducción al puesto y a la entidad',
                 'requires_evaluation' => false,
-                'is_public' => false,
-                'default_duration_days' => 1,
             ],
             [
-                'code' => 'PHASE_012',
-                'name' => 'Inicio de Labores',
-                'description' => 'Fecha oficial de inicio de actividades del personal contratado',
+                'code' => 'PHASE_12_START',
                 'phase_number' => 12,
-                'order' => 12,
+                'name' => 'Inicio de labores',
+                'description' => 'Primer día de trabajo',
                 'requires_evaluation' => false,
-                'is_public' => false,
-                'default_duration_days' => 1,
             ],
         ];
 
-        foreach ($phases as $phaseData) {
-            ProcessPhase::firstOrCreate(
-                ['code' => $phaseData['code']],
-                array_merge($phaseData, [
-                    'id' => (string) Str::uuid(),
+        foreach ($phases as $phase) {
+            ProcessPhase::updateOrCreate(
+                ['code' => $phase['code']], // Buscamos por código para no duplicar
+                [
+                    'name' => $phase['name'],
+                    'description' => $phase['description'],
+                    'phase_number' => $phase['phase_number'],
+                    'requires_evaluation' => $phase['requires_evaluation'],
                     'is_active' => true,
-                ])
+                    'is_system' => true, // Protegido del sistema
+                ]
             );
         }
-
-        $this->command->info('✓ 12 fases del proceso CAS creadas exitosamente');
     }
 }

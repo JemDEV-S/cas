@@ -35,6 +35,8 @@ class ReviewService
             // Validar que tenga datos mínimos requeridos
             $this->validateMinimumRequirements($jobProfile);
 
+            $oldStatus = $jobProfile->status;
+
             // Actualizar estado
             $jobProfile->update([
                 'status' => 'in_review',
@@ -66,6 +68,8 @@ class ReviewService
                 throw new BusinessRuleException('Solo se pueden solicitar modificaciones a perfiles en revisión.');
             }
 
+            $oldStatus = $jobProfile->status;
+
             // Actualizar estado
             $jobProfile->update([
                 'status' => 'modification_requested',
@@ -96,6 +100,8 @@ class ReviewService
 
             // Validar requisitos completos para aprobación
             $this->validateForApproval($jobProfile);
+
+            $oldStatus = $jobProfile->status;
 
             // Actualizar estado
             $jobProfile->update([
@@ -130,6 +136,8 @@ class ReviewService
             if (empty($reason)) {
                 throw new BusinessRuleException('Debe proporcionar una razón para el rechazo.');
             }
+
+            $oldStatus = $jobProfile->status;
 
             // Actualizar estado
             $jobProfile->update([

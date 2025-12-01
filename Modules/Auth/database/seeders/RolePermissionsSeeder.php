@@ -92,8 +92,11 @@ class RolePermissionsSeeder extends Seeder
                 'jobprofile.view.profiles',
                 'jobprofile.view.profile',
                 'jobprofile.view.own',
+                'jobprofile.create.profile',
+                'jobprofile.update.own',
                 'jobprofile.update.any',
                 'jobprofile.delete.profile',
+                'jobprofile.submit.profile',
                 'jobprofile.review.profile',
                 'jobprofile.approve.profile',
                 'jobprofile.reject.profile',
@@ -183,6 +186,7 @@ class RolePermissionsSeeder extends Seeder
                 'jobprofile.view.own',
                 'jobprofile.create.profile',
                 'jobprofile.update.own',
+                'jobprofile.submit.profile',
 
                 // JobPosting
                 'jobposting.view.postings',

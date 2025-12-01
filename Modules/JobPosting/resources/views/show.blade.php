@@ -24,70 +24,6 @@
                 <li class="text-gray-900 font-semibold">{{ $jobPosting->code }}</li>
             </ol>
         </nav>
-
-        {{-- Alertas --}}
-        @if(session('success'))
-        <div class="bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl shadow-2xl p-6 mb-6 text-white">
-            <div class="flex items-center">
-                <svg class="w-8 h-8 mr-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                </svg>
-                <div>
-                    <h3 class="text-lg font-bold mb-1">¡Éxito!</h3>
-                    <p>{{ session('success') }}</p>
-                </div>
-            </div>
-        </div>
-        @endif
-
-        {{-- Header Premium --}}
-        <div class="relative overflow-hidden bg-white rounded-3xl shadow-2xl mb-8">
-            <div class="absolute inset-0 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 opacity-95"></div>
-            <div class="absolute inset-0 opacity-10" style="background-image: url('data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');"></div>
-
-            <div class="relative px-8 py-10">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center space-x-6">
-                        <div class="flex items-center justify-center w-20 h-20 bg-white/20 backdrop-blur-lg rounded-2xl shadow-lg">
-                            <div class="text-2xl font-bold text-white">{{ substr($jobPosting->year, -2) }}</div>
-                        </div>
-                        <div>
-                            <div class="text-blue-100 text-lg font-medium mb-1">{{ $jobPosting->code }}</div>
-                            <h1 class="text-4xl font-bold text-white mb-2">{{ $jobPosting->title }}</h1>
-                            <div class="flex items-center space-x-4 text-blue-100">
-                                @if($jobPosting->start_date)
-                                <span class="flex items-center">
-                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                                    </svg>
-                                    {{ $jobPosting->start_date->format('d/m/Y') }}
-                                </span>
-                                @endif
-                                @if($jobPosting->end_date)
-                                <span class="flex items-center">
-                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                    </svg>
-                                    {{ $jobPosting->end_date->format('d/m/Y') }}
-                                </span>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-                    <div class="text-right">
-                        <span class="inline-flex items-center px-6 py-3 rounded-2xl text-lg font-bold bg-white/20 backdrop-blur-md text-white border border-white/30">
-                            {{ $jobPosting->status->iconEmoji() }} {{ $jobPosting->status->label() }}
-                        </span>
-                        @if($jobPosting->published_at)
-                        <div class="mt-3 text-blue-100 text-sm">
-                            Publicada: {{ $jobPosting->published_at->format('d/m/Y H:i') }}
-                        </div>
-                        @endif
-                    </div>
-                </div>
-            </div>
-        </div>
-
         {{-- Barra de Progreso Premium --}}
         <div class="bg-white rounded-2xl shadow-xl p-6 mb-8">
             <div class="flex items-center justify-between mb-4">
@@ -264,7 +200,7 @@
                                 </svg>
                                 Cronograma
                             </h3>
-                            <a href="{{ route('jobposting.schedule', $jobPosting) }}"
+                            <a href="{{ route('jobposting.schedule.edit', $jobPosting) }}"
                                class="px-4 py-2 bg-white/20 backdrop-blur-md text-white rounded-xl font-bold hover:bg-white/30 transition-all shadow-lg">
                                 Ver Completo
                             </a>
@@ -303,6 +239,81 @@
                             </div>
                             @endforeach
                         </div>
+                    </div>
+                </div>
+
+                {{-- Perfiles Asociados --}}
+                <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
+                    <div class="bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-4">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-lg font-bold text-white flex items-center">
+                                <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                                </svg>
+                                Perfiles de Puesto
+                            </h3>
+                            <span class="px-3 py-1 bg-white/20 backdrop-blur-md rounded-lg text-white font-bold">
+                                {{ $jobPosting->jobProfiles->count() }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        @if($jobPosting->jobProfiles->isEmpty())
+                        <div class="text-center py-8">
+                            <div class="flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mx-auto mb-4">
+                                <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                                </svg>
+                            </div>
+                            <p class="text-gray-600 font-medium mb-4">No hay perfiles asociados</p>
+                            @can('jobposting.manage.profiles')
+                            @if($jobPosting->isDraft())
+                            <a href="{{ route('jobprofile.profiles.create', ['job_posting_id' => $jobPosting->id]) }}"
+                               class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-semibold hover:from-green-600 hover:to-emerald-700 transition-all shadow-md">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                </svg>
+                                Agregar Primer Perfil
+                            </a>
+                            @endif
+                            @endcan
+                        </div>
+                        @else
+                        <div class="space-y-3">
+                            @foreach($jobPosting->jobProfiles as $profile)
+                            <div class="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl hover:shadow-md transition-all">
+                                <div class="flex-1">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="flex-shrink-0">
+                                            <div class="h-10 w-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-bold shadow-lg">
+                                                {{ substr($profile->code, -2) }}
+                                            </div>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="font-bold text-gray-900 truncate">{{ $profile->title }}</p>
+                                            <div class="flex items-center space-x-2 mt-1">
+                                                <span class="text-xs text-gray-600">{{ $profile->code }}</span>
+                                                <span class="px-2 py-0.5 rounded-full text-xs font-bold {{ $profile->status_badge }}">
+                                                    {{ $profile->status_label }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center space-x-2 ml-4">
+                                    <div class="text-right mr-3">
+                                        <div class="text-sm font-bold text-gray-900">{{ $profile->total_vacancies }}</div>
+                                        <div class="text-xs text-gray-600">vacantes</div>
+                                    </div>
+                                    <a href="{{ route('jobprofile.profiles.show', $profile->id) }}"
+                                       class="px-3 py-2 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition-colors text-sm">
+                                        Ver
+                                    </a>
+                                </div>
+                            </div>
+                            @endforeach
+                        </div>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -386,10 +397,19 @@
                         </form>
                         @endif
 
-                        <a href="{{ route('jobposting.schedule', $jobPosting) }}"
+                        <a href="{{ route('jobposting.schedule.edit', $jobPosting) }}"
                            class="block w-full px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-xl font-bold hover:from-purple-600 hover:to-pink-700 transition-all shadow-lg hover:shadow-xl text-center">
                             📅 Gestionar Cronograma
                         </a>
+
+                        @can('jobposting.manage.profiles')
+                        @if($jobPosting->isDraft())
+                        <a href="{{ route('jobprofile.profiles.create', ['job_posting_id' => $jobPosting->id]) }}"
+                           class="block w-full px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-bold hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg hover:shadow-xl text-center">
+                            ➕ Agregar Perfiles
+                        </a>
+                        @endif
+                        @endcan
 
                         <a href="{{ route('jobposting.history', $jobPosting) }}"
                            class="block w-full px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-xl font-bold hover:from-cyan-600 hover:to-blue-700 transition-all shadow-lg hover:shadow-xl text-center">
@@ -399,7 +419,7 @@
                         <form action="{{ route('jobposting.clone', $jobPosting) }}" method="POST">
                             @csrf
                             <button type="submit"
-                                    class="w-full px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-bold hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg hover:shadow-xl"
+                                    class="w-full px-6 py-3 bg-gradient-to-r from-teal-500 to-cyan-600 text-white rounded-xl font-bold hover:from-teal-600 hover:to-cyan-700 transition-all shadow-lg hover:shadow-xl"
                                     onclick="return confirm('¿Está seguro de clonar esta convocatoria?')">
                                 🐑 Clonar Convocatoria
                             </button>

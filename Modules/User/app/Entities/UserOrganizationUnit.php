@@ -2,13 +2,20 @@
 
 namespace Modules\User\Entities;
 
-use Modules\Core\Entities\BaseModel;
+use Illuminate\Database\Eloquent\Relations\Pivot;
 use Modules\Core\Traits\HasUuid;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class UserOrganizationUnit extends BaseModel
+class UserOrganizationUnit extends Pivot
 {
     use HasUuid;
+
+    /**
+     * Indica que el modelo debe manejar timestamps
+     */
+    protected $table = 'user_organization_units';
+    public $incrementing = false;
+    protected $keyType = 'string';
 
     protected $fillable = [
         'user_id',
@@ -31,6 +38,11 @@ class UserOrganizationUnit extends BaseModel
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function organizationUnit(): BelongsTo
+    {
+        return $this->belongsTo(\Modules\Organization\Entities\OrganizationalUnit::class, 'organization_unit_id');
     }
 
     public function scopeActive($query)

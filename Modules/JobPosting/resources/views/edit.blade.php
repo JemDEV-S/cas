@@ -299,6 +299,33 @@
                         </div>
                         @endif
                     </div>
+
+                    {{-- Cronograma --}}
+                    @if($jobPosting->schedules->isNotEmpty())
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-base font-medium text-gray-800">Cronograma</h3>
+                            <a href="{{ route('jobposting.schedule.edit', $jobPosting) }}" 
+                               class="px-4 py-2 bg-purple-500 text-white rounded-lg text-sm font-medium hover:bg-purple-600 transition-colors">
+                                Gestionar Cronograma
+                            </a>
+                        </div>
+                        <div class="grid grid-cols-3 gap-4 text-center">
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <div class="text-2xl font-medium text-gray-900">{{ $jobPosting->schedules->count() }}</div>
+                                <div class="text-sm text-gray-600">Fases totales</div>
+                            </div>
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <div class="text-2xl font-medium text-green-600">{{ $jobPosting->schedules->where('status', 'COMPLETED')->count() }}</div>
+                                <div class="text-sm text-gray-600">Completadas</div>
+                            </div>
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <div class="text-2xl font-medium text-blue-600">{{ number_format($jobPosting->getProgressPercentage(), 1) }}%</div>
+                                <div class="text-sm text-gray-600">Progreso</div>
+                            </div>
+                        </div>
+                    </div>
+                    @endif
                 </div>
 
                 {{-- Cronograma --}}

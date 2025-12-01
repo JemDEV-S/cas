@@ -153,4 +153,10 @@ class OrganizationalUnitService extends BaseService
             ->where('ancestor_id', '!=', $unit->id)
             ->delete();
     }
+
+    public function getActiveUnits()
+    {
+        return $this->repository->getActive();
+    }
+
 }

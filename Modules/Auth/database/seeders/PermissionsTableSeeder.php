@@ -48,6 +48,15 @@ class PermissionsTableSeeder extends Seeder
             ['name' => 'Gestionar Preferencias', 'slug' => 'user.manage.preferences', 'module' => 'user', 'description' => 'Gestionar preferencias de usuario'],
             ['name' => 'Exportar Usuarios', 'slug' => 'user.export.users', 'module' => 'user', 'description' => 'Exportar lista de usuarios'],
 
+            // Permisos de Asignaciones Organizacionales
+            ['name' => 'Ver Lista de Asignaciones', 'slug' => 'user.view.assignments', 'module' => 'user', 'description' => 'Ver listado de asignaciones organizacionales'],
+            ['name' => 'Ver Detalle de Asignación', 'slug' => 'user.view.assignment', 'module' => 'user', 'description' => 'Ver detalle de una asignación'],
+            ['name' => 'Asignar Usuario a Organización', 'slug' => 'user.assign.organization', 'module' => 'user', 'description' => 'Asignar usuarios a unidades organizacionales'],
+            ['name' => 'Actualizar Asignación', 'slug' => 'user.update.assignment', 'module' => 'user', 'description' => 'Modificar asignaciones existentes'],
+            ['name' => 'Desasignar Usuario', 'slug' => 'user.unassign.organization', 'module' => 'user', 'description' => 'Desasignar usuarios de unidades organizacionales'],
+            ['name' => 'Transferir Usuarios entre Unidades', 'slug' => 'user.transfer.organization', 'module' => 'user', 'description' => 'Transferir usuarios entre unidades organizacionales'],
+            ['name' => 'Cambiar Asignación Principal', 'slug' => 'user.change.primary', 'module' => 'user', 'description' => 'Cambiar la unidad organizacional principal de un usuario'],
+
             // ============================================================
             // ORGANIZATION MODULE - Estructura Organizacional
             // ============================================================
@@ -77,6 +86,7 @@ class PermissionsTableSeeder extends Seeder
             ['name' => 'Actualizar Perfil Propio', 'slug' => 'jobprofile.update.own', 'module' => 'jobprofile', 'description' => 'Modificar perfil propio en borrador'],
             ['name' => 'Actualizar Cualquier Perfil', 'slug' => 'jobprofile.update.any', 'module' => 'jobprofile', 'description' => 'Modificar cualquier perfil'],
             ['name' => 'Eliminar Perfil', 'slug' => 'jobprofile.delete.profile', 'module' => 'jobprofile', 'description' => 'Eliminar perfil de puesto'],
+            ['name' => 'Enviar Perfil para Revisión', 'slug' => 'jobprofile.submit.profile', 'module' => 'jobprofile', 'description' => 'Enviar perfil para revisión'],
             ['name' => 'Revisar Perfil', 'slug' => 'jobprofile.review.profile', 'module' => 'jobprofile', 'description' => 'Revisar perfil solicitado'],
             ['name' => 'Aprobar Perfil', 'slug' => 'jobprofile.approve.profile', 'module' => 'jobprofile', 'description' => 'Aprobar perfil de puesto'],
             ['name' => 'Rechazar Perfil', 'slug' => 'jobprofile.reject.profile', 'module' => 'jobprofile', 'description' => 'Rechazar perfil de puesto'],
@@ -97,6 +107,7 @@ class PermissionsTableSeeder extends Seeder
             ['name' => 'Finalizar Convocatoria', 'slug' => 'jobposting.finalize.posting', 'module' => 'jobposting', 'description' => 'Finalizar proceso de convocatoria'],
             ['name' => 'Gestionar Cronograma', 'slug' => 'jobposting.manage.schedule', 'module' => 'jobposting', 'description' => 'Gestionar cronograma de fases'],
             ['name' => 'Gestionar Fases', 'slug' => 'jobposting.manage.phases', 'module' => 'jobposting', 'description' => 'Gestionar fases del proceso'],
+            ['name' => 'Gestionar Perfiles', 'slug' => 'jobposting.manage.profiles', 'module' => 'jobposting', 'description' => 'Agregar y gestionar perfiles de una convocatoria'],
             ['name' => 'Exportar Convocatorias', 'slug' => 'jobposting.export.postings', 'module' => 'jobposting', 'description' => 'Exportar listado de convocatorias'],
 
             // ============================================================

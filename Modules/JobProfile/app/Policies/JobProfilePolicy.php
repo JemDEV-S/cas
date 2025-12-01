@@ -12,7 +12,7 @@ class JobProfilePolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->can('jobprofile.view.any');
+        return $user->hasPermission('jobprofile.view.profiles');
     }
 
     /**
@@ -21,8 +21,8 @@ class JobProfilePolicy
     public function view(User $user, JobProfile $jobProfile): bool
     {
         // El usuario puede ver si tiene permiso general o si es el solicitante
-        return $user->can('jobprofile.view')
-            || $jobProfile->requested_by === $user->id;
+        return $user->hasPermission('jobprofile.view.profile')
+            || ($user->hasPermission('jobprofile.view.own') && $jobProfile->requested_by === $user->id);
     }
 
     /**
@@ -30,7 +30,7 @@ class JobProfilePolicy
      */
     public function create(User $user): bool
     {
-        return $user->can('jobprofile.create');
+        return $user->hasPermission('jobprofile.create.profile');
     }
 
     /**
@@ -38,19 +38,15 @@ class JobProfilePolicy
      */
     public function update(User $user, JobProfile $jobProfile): bool
     {
-        // Solo puede editar si tiene permiso y el perfil está en estado editable
-        if (!$user->can('jobprofile.update')) {
-            return false;
+        // Admin RRHH puede editar cualquier perfil
+        if ($user->hasPermission('jobprofile.update.any')) {
+            return $jobProfile->canEdit();
         }
 
-        // Verificar que el perfil se puede editar
-        if (!$jobProfile->canEdit()) {
-            return false;
-        }
-
-        // El solicitante puede editar su propio perfil en draft o modification_requested
-        if ($jobProfile->requested_by === $user->id) {
-            return in_array($jobProfile->status, ['draft', 'modification_requested']);
+        // El solicitante puede editar su propio perfil solo en draft o modification_requested
+        if ($user->hasPermission('jobprofile.update.own') && $jobProfile->requested_by === $user->id) {
+            return in_array($jobProfile->status, ['draft', 'modification_requested'])
+                && $jobProfile->canEdit();
         }
 
         return false;
@@ -62,7 +58,7 @@ class JobProfilePolicy
     public function delete(User $user, JobProfile $jobProfile): bool
     {
         // Solo el solicitante puede eliminar y solo en draft o rejected
-        return $user->can('jobprofile.delete')
+        return $user->hasPermission('jobprofile.delete.profile')
             && $jobProfile->requested_by === $user->id
             && in_array($jobProfile->status, ['draft', 'rejected']);
     }
@@ -72,7 +68,7 @@ class JobProfilePolicy
      */
     public function submitForReview(User $user, JobProfile $jobProfile): bool
     {
-        return $user->can('jobprofile.submit')
+        return $user->hasPermission('jobprofile.submit.profile')
             && $jobProfile->requested_by === $user->id
             && $jobProfile->canSubmitForReview();
     }
@@ -87,7 +83,7 @@ class JobProfilePolicy
             return false;
         }
 
-        return $user->can('jobprofile.review')
+        return $user->hasPermission('jobprofile.review.profile')
             && $jobProfile->isInReview();
     }
 
@@ -96,7 +92,7 @@ class JobProfilePolicy
      */
     public function approve(User $user, JobProfile $jobProfile): bool
     {
-        return $user->can('jobprofile.approve')
+        return $user->hasPermission('jobprofile.approve.profile')
             && $jobProfile->requested_by !== $user->id
             && $jobProfile->canApprove();
     }
@@ -106,7 +102,7 @@ class JobProfilePolicy
      */
     public function reject(User $user, JobProfile $jobProfile): bool
     {
-        return $user->can('jobprofile.reject')
+        return $user->hasPermission('jobprofile.reject.profile')
             && $jobProfile->requested_by !== $user->id
             && $jobProfile->canReject();
     }
@@ -116,7 +112,7 @@ class JobProfilePolicy
      */
     public function requestModification(User $user, JobProfile $jobProfile): bool
     {
-        return $user->can('jobprofile.review')
+        return $user->hasPermission('jobprofile.request.modification')
             && $jobProfile->requested_by !== $user->id
             && $jobProfile->canRequestModification();
     }

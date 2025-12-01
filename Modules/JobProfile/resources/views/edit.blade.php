@@ -60,18 +60,59 @@
                     placeholder="Seleccione un código"
                 />
 
+                <!-- Campo para seleccionar convocatoria -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Convocatoria (Opcional)
+                    </label>
+                    <select name="job_posting_id" class="border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm w-full">
+                        <option value="">Sin convocatoria</option>
+                        @foreach(\Modules\JobPosting\Entities\JobPosting::draft()->orderBy('created_at', 'desc')->get() as $posting)
+                            <option value="{{ $posting->id }}" {{ old('job_posting_id', $jobProfile->job_posting_id) == $posting->id ? 'selected' : '' }}>
+                                {{ $posting->code }} - {{ $posting->title }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <p class="mt-1 text-xs text-gray-500">
+                        <i class="fas fa-info-circle"></i> Asocie este perfil a una convocatoria en borrador
+                    </p>
+                    @if($jobProfile->jobPosting && !$jobProfile->jobPosting->isDraft())
+                    <p class="mt-1 text-xs text-amber-600">
+                        <i class="fas fa-exclamation-triangle"></i> La convocatoria actual no está en borrador, solo se pueden asociar perfiles a convocatorias en borrador
+                    </p>
+                    @endif
+                </div>
+
                 <x-form.select
-                    name="work_regime"
-                    label="Régimen Laboral"
+                    name="job_level"
+                    label="Nivel del Puesto"
                     :options="[
-                        'cas' => 'CAS (Contrato Administrativo de Servicios)',
-                        '276' => 'D.L. 276 (Nombrado)',
-                        '728' => 'D.L. 728 (Contrato Indefinido)',
-                        '1057' => 'D.L. 1057 (CAS Especial)'
+                        'junior' => 'Junior',
+                        'mid' => 'Intermedio',
+                        'senior' => 'Senior',
+                        'specialist' => 'Especialista',
+                        'coordinator' => 'Coordinador',
+                        'head' => 'Jefe',
+                        'manager' => 'Gerente'
                     ]"
-                    :selected="old('work_regime', $jobProfile->work_regime)"
-                    required
+                    :selected="old('job_level', $jobProfile->job_level)"
+                    placeholder="Seleccione un nivel"
                 />
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Régimen Laboral <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        value="CAS - Contrato Administrativo de Servicios (D.L. 1057)"
+                        class="border-gray-300 bg-gray-100 rounded-md shadow-sm w-full"
+                        disabled
+                        readonly>
+                    <p class="mt-1 text-xs text-gray-500">
+                        <i class="fas fa-info-circle"></i> Solo se admiten contratos CAS
+                    </p>
+                </div>
 
                 <x-form.input
                     type="number"
@@ -136,14 +177,7 @@
                 <x-form.select
                     name="education_level"
                     label="Nivel Educativo"
-                    :options="[
-                        'secondary' => 'Secundaria Completa',
-                        'technical' => 'Técnico',
-                        'bachelor' => 'Bachiller',
-                        'graduate' => 'Titulado',
-                        'master' => 'Maestría',
-                        'doctorate' => 'Doctorado'
-                    ]"
+                    :options="$educationOptions"
                     :selected="old('education_level', $jobProfile->education_level)"
                     required
                 />
@@ -217,12 +251,100 @@
             </div>
         </x-card>
 
+        <!-- Capacitación y Cursos -->
+        <x-card title="Capacitación y Cursos Requeridos">
+            <div id="courses-container" class="space-y-3">
+                @php
+                    $courses = old('required_courses', $jobProfile->required_courses ?? ['']);
+                    $courses = is_array($courses) ? $courses : [''];
+                    if (empty($courses)) $courses = [''];
+                @endphp
+                @foreach($courses as $index => $course)
+                    <div class="flex gap-2 course-item">
+                        <input
+                            type="text"
+                            name="required_courses[]"
+                            value="{{ $course }}"
+                            class="flex-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm"
+                            placeholder="Ej: Curso de Gestión Pública">
+                        <button type="button" onclick="removeCourse(this)" class="px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                @endforeach
+            </div>
+            <div class="mt-4">
+                <x-button type="button" variant="secondary" onclick="addCourse()">
+                    <i class="fas fa-plus mr-2"></i> Agregar Curso
+                </x-button>
+            </div>
+        </x-card>
+
+        <!-- Conocimientos y Áreas de Conocimiento -->
+        <x-card title="Conocimientos Técnicos y Áreas de Conocimiento">
+            <div id="knowledge-container" class="space-y-3">
+                @php
+                    $knowledgeAreas = old('knowledge_areas', $jobProfile->knowledge_areas ?? ['']);
+                    $knowledgeAreas = is_array($knowledgeAreas) ? $knowledgeAreas : [''];
+                    if (empty($knowledgeAreas)) $knowledgeAreas = [''];
+                @endphp
+                @foreach($knowledgeAreas as $index => $knowledge)
+                    <div class="flex gap-2 knowledge-item">
+                        <input
+                            type="text"
+                            name="knowledge_areas[]"
+                            value="{{ $knowledge }}"
+                            class="flex-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm"
+                            placeholder="Ej: Microsoft Office Avanzado, Conocimiento en legislación laboral">
+                        <button type="button" onclick="removeKnowledge(this)" class="px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                @endforeach
+            </div>
+            <div class="mt-4">
+                <x-button type="button" variant="secondary" onclick="addKnowledge()">
+                    <i class="fas fa-plus mr-2"></i> Agregar Conocimiento
+                </x-button>
+            </div>
+        </x-card>
+
+        <!-- Competencias Requeridas -->
+        <x-card title="Competencias Requeridas">
+            <div id="competencies-container" class="space-y-3">
+                @php
+                    $competencies = old('required_competencies', $jobProfile->required_competencies ?? ['']);
+                    $competencies = is_array($competencies) ? $competencies : [''];
+                    if (empty($competencies)) $competencies = [''];
+                @endphp
+                @foreach($competencies as $index => $competency)
+                    <div class="flex gap-2 competency-item">
+                        <input
+                            type="text"
+                            name="required_competencies[]"
+                            value="{{ $competency }}"
+                            class="flex-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm"
+                            placeholder="Ej: Trabajo en equipo, Liderazgo, Orientación a resultados">
+                        <button type="button" onclick="removeCompetency(this)" class="px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                @endforeach
+            </div>
+            <div class="mt-4">
+                <x-button type="button" variant="secondary" onclick="addCompetency()">
+                    <i class="fas fa-plus mr-2"></i> Agregar Competencia
+                </x-button>
+            </div>
+        </x-card>
+
         <!-- Funciones Principales -->
         <x-card title="Funciones Principales del Puesto">
             <div id="functions-container" class="space-y-3">
                 @php
                     $functions = old('main_functions', $jobProfile->main_functions ?? ['']);
                     $functions = is_array($functions) ? $functions : [''];
+                    if (empty($functions)) $functions = [''];
                 @endphp
                 @foreach($functions as $index => $function)
                     <div class="flex gap-2 function-item">
@@ -279,6 +401,7 @@
 
 @push('scripts')
 <script>
+// Funciones Principales
 function addFunction() {
     const container = document.getElementById('functions-container');
     const newFunction = document.createElement('div');
@@ -303,6 +426,84 @@ function removeFunction(button) {
         button.closest('.function-item').remove();
     } else {
         alert('Debe mantener al menos una función');
+    }
+}
+
+// Cursos
+function addCourse() {
+    const container = document.getElementById('courses-container');
+    const newCourse = document.createElement('div');
+    newCourse.className = 'flex gap-2 course-item';
+    newCourse.innerHTML = `
+        <input
+            type="text"
+            name="required_courses[]"
+            class="flex-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm"
+            placeholder="Ej: Curso de Gestión Pública">
+        <button type="button" onclick="removeCourse(this)" class="px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600">
+            <i class="fas fa-trash"></i>
+        </button>
+    `;
+    container.appendChild(newCourse);
+}
+
+function removeCourse(button) {
+    const container = document.getElementById('courses-container');
+    const items = container.getElementsByClassName('course-item');
+    if (items.length > 1) {
+        button.closest('.course-item').remove();
+    }
+}
+
+// Conocimientos
+function addKnowledge() {
+    const container = document.getElementById('knowledge-container');
+    const newKnowledge = document.createElement('div');
+    newKnowledge.className = 'flex gap-2 knowledge-item';
+    newKnowledge.innerHTML = `
+        <input
+            type="text"
+            name="knowledge_areas[]"
+            class="flex-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm"
+            placeholder="Ej: Microsoft Office Avanzado, Conocimiento en legislación laboral">
+        <button type="button" onclick="removeKnowledge(this)" class="px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600">
+            <i class="fas fa-trash"></i>
+        </button>
+    `;
+    container.appendChild(newKnowledge);
+}
+
+function removeKnowledge(button) {
+    const container = document.getElementById('knowledge-container');
+    const items = container.getElementsByClassName('knowledge-item');
+    if (items.length > 1) {
+        button.closest('.knowledge-item').remove();
+    }
+}
+
+// Competencias
+function addCompetency() {
+    const container = document.getElementById('competencies-container');
+    const newCompetency = document.createElement('div');
+    newCompetency.className = 'flex gap-2 competency-item';
+    newCompetency.innerHTML = `
+        <input
+            type="text"
+            name="required_competencies[]"
+            class="flex-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm"
+            placeholder="Ej: Trabajo en equipo, Liderazgo, Orientación a resultados">
+        <button type="button" onclick="removeCompetency(this)" class="px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600">
+            <i class="fas fa-trash"></i>
+        </button>
+    `;
+    container.appendChild(newCompetency);
+}
+
+function removeCompetency(button) {
+    const container = document.getElementById('competencies-container');
+    const items = container.getElementsByClassName('competency-item');
+    if (items.length > 1) {
+        button.closest('.competency-item').remove();
     }
 }
 </script>

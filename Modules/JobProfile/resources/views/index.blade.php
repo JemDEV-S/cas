@@ -134,7 +134,7 @@
                                 </td>
                                 <td class="px-3 py-4 text-sm text-gray-900">
                                     <div class="flex flex-col">
-                                        <span class="font-medium">{{ $profile->requestedBy->name ?? 'N/A' }}</span>
+                                        <span class="font-medium">{{ optional($profile->requestedBy)->first_name . ' ' . optional($profile->requestedBy)->last_name ?? 'N/A' }}</span>
                                     </div>
                                 </td>
                                 <td class="px-3 py-4 text-sm text-gray-500">
@@ -158,20 +158,20 @@
                                             </a>
                                         @endcan
 
-                                        @if($profile->canSubmitForReview())
-                                            @can('submitForReview', $profile)
-                                                <form action="{{ route('jobprofile.review.submit', $profile->id) }}"
+                                        @can('submitForReview', $profile)
+                                            @if($profile->canSubmitForReview())
+                                                <form action="{{ route('jobprofile.profiles.submit', $profile->id) }}"
                                                       method="POST" class="inline">
                                                     @csrf
                                                     <button type="submit"
                                                             class="inline-flex items-center px-2.5 py-1.5 border border-green-300 shadow-sm text-xs font-medium rounded text-green-700 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                                                             title="Enviar a Revisión"
-                                                            onclick="return confirm('¿Enviar a revisión?')">
+                                                            onclick="return confirm('¿Está seguro de enviar este perfil a revisión?')">
                                                         <i class="fas fa-paper-plane"></i>
                                                     </button>
                                                 </form>
-                                            @endcan
-                                        @endif
+                                            @endif
+                                        @endcan
                                     </div>
                                 </td>
                             </tr>
