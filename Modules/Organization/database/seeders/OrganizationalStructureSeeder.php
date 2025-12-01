@@ -10,6 +10,8 @@ use Illuminate\Support\Str;
 class OrganizationalStructureSeeder extends Seeder
 {
     protected array $map = [];
+    protected array $usedCodes = [];
+    protected array $codeMapping = [];
 
     public function run(): void
     {
@@ -25,18 +27,70 @@ class OrganizationalStructureSeeder extends Seeder
         $json = file_get_contents(__DIR__ . '/json/organigrama_json.json');
         $data = json_decode($json, true);
 
+        // Validar y corregir códigos
+        $data = $this->validateAndFixCodes($data);
+
         // Crear unidades
         $this->createUnits($data);
 
         // Reconstruir closure
         $this->rebuildClosureTable();
 
-        $this->command->info('✅ Organigrama cargado exactamente desde JSON.');
+        $this->command->info('✅ Organigrama cargado exitosamente.');
+    }
+
+    protected function validateAndFixCodes(array $node, string $parentCode = ''): array
+    {
+        $code = $node['codigo'] ?? '';
+
+        // Corregir códigos vacíos o inválidos
+        if (empty($code) || $code === '000' || $code === '0000' || strlen($code) < 5) {
+            $code = $this->generateValidCode($parentCode);
+            $this->command->warn("⚠ Código corregido: '" . ($node['codigo'] ?? 'vacío') . "' → '{$code}'");
+       }
+
+        // Verificar duplicados
+        if (isset($this->usedCodes[$code])) {
+            $oldCode = $code;
+            $code = $this->generateValidCode($parentCode);
+            $this->command->warn("⚠ Código duplicado corregido: '{$oldCode}' → '{$code}'");
+        }
+
+        $this->usedCodes[$code] = true;
+        $node['codigo'] = $code;
+
+        // Procesar hijos
+        if (isset($node['hijos'])) {
+            foreach ($node['hijos'] as &$child) {
+                $child = $this->validateAndFixCodes($child, $code);
+            }
+        }
+
+        if (isset($node['sub_unidades'])) {
+            foreach ($node['sub_unidades'] as &$child) {
+                $child = $this->validateAndFixCodes($child, $code);
+            }
+        }
+
+        return $node;
+    }
+
+    protected function generateValidCode(string $parentCode): string
+    {
+        $baseCode = empty($parentCode) ? '000' : substr($parentCode, 0, 3);
+        $counter = 1;
+
+        do {
+            $newCode = $baseCode . str_pad($counter, 2, '0', STR_PAD_LEFT);
+            $counter++;
+        } while (isset($this->usedCodes[$newCode]) && $counter < 100);
+
+        return $newCode;
     }
 
     protected function createUnits(array $node, ?string $parentId = null, int $level = 0): string
     {
-        $code = $node['codigo'] ?? '00000';
+        $code = $node['codigo'];
 
         // Si ya existe, saltamos
         if (OrganizationalUnit::where('code', $code)->exists()) {
