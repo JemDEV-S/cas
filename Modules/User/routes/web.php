@@ -18,18 +18,33 @@ Route::middleware(['auth'])->group(function () {
 
 // User Management Routes (admin functionality)
 Route::middleware(['auth', 'verified'])->prefix('users')->name('users.')->group(function () {
-    // Resource routes
+    
+    // RUTAS ESPECÍFICAS (Deben ir ANTES de las rutas con {wildcards} como {user})
     Route::get('/', [UserController::class, 'index'])->name('index');
     Route::get('/create', [UserController::class, 'create'])->name('create');
     Route::post('/', [UserController::class, 'store'])->name('store');
+    
+    // Ruta de Búsqueda AJAX (Resultado final: users.search)
+    Route::get('/search-ajax', [AssignmentWebController::class, 'searchUsers'])->name('search');
+    
+    Route::get('/export', [UserController::class, 'export'])->name('export');
+
+    // RUTAS CON WILDCARDS (Show, Edit, Update, Destroy)
     Route::get('/{user}', [UserController::class, 'show'])->name('show');
     Route::get('/{user}/edit', [UserController::class, 'edit'])->name('edit');
     Route::put('/{user}', [UserController::class, 'update'])->name('update');
     Route::delete('/{user}', [UserController::class, 'destroy'])->name('destroy');
-
-    // Additional routes
+    
     Route::patch('/{user}/toggle-status', [UserController::class, 'toggleStatus'])->name('toggle-status');
-    Route::get('/export', [UserController::class, 'export'])->name('export');
+    
+    // Rutas adicionales relacionadas con assignments dentro del prefijo de usuarios
+    Route::get('/{user}/assignments', [AssignmentWebController::class, 'userAssignments'])
+        ->name('assignments')
+        ->middleware('permission:user.view.assignments');
+    
+    Route::post('/{user}/change-primary', [AssignmentWebController::class, 'changePrimary'])
+        ->name('change-primary')
+        ->middleware('permission:user.update.assignment');
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
@@ -41,35 +56,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('index')
             ->middleware('permission:user.view.assignments');
         
-        // Formulario de nueva asignación
-        Route::get('/create', [AssignmentWebController::class, 'create'])
-            ->name('create')
-            ->middleware('permission:user.assign.organization');
-        
-        // Guardar nueva asignación
-        Route::post('/', [AssignmentWebController::class, 'store'])
-            ->name('store')
-            ->middleware('permission:user.assign.organization');
-        
-        // Ver detalle de asignación
-        Route::get('/{assignment}', [AssignmentWebController::class, 'show'])
-            ->name('show')
-            ->middleware('permission:user.view.assignments');
-        
-        // Formulario de edición
-        Route::get('/{assignment}/edit', [AssignmentWebController::class, 'edit'])
-            ->name('edit')
-            ->middleware('permission:user.update.assignment');
-        
-        // Actualizar asignación
-        Route::put('/{assignment}', [AssignmentWebController::class, 'update'])
-            ->name('update')
-            ->middleware('permission:user.update.assignment');
-        
-        // Eliminar asignación
-        Route::delete('/{assignment}', [AssignmentWebController::class, 'destroy'])
-            ->name('destroy')
-            ->middleware('permission:user.unassign.organization');
+        // RUTAS ESPECÍFICAS (Bulk, Transfer, Create) ANTES de {assignment}
         
         // Formulario de asignación masiva
         Route::get('/bulk/create', [AssignmentWebController::class, 'bulkCreate'])
@@ -90,25 +77,42 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/transfer/store', [AssignmentWebController::class, 'transferStore'])
             ->name('transfer.store')
             ->middleware('permission:user.transfer.organization');
-    });
 
-    // Rutas relacionadas con usuarios
-    Route::prefix('users')->name('users.')->group(function () {
+        // Formulario de nueva asignación
+        Route::get('/create', [AssignmentWebController::class, 'create'])
+            ->name('create')
+            ->middleware('permission:user.assign.organization');
         
-        // Vista de asignaciones de un usuario
-        Route::get('/{user}/assignments', [AssignmentWebController::class, 'userAssignments'])
-            ->name('assignments')
+        // Guardar nueva asignación
+        Route::post('/', [AssignmentWebController::class, 'store'])
+            ->name('store')
+            ->middleware('permission:user.assign.organization');
+        
+        // RUTAS CON WILDCARDS
+        
+        // Ver detalle de asignación
+        Route::get('/{assignment}', [AssignmentWebController::class, 'show'])
+            ->name('show')
             ->middleware('permission:user.view.assignments');
         
-        // Cambiar unidad principal
-        Route::post('/{user}/change-primary', [AssignmentWebController::class, 'changePrimary'])
-            ->name('change-primary')
+        // Formulario de edición
+        Route::get('/{assignment}/edit', [AssignmentWebController::class, 'edit'])
+            ->name('edit')
             ->middleware('permission:user.update.assignment');
+        
+        // Actualizar asignación
+        Route::put('/{assignment}', [AssignmentWebController::class, 'update'])
+            ->name('update')
+            ->middleware('permission:user.update.assignment');
+        
+        // Eliminar asignación
+        Route::delete('/{assignment}', [AssignmentWebController::class, 'destroy'])
+            ->name('destroy')
+            ->middleware('permission:user.unassign.organization');
     });
 
     // Rutas relacionadas con unidades organizacionales
     Route::prefix('organizational-units')->name('organizational-units.')->group(function () {
-        
         // Vista de usuarios de una unidad
         Route::get('/{unit}/users', [AssignmentWebController::class, 'unitUsers'])
             ->name('users')

@@ -91,6 +91,21 @@ class AssignmentWebController extends Controller
         ));
     }
 
+    public function searchUsers(Request $request)
+    {
+        $query = $request->get('query');
+        
+        $users = User::where('is_active', true)
+            ->where(function($q) use ($query) {
+                $q->where('first_name', 'like', "%{$query}%")
+                ->orWhere('last_name', 'like', "%{$query}%")
+                ->orWhere('dni', 'like', "%{$query}%");
+            })
+            ->limit(10) // Limitamos para no saturar
+            ->get(['id', 'first_name', 'last_name', 'dni']);
+
+        return response()->json($users);
+    }
     /**
      * Formulario de nueva asignación
      */
