@@ -132,7 +132,7 @@ class FirmaPeruService
                 'document' => $document->id,
                 'token' => $this->generateDownloadToken($document),
             ]),
-            'certificateFilter' => $options['certificateFilter'] ?? '.*FIR.*', // Solo certificados de firma
+            'certificateFilter' => $options['certificateFilter'] ?? '.*', // Solo certificados de firma
             'webTsa' => config('document.firmaperu.tsa_url', ''),
             'userTsa' => config('document.firmaperu.tsa_user', ''),
             'passwordTsa' => config('document.firmaperu.tsa_password', ''),
