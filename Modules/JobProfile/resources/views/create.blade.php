@@ -224,13 +224,21 @@
                     <label for="justification" class="block text-sm font-medium text-gray-700 mb-1">
                         Justificación <span class="text-red-500">*</span>
                     </label>
-                    <textarea
+                    <select
                         name="justification"
                         id="justification"
-                        rows="3"
                         required
-                        class="border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm w-full"
-                        placeholder="Justifique la necesidad de este perfil de puesto">{{ old('justification') }}</textarea>
+                        class="border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm w-full">
+                        <option value="">Seleccione una justificación</option>
+                        @foreach(\Modules\JobProfile\Entities\JobProfile::getJustificationOptions() as $value => $label)
+                            <option value="{{ $value }}" {{ old('justification') == $value ? 'selected' : '' }}>
+                                {{ $label }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <p class="mt-1 text-xs text-gray-500">
+                        <i class="fas fa-info-circle"></i> Seleccione la justificación que corresponda a la necesidad del puesto
+                    </p>
                     @error('justification')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror

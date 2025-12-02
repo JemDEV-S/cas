@@ -145,7 +145,29 @@ class UserController extends Controller
         $this->authorize('update', $user);
 
         try {
-            $this->userService->update($user->id, $request->validated());
+            // Preparar los datos para actualizar
+            $updateData = $request->validated();
+
+            // Solo actualizar la contraseña si se proporciona una nueva
+            if (empty($updateData['password'])) {
+                // Eliminar la contraseña de los datos a actualizar
+                unset($updateData['password']);
+                unset($updateData['current_password']);
+                unset($updateData['password_confirmation']);
+            } else {
+                // Verificar que la contraseña actual es correcta
+                if (!Hash::check($request->current_password, $user->password)) {
+                    return redirect()
+                        ->back()
+                        ->withInput()
+                        ->with('error', 'La contraseña actual es incorrecta.');
+                }
+
+                // Hashear la nueva contraseña
+                $updateData['password'] = Hash::make($updateData['password']);
+            }
+
+            $this->userService->update($user->id, $updateData);
 
             // Actualizar roles
             if ($request->filled('roles')) {
@@ -162,6 +184,7 @@ class UserController extends Controller
                 ->with('error', 'Error al actualizar usuario: ' . $e->getMessage());
         }
     }
+
 
     /**
      * Remove the specified user.

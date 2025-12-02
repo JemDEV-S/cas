@@ -122,6 +122,40 @@
             </div>
         </x-card>
 
+        <!-- Cambio de Contraseña (Opcional) -->
+        <x-card title="Cambiar Contraseña">
+            <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
+                <p class="text-sm text-blue-700">
+                    <i class="fas fa-info-circle"></i> Deja estos campos en blanco si no deseas cambiar tu contraseña.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <x-form.input
+                    label="Contraseña Actual"
+                    name="current_password"
+                    type="password"
+                    placeholder="Ingresa tu contraseña actual para confirmar el cambio"
+                />
+
+                <x-form.input
+                    label="Nueva Contraseña"
+                    name="password"
+                    type="password"
+                    placeholder="Ingresa tu nueva contraseña (mínimo 8 caracteres)"
+                />
+
+                <div class="md:col-span-2">
+                    <x-form.input
+                        label="Confirmar Nueva Contraseña"
+                        name="password_confirmation"
+                        type="password"
+                        placeholder="Confirma tu nueva contraseña"
+                    />
+                </div>
+            </div>
+        </x-card>
+
         <!-- Botones -->
         <div class="flex justify-end space-x-3">
             <x-button type="button" variant="secondary" onclick="window.location='{{ route('profile.show') }}'">

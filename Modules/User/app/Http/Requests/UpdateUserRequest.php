@@ -33,6 +33,11 @@ class UpdateUserRequest extends FormRequest
             'is_active' => ['nullable', 'boolean'],
             'roles' => ['nullable', 'array'],
             'roles.*' => ['exists:roles,id'],
+
+            // Contraseña opcional - solo se valida si se proporciona
+            'current_password' => 'required_with:password|string',
+            'password_confirmation' => 'required_with:password|string',
+
         ];
     }
 
@@ -55,6 +60,7 @@ class UpdateUserRequest extends FormRequest
         return [
             'dni.regex' => 'El DNI debe contener exactamente 8 dígitos numéricos.',
             'dni.size' => 'El DNI debe tener exactamente 8 caracteres.',
+            'current_password.required_with' => 'Debes ingresar tu contraseña actual para cambiarla.',
             'password.min' => 'La contraseña debe tener al menos 8 caracteres.',
             'password.confirmed' => 'La confirmación de contraseña no coincide.',
         ];
