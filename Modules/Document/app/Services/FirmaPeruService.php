@@ -274,7 +274,23 @@ class FirmaPeruService
     protected function generateDownloadToken(GeneratedDocument $document): string
     {
         $token = Str::random(64);
-        Cache::put("doc_download_{$token}", $document->id, now()->addMinutes(30));
+        $cacheKey = "doc_download_{$token}";
+        $documentId = (string) $document->id;
+
+        // Guardar explícitamente como string para evitar problemas de tipo
+        Cache::put($cacheKey, $documentId, now()->addMinutes(30));
+
+        // Verificar que se guardó correctamente
+        $cached = Cache::get($cacheKey);
+
+        \Log::info('Download token generated', [
+            'token_prefix' => substr($token, 0, 8) . '...',
+            'document_id' => $documentId,
+            'cache_key' => $cacheKey,
+            'cached_value' => $cached,
+            'match' => $cached === $documentId ? 'yes' : 'no',
+        ]);
+
         return $token;
     }
 
@@ -290,10 +306,27 @@ class FirmaPeruService
 
     /**
      * Valida un token de descarga
+     * @return string|null ID del documento como string
      */
     public function validateDownloadToken(string $token): ?string
     {
-        return Cache::get("doc_download_{$token}");
+        $cacheKey = "doc_download_{$token}";
+        $documentId = Cache::get($cacheKey);
+
+        \Log::info('Validating download token', [
+            'token_prefix' => substr($token, 0, 8) . '...',
+            'cache_key' => $cacheKey,
+            'found' => $documentId ? 'yes' : 'no',
+            'value' => $documentId,
+            'type' => gettype($documentId),
+        ]);
+
+        // Asegurar que siempre retornamos un string o null
+        if ($documentId === null) {
+            return null;
+        }
+
+        return (string) $documentId;
     }
 
     /**

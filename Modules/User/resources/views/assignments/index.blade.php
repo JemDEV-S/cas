@@ -213,8 +213,8 @@
                                     </div>
                                 </td>
                                 <td class="whitespace-nowrap px-3 py-4 text-sm">
-                                    <div class="font-medium text-gray-900">{{ $assignment->organizationUnit->name }}</div>
-                                    <div class="text-gray-500">{{ $assignment->organizationUnit->code }}</div>
+                                    <div class="font-medium text-gray-900">{{ $assignment->organizationUnit->name ?? 'N/A' }}</div>
+                                    <div class="text-gray-500">{{ $assignment->organizationUnit->code ?? 'N/A'}}</div>
                                 </td>
                                 <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                                     {{ $assignment->start_date->format('d/m/Y') }}

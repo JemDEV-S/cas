@@ -4,13 +4,16 @@ use Illuminate\Support\Facades\Route;
 use Modules\Document\Http\Controllers\DocumentSignatureController;
 
 // Rutas API para FIRMA PERÚ
-// IMPORTANTE: Estas rutas NO usan sesión, usan Cache para compartir tokens
+// IMPORTANTE: Estas rutas NO usan sesión ni autenticación de usuario
+// Usan validación por tokens de cache de un solo uso
 // Son llamadas desde el componente local de FIRMA PERÚ (localhost:48596)
-Route::middleware([\Illuminate\Routing\Middleware\SubstituteBindings::class])
-    ->prefix('documents')
+Route::prefix('documents')
     ->name('documents.')
     ->group(function () {
         // Endpoints para FIRMA PERÚ
+        // Estas rutas NO usan SubstituteBindings para evitar que se apliquen policies automáticamente
+        // La validación se hace manualmente con tokens de cache
+
         Route::post('/signature-params', [DocumentSignatureController::class, 'getSignatureParams'])
             ->name('signature-params');
 

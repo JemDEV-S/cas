@@ -84,7 +84,10 @@ class DocumentSignatureController extends Controller
         $token = $request->input('param_token');
 
         if (!$token) {
-            return response()->json(['error' => 'Token no válido'], 401);
+            \Log::warning('Signature params request without token', [
+                'ip' => $request->ip(),
+            ]);
+            return response()->json(['error' => 'Token requerido'], 400);
         }
 
         // Obtener el ID del documento y firma desde el cache
@@ -92,110 +95,238 @@ class DocumentSignatureController extends Controller
         $signatureId = Cache::get("firmaperu_sig_{$token}");
 
         if (!$documentId || !$signatureId) {
+            \Log::warning('Expired or invalid param token', [
+                'token_prefix' => substr($token, 0, 8) . '...',
+                'document_id_found' => $documentId ? 'yes' : 'no',
+                'signature_id_found' => $signatureId ? 'yes' : 'no',
+                'ip' => $request->ip(),
+            ]);
             return response()->json(['error' => 'Token expirado o inválido'], 401);
         }
 
-        $document = GeneratedDocument::findOrFail($documentId);
-        $signature = DigitalSignature::findOrFail($signatureId);
+        try {
+            $document = GeneratedDocument::findOrFail($documentId);
+            $signature = DigitalSignature::findOrFail($signatureId);
 
-        // Preparar parámetros de firma
-        $params = $this->firmaPeruService->prepareSignatureParams($document, $signature);
+            // Validar que la firma pertenece al documento
+            if ((string) $signature->generated_document_id !== (string) $document->id) {
+                \Log::error('Signature params mismatch', [
+                    'document_id' => $document->id,
+                    'signature_doc_id' => $signature->generated_document_id,
+                    'signature_id' => $signature->id,
+                ]);
+                return response()->json(['error' => 'Datos inconsistentes'], 400);
+            }
 
-        // Retornar parámetros codificados en Base64
-        // FIRMA PERÚ espera texto plano con el base64, no JSON
-        $base64Params = base64_encode(json_encode($params));
+            // Preparar parámetros de firma
+            $params = $this->firmaPeruService->prepareSignatureParams($document, $signature);
 
-        return response($base64Params, 200)
-            ->header('Content-Type', 'text/plain');
+            \Log::info('Signature params generated', [
+                'document_id' => $document->id,
+                'document_code' => $document->code,
+                'signature_id' => $signature->id,
+                'user_id' => $signature->user_id,
+                'ip' => $request->ip(),
+            ]);
+
+            // Retornar parámetros codificados en Base64
+            // FIRMA PERÚ espera texto plano con el base64, no JSON
+            $base64Params = base64_encode(json_encode($params));
+
+            return response($base64Params, 200)
+                ->header('Content-Type', 'text/plain');
+        } catch (\Exception $e) {
+            \Log::error('Error generating signature params', [
+                'document_id' => $documentId ?? 'unknown',
+                'signature_id' => $signatureId ?? 'unknown',
+                'error' => $e->getMessage(),
+                'ip' => $request->ip(),
+            ]);
+
+            return response()->json([
+                'error' => 'Error al generar parámetros de firma',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
      * API: Descarga el documento para firma
      * Endpoint llamado por FIRMA PERÚ para obtener el PDF
+     * IMPORTANTE: No usa route model binding para evitar que se apliquen policies
      */
-    public function downloadForSignature(GeneratedDocument $document, Request $request)
+    public function downloadForSignature(string $document, Request $request)
     {
         $token = $request->input('token');
 
-        // Validar token
+        if (!$token) {
+            \Log::warning('Download attempt without token', [
+                'document_id' => $document,
+                'ip' => $request->ip(),
+            ]);
+            abort(400, 'Token requerido');
+        }
+
+        // Validar token (ya retorna string o null)
         $validDocId = $this->firmaPeruService->validateDownloadToken($token);
 
-        if (!$validDocId || $validDocId != $document->id) {
-            \Log::error('Download token validation failed', [
-                'token' => $token,
-                'expected_doc_id' => $document->id,
-                'expected_type' => gettype($document->id),
-                'cached_doc_id' => $validDocId,
-                'cached_type' => gettype($validDocId),
+        if (!$validDocId) {
+            \Log::warning('Invalid or expired download token', [
+                'token_prefix' => substr($token, 0, 8) . '...',
+                'document_id' => $document,
+                'ip' => $request->ip(),
             ]);
-            abort(403, 'Token no válido');
+            abort(403, 'Token no válido o expirado');
         }
+
+        // Comparación estricta de strings (ambos son UUIDs como strings)
+        if ($validDocId !== $document) {
+            \Log::error('Token document mismatch', [
+                'token_prefix' => substr($token, 0, 8) . '...',
+                'expected_doc_id' => $document,
+                'token_doc_id' => $validDocId,
+                'match' => $validDocId === $document ? 'yes' : 'no',
+                'ip' => $request->ip(),
+            ]);
+            abort(403, 'Token no corresponde al documento solicitado');
+        }
+
+        // Obtener el documento manualmente (sin route model binding ni policies)
+        $document = GeneratedDocument::findOrFail($validDocId);
 
         // Retornar el PDF con las firmas más recientes (si existen) o el original
         // CRÍTICO: El segundo firmante debe firmar sobre el PDF que ya tiene la primera firma
         $path = $document->getLatestSignedPath() ?? $document->pdf_path;
 
         if (!$path || !Storage::disk('private')->exists($path)) {
-            \Log::error('PDF file not found', [
+            \Log::error('PDF file not found for signature', [
                 'document_id' => $document->id,
                 'pdf_path' => $path,
                 'latest_signed_path' => $document->getLatestSignedPath(),
                 'original_path' => $document->pdf_path,
+                'storage_exists' => $path ? Storage::disk('private')->exists($path) : false,
             ]);
-            abort(404, 'Documento no encontrado');
+            abort(404, 'Documento PDF no encontrado');
         }
 
-        \Log::info('Documento descargado para firma', [
+        \Log::info('Document downloaded for signature', [
             'document_id' => $document->id,
+            'document_code' => $document->code,
             'path' => $path,
             'has_signatures' => $document->hasAnySignature(),
             'signatures_completed' => $document->signatures_completed,
+            'total_required' => $document->total_signatures_required,
+            'ip' => $request->ip(),
         ]);
 
         return Storage::disk('private')->response($path, $document->code . '.pdf', [
             'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . $document->code . '.pdf"',
         ]);
     }
 
     /**
      * API: Recibe el documento firmado desde FIRMA PERÚ
+     * IMPORTANTE: No usa route model binding para evitar que se apliquen policies
      */
-    public function uploadSigned(Request $request, GeneratedDocument $document)
+    public function uploadSigned(Request $request, string $document)
     {
         $token = $request->input('token');
 
-        // Validar token
+        if (!$token) {
+            \Log::warning('Upload attempt without token', [
+                'document_id' => $document,
+                'ip' => $request->ip(),
+            ]);
+            return response()->json(['error' => 'Token requerido'], 400);
+        }
+
+        // Validar token (retorna string o null, token de un solo uso)
         $validSigId = $this->firmaPeruService->validateUploadToken($token);
 
         if (!$validSigId) {
-            return response()->json(['error' => 'Token no válido'], 401);
+            \Log::warning('Invalid or expired upload token', [
+                'token_prefix' => substr($token, 0, 8) . '...',
+                'document_id' => $document,
+                'ip' => $request->ip(),
+            ]);
+            return response()->json(['error' => 'Token no válido o expirado'], 401);
         }
 
         $signature = DigitalSignature::findOrFail($validSigId);
 
-        // Validar que la firma pertenece al documento
-        if ($signature->generated_document_id !== $document->id) {
+        // Validar que la firma pertenece al documento (comparación estricta de strings)
+        if ((string) $signature->generated_document_id !== $document) {
+            \Log::error('Signature document mismatch on upload', [
+                'signature_id' => $signature->id,
+                'signature_doc_id' => (string) $signature->generated_document_id,
+                'expected_doc_id' => $document,
+                'ip' => $request->ip(),
+            ]);
             return response()->json(['error' => 'Firma no corresponde al documento'], 400);
         }
 
+        // Obtener el documento manualmente (sin route model binding ni policies)
+        $document = GeneratedDocument::findOrFail($signature->generated_document_id);
+
         // Validar archivo firmado
         if (!$request->hasFile('signed_file')) {
+            \Log::error('Signed file not received', [
+                'document_id' => $document->id,
+                'signature_id' => $signature->id,
+                'ip' => $request->ip(),
+            ]);
             return response()->json(['error' => 'Archivo firmado no recibido'], 400);
         }
 
         $signedFile = $request->file('signed_file');
 
-        // Procesar el documento firmado
-        $this->firmaPeruService->processSignedDocument($document, $signature, $signedFile);
+        // Validar que es un PDF válido
+        if ($signedFile->getMimeType() !== 'application/pdf') {
+            \Log::error('Invalid signed file type', [
+                'document_id' => $document->id,
+                'signature_id' => $signature->id,
+                'mime_type' => $signedFile->getMimeType(),
+                'ip' => $request->ip(),
+            ]);
+            return response()->json(['error' => 'El archivo debe ser un PDF'], 400);
+        }
 
-        // Procesar la firma en el workflow
-        // Los datos del certificado ya están en el PDF firmado por FIRMA PERÚ
-        $this->signatureService->processSignature($signature, []);
+        try {
+            // Procesar el documento firmado
+            $this->firmaPeruService->processSignedDocument($document, $signature, $signedFile);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Documento firmado exitosamente',
-        ]);
+            // Procesar la firma en el workflow
+            // Los datos del certificado ya están en el PDF firmado por FIRMA PERÚ
+            $this->signatureService->processSignature($signature, []);
+
+            \Log::info('Document signed successfully', [
+                'document_id' => $document->id,
+                'document_code' => $document->code,
+                'signature_id' => $signature->id,
+                'user_id' => $signature->user_id,
+                'signature_order' => $signature->signature_order,
+                'ip' => $request->ip(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Documento firmado exitosamente',
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error processing signed document', [
+                'document_id' => $document->id,
+                'signature_id' => $signature->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'ip' => $request->ip(),
+            ]);
+
+            return response()->json([
+                'error' => 'Error al procesar el documento firmado',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
