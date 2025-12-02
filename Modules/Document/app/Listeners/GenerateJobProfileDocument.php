@@ -72,7 +72,7 @@ class GenerateJobProfileDocument
     protected function prepareDocumentData($jobProfile): array
     {
         return [
-            'title' => 'Perfil de Puesto - ' . $jobProfile->title,
+            'title' => 'Perfil de Puesto - ' . $jobProfile->profile_name,
             'code' => $jobProfile->code,
             'job_profile' => $jobProfile,
 
@@ -120,10 +120,26 @@ class GenerateJobProfileDocument
 
             // Régimen laboral
             'work_regime' => $jobProfile->work_regime_label,
-            'justification' => $jobProfile->justification,
+            'justification' => $jobProfile->justification_text,
+
+            // Contrato
+            'contract_duration' => $jobProfile->contract_duration,
+            'contract_start_date' => $jobProfile->contract_start_date?->format('d/m/Y'),
+            'contract_end_date' => $jobProfile->contract_end_date?->format('d/m/Y'),
+            'work_location' => $jobProfile->work_location ?? 'MUNICIPALIDAD DISTRITAL DE SAN JERÓNIMO',
+            'selection_process_name' => $jobProfile->selection_process_name ?? 'PROCESO DE SELECCIÓN CAS',
 
             // Vacantes
             'total_vacancies' => $jobProfile->total_vacancies,
+
+            // Requisitos generales (desde PositionCode)
+            'requisitos_generales' => $jobProfile->getRequisitosGenerales(),
+            'position_min_experience' => $jobProfile->positionCode?->min_professional_experience,
+            'position_specific_experience' => $jobProfile->positionCode?->min_specific_experience,
+
+            // Salario formateado
+            'formatted_salary' => $jobProfile->formatted_salary,
+            'base_salary' => $jobProfile->positionCode?->base_salary,
 
             // Aprobación
             'requested_by' => $jobProfile->requestedBy?->name,
@@ -137,6 +153,10 @@ class GenerateJobProfileDocument
             'generation_date' => now()->format('d/m/Y'),
             'generation_time' => now()->format('H:i:s'),
             'current_year' => now()->year,
+
+            // Datos estructurados para el Anexo 2
+            'anexo2' => $jobProfile->anexo2_data,
+            'published_profile' => $jobProfile->published_profile_data,
         ];
     }
 

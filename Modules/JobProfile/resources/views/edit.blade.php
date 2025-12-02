@@ -158,16 +158,65 @@
                 <label for="justification" class="block text-sm font-medium text-gray-700 mb-1">
                     Justificación <span class="text-red-500">*</span>
                 </label>
-                <textarea
+                <select
                     name="justification"
                     id="justification"
-                    rows="3"
                     required
-                    class="border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm w-full"
-                    placeholder="Justifique la necesidad de este perfil de puesto">{{ old('justification', $jobProfile->justification) }}</textarea>
+                    class="border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm w-full">
+                    <option value="">Seleccione una justificación</option>
+                    @foreach(\Modules\JobProfile\Entities\JobProfile::getJustificationOptions() as $value => $label)
+                        <option value="{{ $value }}" {{ old('justification', $jobProfile->justification) == $value ? 'selected' : '' }}>
+                            {{ $label }}
+                        </option>
+                    @endforeach
+                </select>
+                <p class="mt-1 text-xs text-gray-500">
+                    <i class="fas fa-info-circle"></i> Seleccione la justificación que corresponda a la necesidad del puesto
+                </p>
                 @error('justification')
                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                 @enderror
+            </div>
+        </x-card>
+
+        <!-- Información del Contrato -->
+        <x-card title="📅 Información del Contrato">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <x-form.input
+                    type="date"
+                    name="contract_start_date"
+                    label="Fecha de Inicio del Contrato"
+                    :value="old('contract_start_date', $jobProfile->contract_start_date?->format('Y-m-d'))"
+                    placeholder="dd/mm/yyyy"
+                />
+
+                <x-form.input
+                    type="date"
+                    name="contract_end_date"
+                    label="Fecha de Fin del Contrato"
+                    :value="old('contract_end_date', $jobProfile->contract_end_date?->format('Y-m-d'))"
+                    placeholder="dd/mm/yyyy"
+                />
+
+                <div class="md:col-span-2">
+                    <x-form.input
+                        type="text"
+                        name="work_location"
+                        label="Lugar de Prestación del Servicio"
+                        :value="old('work_location', $jobProfile->work_location ?? 'MUNICIPALIDAD DISTRITAL DE SAN JERÓNIMO')"
+                        placeholder="Ej: MUNICIPALIDAD DISTRITAL DE SAN JERÓNIMO"
+                    />
+                </div>
+
+                <div class="md:col-span-2">
+                    <x-form.input
+                        type="text"
+                        name="selection_process_name"
+                        label="Nombre del Proceso de Selección"
+                        :value="old('selection_process_name', $jobProfile->selection_process_name)"
+                        placeholder="Ej: PROCESO DE SELECCIÓN CAS VI-2025"
+                    />
+                </div>
             </div>
         </x-card>
 

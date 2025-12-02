@@ -143,6 +143,24 @@
                 <th>Número de Vacantes</th>
                 <td>{{ $total_vacancies }}</td>
             </tr>
+            @if(isset($contract_duration) && $contract_duration !== 'No especificado')
+            <tr>
+                <th>Vigencia del Contrato</th>
+                <td>{{ $contract_duration }}</td>
+            </tr>
+            @endif
+            @if(isset($work_location) && $work_location)
+            <tr>
+                <th>Lugar de Prestación</th>
+                <td>{{ $work_location }}</td>
+            </tr>
+            @endif
+            @if(isset($formatted_salary) && $formatted_salary !== 'No especificado')
+            <tr>
+                <th>Remuneración Mensual</th>
+                <td>{{ $formatted_salary }}</td>
+            </tr>
+            @endif
         </table>
     </div>
 
@@ -183,9 +201,19 @@
         </table>
     </div>
 
+    <!-- Requisitos Generales del Cargo (Anexo 11) -->
+    @if(isset($requisitos_generales) && $requisitos_generales !== 'No especificado')
+    <div class="section">
+        <div class="section-title">IV. REQUISITOS GENERALES DEL CARGO</div>
+        <div class="content-text">
+            <p style="margin: 0;">{{ $requisitos_generales }}</p>
+        </div>
+    </div>
+    @endif
+
     <!-- Experiencia -->
     <div class="section">
-        <div class="section-title">IV. EXPERIENCIA</div>
+        <div class="section-title">V. EXPERIENCIA</div>
         <table>
             <tr>
                 <th>Experiencia General</th>
@@ -204,10 +232,25 @@
         </table>
     </div>
 
+    <!-- Capacitaciones -->
+    @if(!empty($required_courses))
+    <div class="section">
+        <div class="section-title">VI. CAPACITACIONES REQUERIDAS</div>
+        <div class="content-text">
+            <p style="margin: 0 0 5px 0;"><em>Es necesario acreditar con documentos como constancias, certificados o diplomas</em></p>
+            <ul>
+                @foreach($required_courses as $course)
+                <li>{{ is_array($course) ? $course['name'] : $course }}</li>
+                @endforeach
+            </ul>
+        </div>
+    </div>
+    @endif
+
     <!-- Conocimientos y Competencias -->
     @if(!empty($knowledge_areas) || !empty($required_competencies))
     <div class="section">
-        <div class="section-title">V. CONOCIMIENTOS Y COMPETENCIAS</div>
+        <div class="section-title">VII. CONOCIMIENTOS Y COMPETENCIAS</div>
         <div class="content-text">
             @if(!empty($knowledge_areas))
             <p style="margin: 8px 0 3px 0;"><strong>Conocimientos Requeridos:</strong></p>
@@ -233,7 +276,7 @@
     <!-- Condiciones de Trabajo -->
     @if(isset($working_conditions) && $working_conditions)
     <div class="section">
-        <div class="section-title">VI. CONDICIONES DE TRABAJO</div>
+        <div class="section-title">VIII. CONDICIONES DE TRABAJO</div>
         <div class="content-text">
             <p style="margin: 0;">{{ $working_conditions }}</p>
         </div>
@@ -243,7 +286,7 @@
     <!-- Justificación -->
     @if(isset($justification) && $justification)
     <div class="section">
-        <div class="section-title">VII. JUSTIFICACIÓN</div>
+        <div class="section-title">IX. JUSTIFICACIÓN</div>
         <div class="content-text">
             <p style="margin: 0;">{{ $justification }}</p>
         </div>
@@ -252,7 +295,7 @@
 
     <!-- Aprobaciones -->
     <div class="section">
-        <div class="section-title">VIII. APROBACIONES Y VALIDACIONES</div>
+        <div class="section-title">X. APROBACIONES Y VALIDACIONES</div>
         <table>
             <tr>
                 <th width="25%">Solicitado por</th>

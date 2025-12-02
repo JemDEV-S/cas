@@ -66,11 +66,63 @@
                     @if($jobProfile->justification)
                     <div class="grid grid-cols-3 gap-4 border-t border-gray-200 pt-4">
                         <dt class="text-sm font-medium text-gray-500">Justificación</dt>
-                        <dd class="text-sm text-gray-900 col-span-2">{{ $jobProfile->justification }}</dd>
+                        <dd class="text-sm text-gray-900 col-span-2">
+                            <div class="prose prose-sm">
+                                {{ $jobProfile->justification_text }}
+                            </div>
+                        </dd>
+                    </div>
+                    @endif
+                    @if($jobProfile->contract_start_date && $jobProfile->contract_end_date)
+                    <div class="grid grid-cols-3 gap-4 border-t border-gray-200 pt-4">
+                        <dt class="text-sm font-medium text-gray-500">Vigencia del Contrato</dt>
+                        <dd class="text-sm text-gray-900 col-span-2">
+                            <i class="fas fa-calendar-alt text-gray-400 mr-2"></i>
+                            {{ $jobProfile->contract_duration }}
+                        </dd>
+                    </div>
+                    @endif
+                    @if($jobProfile->work_location)
+                    <div class="grid grid-cols-3 gap-4 border-t border-gray-200 pt-4">
+                        <dt class="text-sm font-medium text-gray-500">Lugar de Prestación</dt>
+                        <dd class="text-sm text-gray-900 col-span-2">
+                            <i class="fas fa-map-marker-alt text-gray-400 mr-2"></i>
+                            {{ $jobProfile->work_location }}
+                        </dd>
+                    </div>
+                    @endif
+                    @if($jobProfile->positionCode)
+                    <div class="grid grid-cols-3 gap-4 border-t border-gray-200 pt-4">
+                        <dt class="text-sm font-medium text-gray-500">Remuneración Mensual</dt>
+                        <dd class="text-sm text-gray-900 col-span-2">
+                            <span class="text-lg font-bold text-green-600">S/ {{ number_format($jobProfile->positionCode->base_salary, 2) }}</span>
+                            <p class="text-xs text-gray-500 mt-1">Incluye todos los beneficios de ley</p>
+                        </dd>
                     </div>
                     @endif
                 </div>
             </x-card>
+
+            <!-- Requisitos del Cargo (desde Anexo 11) -->
+            @if($jobProfile->positionCode)
+            <x-card title="Requisitos Generales del Cargo (Anexo 11)">
+                <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-info-circle text-blue-400"></i>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm text-blue-700">
+                                Requisitos mínimos para el cargo <strong>{{ $jobProfile->positionCode->code }}</strong>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="prose prose-sm max-w-none">
+                    <p class="text-sm text-gray-700 leading-relaxed">{{ $jobProfile->getRequisitosGenerales() }}</p>
+                </div>
+            </x-card>
+            @endif
 
             <!-- Requisitos Académicos -->
             <x-card title="Requisitos Académicos">
@@ -131,6 +183,56 @@
                     @endif
                 </div>
             </x-card>
+
+            <!-- Capacitaciones Requeridas -->
+            @if($jobProfile->required_courses && count($jobProfile->required_courses) > 0)
+            <x-card title="Capacitaciones Requeridas">
+                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-certificate text-yellow-400"></i>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-xs text-yellow-700">
+                                Debe acreditar con constancias, certificados o diplomas
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <ul class="list-disc list-inside space-y-2">
+                    @foreach($jobProfile->required_courses as $course)
+                        <li class="text-sm text-gray-700">{{ is_array($course) ? $course['name'] : $course }}</li>
+                    @endforeach
+                </ul>
+            </x-card>
+            @endif
+
+            <!-- Conocimientos Requeridos -->
+            @if($jobProfile->knowledge_areas && count($jobProfile->knowledge_areas) > 0)
+            <x-card title="Conocimientos Requeridos">
+                <div class="grid grid-cols-2 gap-3">
+                    @foreach($jobProfile->knowledge_areas as $knowledge)
+                        <div class="flex items-center">
+                            <i class="fas fa-check-circle text-green-500 mr-2"></i>
+                            <span class="text-sm text-gray-700">{{ $knowledge }}</span>
+                        </div>
+                    @endforeach
+                </div>
+            </x-card>
+            @endif
+
+            <!-- Competencias Requeridas -->
+            @if($jobProfile->required_competencies && count($jobProfile->required_competencies) > 0)
+            <x-card title="Competencias Requeridas">
+                <div class="flex flex-wrap gap-2">
+                    @foreach($jobProfile->required_competencies as $competency)
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                            {{ $competency }}
+                        </span>
+                    @endforeach
+                </div>
+            </x-card>
+            @endif
 
             <!-- Funciones Principales -->
             @if($jobProfile->main_functions && count($jobProfile->main_functions) > 0)

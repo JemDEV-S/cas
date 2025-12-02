@@ -205,7 +205,7 @@
                     @enderror
                 </div>
 
-                <div>
+                <!-- <div>
                     <label for="mission" class="block text-sm font-medium text-gray-700 mb-1">
                         Misión del Puesto
                     </label>
@@ -218,7 +218,7 @@
                     @error('mission')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
-                </div>
+                </div> -->
 
                 <div>
                     <label for="justification" class="block text-sm font-medium text-gray-700 mb-1">
@@ -242,6 +242,37 @@
                     @error('justification')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
+                </div>
+            </div>
+        </x-card>
+
+        <!-- Información del Contrato -->
+        <x-card title="📅 Información del Contrato">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <x-form.input
+                    type="date"
+                    name="contract_start_date"
+                    label="Fecha de Inicio del Contrato"
+                    :value="old('contract_start_date')"
+                    placeholder="dd/mm/yyyy"
+                />
+
+                <x-form.input
+                    type="date"
+                    name="contract_end_date"
+                    label="Fecha de Fin del Contrato"
+                    :value="old('contract_end_date')"
+                    placeholder="dd/mm/yyyy"
+                />
+
+                <div class="md:col-span-2">
+                    <x-form.input
+                        type="text"
+                        name="work_location"
+                        label="Lugar de Prestación del Servicio"
+                        :value="old('work_location', 'MUNICIPALIDAD DISTRITAL DE SAN JERÓNIMO')"
+                        placeholder="Ej: MUNICIPALIDAD DISTRITAL DE SAN JERÓNIMO"
+                    />
                 </div>
             </div>
         </x-card>

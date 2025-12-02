@@ -68,6 +68,8 @@ class JobProfileController extends Controller
                     'colegiatura_required' => $pc->requires_professional_license,
                     'general_experience_years' => $pc->min_professional_experience,
                     'specific_experience_years' => $pc->min_specific_experience,
+                    'base_salary' => $pc->base_salary,
+                    'formatted_salary' => 'S/ ' . number_format($pc->base_salary, 2),
                 ];
             })
             ->toArray();
@@ -201,6 +203,8 @@ class JobProfileController extends Controller
                     'colegiatura_required' => $pc->requires_professional_license,
                     'general_experience_years' => $pc->min_professional_experience,
                     'specific_experience_years' => $pc->min_specific_experience,
+                    'base_salary' => $pc->base_salary,
+                    'formatted_salary' => 'S/ ' . number_format($pc->base_salary, 2),
                 ];
             })
             ->toArray();

@@ -52,6 +52,12 @@ class JobProfile extends BaseSoftDelete
         'work_regime',
         'justification',
 
+        // Contrato
+        'contract_start_date',
+        'contract_end_date',
+        'work_location',
+        'selection_process_name',
+
         // Vacantes
         'total_vacancies',
 
@@ -79,6 +85,8 @@ class JobProfile extends BaseSoftDelete
         'required_competencies' => 'array',
         'main_functions' => 'array',
         'total_vacancies' => 'integer',
+        'contract_start_date' => 'date',
+        'contract_end_date' => 'date',
         'requested_at' => 'datetime',
         'reviewed_at' => 'datetime',
         'approved_at' => 'datetime',
@@ -351,6 +359,141 @@ class JobProfile extends BaseSoftDelete
             'd' => 'Labores para cubrir emergencias',
             'e' => 'Labores en Programas y Proyectos Especiales',
             'f' => 'Cuando una norma con rango de ley autorice la contratación temporal'
+        ];
+    }
+
+    /**
+     * Obtiene la duración del contrato formateada
+     */
+    public function getContractDurationAttribute(): string
+    {
+        if (!$this->contract_start_date || !$this->contract_end_date) {
+            return 'No especificado';
+        }
+
+        return $this->contract_start_date->format('d \d\e F \d\e\l Y') .
+               ' al ' .
+               $this->contract_end_date->format('d \d\e F \d\e\l Y');
+    }
+
+    /**
+     * Obtiene la remuneración mensual formateada para documentos
+     */
+    public function getFormattedSalaryAttribute(): string
+    {
+        if (!$this->positionCode) {
+            return 'No especificado';
+        }
+
+        $salary = $this->positionCode->base_salary;
+        return 'S/ ' . number_format($salary, 2) .
+               ' (Monto que incluye todos los incentivos y otros conceptos establecidos por ley, conforme a la normativa vigente)';
+    }
+
+    /**
+     * Obtiene los datos formateados para el Anexo 2
+     */
+    public function getAnexo2DataAttribute(): array
+    {
+        return [
+            'identificacion_del_puesto' => [
+                'unidad_organizacional_solicitante' => $this->requestingUnit?->name ?? 'No especificado',
+                'denominacion' => $this->profile_name ?? 'No especificado',
+                'cargo_requerido' => $this->positionCode?->name ?? 'No especificado',
+                'codigo_de_cargo' => $this->positionCode?->code ?? 'No especificado',
+                'vigencia_de_contrato' => $this->contract_duration,
+            ],
+            'funciones_especificas_a_desarrollar' => $this->main_functions ?? [],
+            'formacion_academica' => [
+                'descripcion' => $this->title_required ?? 'No especificado',
+                'colegiado_y_habilitado' => [
+                    'si' => $this->colegiatura_required,
+                    'no' => !$this->colegiatura_required,
+                ],
+            ],
+            'requisitos_generales' => $this->getRequisitosGenerales(),
+            'requisitos_especificos' => [
+                'experiencia_especifica' => $this->specific_experience_description ?? 'No especificado',
+                'capacitacion' => $this->required_courses ?? [],
+                'conocimientos' => $this->knowledge_areas ?? [],
+            ],
+        ];
+    }
+
+    /**
+     * Obtiene los requisitos generales desde el PositionCode
+     */
+    public function getRequisitosGenerales(): string
+    {
+        if (!$this->positionCode) {
+            return 'No especificado';
+        }
+
+        $parts = [];
+
+        if ($this->positionCode->education_level_required) {
+            $parts[] = 'Nivel educativo: ' . ucfirst($this->positionCode->education_level_required);
+        }
+
+        if ($this->positionCode->requires_professional_title) {
+            $parts[] = 'Título profesional requerido';
+        }
+
+        if ($this->positionCode->requires_professional_license) {
+            $parts[] = 'Habilitación profesional vigente';
+        }
+
+        if ($this->positionCode->min_professional_experience > 0) {
+            $parts[] = 'Experiencia profesional no menor a ' .
+                      str_pad($this->positionCode->min_professional_experience, 2, '0', STR_PAD_LEFT) .
+                      ' años';
+        }
+
+        if ($this->positionCode->min_specific_experience > 0) {
+            $parts[] = 'Experiencia específica no menor a ' .
+                      str_pad($this->positionCode->min_specific_experience, 2, '0', STR_PAD_LEFT) .
+                      ' años en gestión pública';
+        }
+
+        return implode('. ', $parts) . '.';
+    }
+
+    /**
+     * Obtiene los datos formateados para el Perfil Publicado
+     */
+    public function getPublishedProfileDataAttribute(): array
+    {
+        return [
+            'oficina' => $this->organizationalUnit?->name ?? 'No especificado',
+            'proceso_seleccion' => $this->selection_process_name ?? 'PROCESO DE SELECCIÓN CAS',
+            'perfil_de_puesto' => [
+                'area_solicitante' => $this->requestingUnit?->parent?->name ?? $this->organizationalUnit?->name ?? 'No especificado',
+                'unidad_organica' => $this->requestingUnit?->name ?? 'No especificado',
+                'denominacion' => strtoupper($this->profile_name ?? ''),
+                'cargo_requerido' => strtoupper($this->positionCode?->name ?? ''),
+                'codigo_de_cargo' => $this->positionCode?->code ?? '',
+                'cantidad' => $this->total_vacancies,
+                'justificacion_contratacion' => strtoupper($this->justification_text ?? ''),
+            ],
+            'requisitos_minimos' => [
+                'formacion_academica' => strtoupper($this->title_required ?? ''),
+                'experiencia_laboral_general' => 'EXPERIENCIA PROFESIONAL NO MENOR A ' .
+                    str_pad($this->general_experience_years ?? 0, 2, '0', STR_PAD_LEFT) . ' AÑOS',
+                'experiencia_laboral_especifica' => strtoupper($this->specific_experience_description ?? ''),
+                'capacitaciones' => [
+                    'descripcion' => 'ES NECESARIO ACREDITAR LAS CAPACITACIONES CON DOCUMENTOS COMO CONSTANCIAS, CERTIFICADOS O DIPLOMAS',
+                    'lista' => array_map('strtoupper', $this->required_courses ?? []),
+                ],
+                'conocimientos' => array_map('strtoupper', $this->knowledge_areas ?? []),
+                'competencias' => array_map('strtoupper', $this->required_competencies ?? []),
+                'funciones' => array_map('strtoupper', $this->main_functions ?? []),
+            ],
+            'condiciones' => [
+                'regimen_laboral' => strtoupper($this->work_regime_label ?? ''),
+                'lugar_prestacion_servicios' => strtoupper($this->work_location ?? 'MUNICIPALIDAD DISTRITAL DE SAN JERÓNIMO'),
+                'duracion_contrato' => strtoupper($this->contract_duration),
+                'remuneracion_mensual' => $this->formatted_salary,
+            ],
         ];
     }
 }
