@@ -16,7 +16,7 @@
                 </div>
 
                 <!-- Navigation Links -->
-                <div class="hidden sm:ml-6 sm:flex sm:space-x-2" x-data="{ open: null }">
+                <div class="hidden sm:ml-6 sm:flex sm:space-x-2 sm:items-center" x-data="{ open: null }">
                     <!-- Dashboard - Todos -->
                     <a href="{{ route('dashboard') }}"
                        class="inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition-all
@@ -111,7 +111,7 @@
                              x-transition:enter="transition ease-out duration-200"
                              x-transition:enter-start="opacity-0 scale-95"
                              x-transition:enter-end="opacity-100 scale-100"
-                             class="absolute left-0 mt-2 w-56 rounded-xl shadow-lg bg-white ring-1 ring-gray-200 overflow-hidden"
+                             class="absolute left-0 pt-4 w-56 rounded-xl shadow-lg bg-white ring-1 ring-gray-200 overflow-hidden"
                              style="display: none;">
                             <div class="py-1">
                                 {{-- Ver todos los perfiles (Permiso global) --}}
@@ -240,7 +240,7 @@
                              x-transition:enter="transition ease-out duration-200"
                              x-transition:enter-start="opacity-0 scale-95"
                              x-transition:enter-end="opacity-100 scale-100"
-                             class="absolute left-0 mt-2 w-56 rounded-xl shadow-lg bg-white ring-1 ring-gray-200 overflow-hidden"
+                             class="absolute left-0 pt-4 w-56 rounded-xl shadow-lg bg-white ring-1 ring-gray-200 overflow-hidden"
                              style="display: none;">
                             <div class="py-1">
                                 <a href="{{ route('users.index') }}"
