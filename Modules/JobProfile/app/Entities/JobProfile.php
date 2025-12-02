@@ -320,4 +320,37 @@ class JobProfile extends BaseSoftDelete
     {
         return ($this->general_experience_years ?? 0) + ($this->specific_experience_years ?? 0);
     }
+    // En tu modelo JobProfile (después de los métodos existentes)
+
+    /**
+     * Obtiene el texto completo de la justificación basado en el valor almacenado
+     */
+    public function getJustificationTextAttribute(): string
+    {
+        $justifications = [
+            'a' => 'Trabajos para obra o servicio específico, comprende la prestación de servicios para la realización de obras o servicios específicos que la entidad requiera atender en un periodo determinado.',
+            'b' => 'Labores ocasionales o eventuales de duración determinada, son aquellas actividades excepcionales distintas a las labores habituales o regulares de la entidad.',
+            'c' => 'Labores por incremento extraordinario y temporal de actividades, son aquellas actividades nuevas o ya existentes en la entidad y que se ven incrementadas a consecuencia de una situación estacional o coyuntural.',
+            'd' => 'Labores para cubrir emergencias, son las que se generan por un caso fortuito o fuerza mayor.',
+            'e' => 'Labores en Programas y Proyectos Especiales, son aquellas labores que mantienen su vigencia hasta la extinción de la entidad.',
+            'f' => 'Cuando una norma con rango de ley autorice la contratación temporal para un fin específico.'
+        ];
+
+        return $justifications[$this->justification] ?? '';
+    }
+
+    /**
+     * Obtiene las opciones de justificación para usar en formularios
+     */
+    public static function getJustificationOptions(): array
+    {
+        return [
+            'a' => 'Trabajos para obra o servicio específico',
+            'b' => 'Labores ocasionales o eventuales de duración determinada',
+            'c' => 'Labores por incremento extraordinario y temporal de actividades',
+            'd' => 'Labores para cubrir emergencias',
+            'e' => 'Labores en Programas y Proyectos Especiales',
+            'f' => 'Cuando una norma con rango de ley autorice la contratación temporal'
+        ];
+    }
 }

@@ -22,11 +22,9 @@ class UpdateUserRequest extends FormRequest
     public function rules(): array
     {
         $userId = $this->route('user')->id;
-
-        return [
+        $rules = [
             'dni' => ['sometimes', 'required', 'string', 'size:8', Rule::unique('users', 'dni')->ignore($userId), 'regex:/^[0-9]{8}$/'],
             'email' => ['sometimes', 'required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($userId)],
-            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
             'first_name' => ['sometimes', 'required', 'string', 'max:100'],
             'last_name' => ['sometimes', 'required', 'string', 'max:100'],
             'phone' => ['nullable', 'string', 'max:20'],
@@ -34,6 +32,14 @@ class UpdateUserRequest extends FormRequest
             'roles' => ['nullable', 'array'],
             'roles.*' => ['exists:roles,id'],
         ];
+
+        // Solo añadir reglas de contraseña si se proporciona una
+        if ($this->filled('password')) {
+            $rules['password'] = ['required', 'string', 'min:8', 'confirmed'];
+            $rules['current_password'] = ['required', 'string'];
+        }
+
+        return $rules;
     }
 
     public function attributes(): array
@@ -55,6 +61,7 @@ class UpdateUserRequest extends FormRequest
         return [
             'dni.regex' => 'El DNI debe contener exactamente 8 dígitos numéricos.',
             'dni.size' => 'El DNI debe tener exactamente 8 caracteres.',
+            'current_password.required' => 'Debes ingresar tu contraseña actual para cambiarla.',
             'password.min' => 'La contraseña debe tener al menos 8 caracteres.',
             'password.confirmed' => 'La confirmación de contraseña no coincide.',
         ];
