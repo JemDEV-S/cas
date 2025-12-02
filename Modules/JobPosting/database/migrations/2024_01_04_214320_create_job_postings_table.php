@@ -72,5 +72,11 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('job_postings');
+        Schema::disableForeignKeyConstraints();
+        
+        Schema::dropIfExists('job_postings');
+        
+        // Volvemos a activar la protección
+        Schema::enableForeignKeyConstraints();
     }
 };

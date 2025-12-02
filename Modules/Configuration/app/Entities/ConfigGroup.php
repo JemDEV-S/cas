@@ -4,9 +4,10 @@ namespace Modules\Configuration\Entities;
 
 use Modules\Core\Entities\BaseModel;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-
+use Modules\Core\Traits\HasUuid;
 class ConfigGroup extends BaseModel
 {
+    use HasUuid;
     protected $table = 'config_groups';
 
     protected $fillable = [

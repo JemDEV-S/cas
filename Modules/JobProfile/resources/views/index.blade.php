@@ -12,7 +12,11 @@
             @can('create', \Modules\JobProfile\Entities\JobProfile::class)
                 <a href="{{ route('jobprofile.profiles.create') }}">
                     <x-button variant="primary">
-                        <i class="fas fa-plus mr-2"></i> Nuevo Perfil
+                        <!-- Icono Plus -->
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        Nuevo Perfil
                     </x-button>
                 </a>
             @endcan
@@ -40,7 +44,11 @@
 
                 <div class="flex items-end">
                     <x-button type="submit" variant="primary" class="w-full">
-                        <i class="fas fa-filter mr-2"></i> Filtrar
+                        <!-- Icono Filtro -->
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+                        </svg>
+                        Filtrar
                     </x-button>
                 </div>
 
@@ -48,7 +56,11 @@
                     <div class="flex items-end">
                         <a href="{{ route('jobprofile.index') }}" class="w-full">
                             <x-button type="button" variant="secondary" class="w-full">
-                                <i class="fas fa-times mr-2"></i> Limpiar
+                                <!-- Icono X (Limpiar) -->
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                                Limpiar
                             </x-button>
                         </a>
                     </div>
@@ -70,7 +82,11 @@
                     <div class="mt-6">
                         <a href="{{ route('jobprofile.profiles.create') }}">
                             <x-button variant="primary">
-                                <i class="fas fa-plus mr-2"></i> Crear Perfil
+                                <!-- Icono Plus -->
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                </svg>
+                                Crear Perfil
                             </x-button>
                         </a>
                     </div>
@@ -140,21 +156,30 @@
                                 <td class="px-3 py-4 text-sm text-gray-500">
                                     {{ $profile->created_at->format('d/m/Y') }}
                                 </td>
+                                
+                                {{-- COLUMNA DE ACCIONES CORREGIDA --}}
                                 <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium">
                                     <div class="flex justify-end gap-2">
                                         @can('view', $profile)
                                             <a href="{{ route('jobprofile.profiles.show', $profile->id) }}"
-                                               class="inline-flex items-center px-2.5 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                               class="inline-flex items-center px-2 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                                                title="Ver">
-                                                <i class="fas fa-eye"></i>
+                                                <!-- Icono Ojo -->
+                                                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                                </svg>
                                             </a>
                                         @endcan
 
                                         @can('update', $profile)
                                             <a href="{{ route('jobprofile.profiles.edit', $profile->id) }}"
-                                               class="inline-flex items-center px-2.5 py-1.5 border border-yellow-300 shadow-sm text-xs font-medium rounded text-yellow-700 bg-yellow-50 hover:bg-yellow-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500"
+                                               class="inline-flex items-center px-2 py-2 border border-yellow-300 shadow-sm text-sm font-medium rounded-md text-yellow-700 bg-yellow-50 hover:bg-yellow-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500"
                                                title="Editar">
-                                                <i class="fas fa-edit"></i>
+                                                <!-- Icono Lápiz -->
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                                </svg>
                                             </a>
                                         @endcan
 
@@ -164,10 +189,13 @@
                                                       method="POST" class="inline">
                                                     @csrf
                                                     <button type="submit"
-                                                            class="inline-flex items-center px-2.5 py-1.5 border border-green-300 shadow-sm text-xs font-medium rounded text-green-700 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                                                            class="inline-flex items-center px-2 py-2 border border-green-300 shadow-sm text-sm font-medium rounded-md text-green-700 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                                                             title="Enviar a Revisión"
                                                             onclick="return confirm('¿Está seguro de enviar este perfil a revisión?')">
-                                                        <i class="fas fa-paper-plane"></i>
+                                                        <!-- Icono Enviar (Avión de papel) -->
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                                                        </svg>
                                                     </button>
                                                 </form>
                                             @endif
