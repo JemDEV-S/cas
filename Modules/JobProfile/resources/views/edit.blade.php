@@ -25,23 +25,36 @@
 
         <!-- Información General -->
         <x-card title="Información General">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <x-form.input
-                    type="text"
-                    name="title"
-                    label="Título del Puesto"
-                    :value="old('title', $jobProfile->title)"
-                    required
-                    placeholder="Ej: Especialista en Recursos Humanos"
-                />
+            <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-info-circle text-blue-400"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-blue-700">
+                            El <strong>título actual</strong> es: <span class="font-semibold">{{ $jobProfile->title }}</span>
+                        </p>
+                        <p class="text-xs text-blue-600 mt-1">
+                            Se regenerará automáticamente si cambias el nombre del puesto o la unidad organizacional.
+                        </p>
+                    </div>
+                </div>
+            </div>
 
-                <x-form.input
-                    type="text"
-                    name="profile_name"
-                    label="Nombre del Perfil"
-                    :value="old('profile_name', $jobProfile->profile_name)"
-                    placeholder="Nombre interno del perfil"
-                />
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="md:col-span-2">
+                    <x-form.input
+                        type="text"
+                        name="profile_name"
+                        label="Nombre del Puesto"
+                        :value="old('profile_name', $jobProfile->profile_name)"
+                        required
+                        placeholder="Ej: ESPECIALISTA EN RECURSOS HUMANOS"
+                    />
+                    <p class="mt-1 text-xs text-gray-500">
+                        Este nombre se combinará con la unidad organizacional para formar el título completo del puesto
+                    </p>
+                </div>
 
                 <x-form.select
                     name="organizational_unit_id"
@@ -222,15 +235,95 @@
 
         <!-- Requisitos Académicos -->
         <x-card title="Requisitos Académicos">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <x-form.select
-                    name="education_level"
-                    label="Nivel Educativo"
-                    :options="$educationOptions"
-                    :selected="old('education_level', $jobProfile->education_level)"
-                    required
-                />
+            <div class="md:col-span-2 mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Niveles Educativos Aceptados <span class="text-red-500">*</span>
+                </label>
+                <p class="text-xs text-gray-500 mb-3">
+                    Seleccione uno o más niveles educativos que aceptará este puesto
+                </p>
 
+                <div id="education_levels_container" class="space-y-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <!-- Educación Técnica -->
+                    <div class="border-b border-gray-200 pb-3">
+                        <p class="text-xs font-semibold text-gray-600 mb-2">NIVEL TÉCNICO</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            @php
+                                $technicalLevels = ['estudios_tecnicos', 'egresado_tecnico', 'titulo_tecnico'];
+                                $oldLevels = old('education_levels', $jobProfile->education_levels ?? []);
+                            @endphp
+                            @foreach($technicalLevels as $level)
+                                @if(isset($educationOptions[$level]))
+                                <label class="flex items-start space-x-2 cursor-pointer hover:bg-white p-2 rounded">
+                                    <input
+                                        type="checkbox"
+                                        name="education_levels[]"
+                                        value="{{ $level }}"
+                                        class="education-level-checkbox mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                        {{ in_array($level, $oldLevels) ? 'checked' : '' }}>
+                                    <span class="text-sm text-gray-700">{{ $educationOptions[$level] }}</span>
+                                </label>
+                                @endif
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <!-- Educación Universitaria -->
+                    <div class="border-b border-gray-200 pb-3">
+                        <p class="text-xs font-semibold text-gray-600 mb-2">NIVEL UNIVERSITARIO</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            @php
+                                $universityLevels = ['estudios_universitarios', 'egresado_universitario', 'bachiller', 'titulo_profesional'];
+                            @endphp
+                            @foreach($universityLevels as $level)
+                                @if(isset($educationOptions[$level]))
+                                <label class="flex items-start space-x-2 cursor-pointer hover:bg-white p-2 rounded">
+                                    <input
+                                        type="checkbox"
+                                        name="education_levels[]"
+                                        value="{{ $level }}"
+                                        class="education-level-checkbox mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                        {{ in_array($level, $oldLevels) ? 'checked' : '' }}>
+                                    <span class="text-sm text-gray-700">{{ $educationOptions[$level] }}</span>
+                                </label>
+                                @endif
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <!-- Postgrado y Otros -->
+                    <div>
+                        <p class="text-xs font-semibold text-gray-600 mb-2">OTROS NIVELES</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            @php
+                                $otherLevels = ['secundaria', 'postgrado'];
+                            @endphp
+                            @foreach($otherLevels as $level)
+                                @if(isset($educationOptions[$level]))
+                                <label class="flex items-start space-x-2 cursor-pointer hover:bg-white p-2 rounded">
+                                    <input
+                                        type="checkbox"
+                                        name="education_levels[]"
+                                        value="{{ $level }}"
+                                        class="education-level-checkbox mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                        {{ in_array($level, $oldLevels) ? 'checked' : '' }}>
+                                    <span class="text-sm text-gray-700">{{ $educationOptions[$level] }}</span>
+                                </label>
+                                @endif
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+
+                @error('education_levels')
+                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                @enderror
+                @error('education_levels.*')
+                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <x-form.input
                     type="text"
                     name="career_field"

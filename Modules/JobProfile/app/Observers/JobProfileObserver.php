@@ -8,6 +8,47 @@ use Modules\JobProfile\Entities\JobProfileHistory;
 class JobProfileObserver
 {
     /**
+     * Handle the JobProfile "creating" event.
+     * Se ejecuta antes de crear el registro.
+     */
+    public function creating(JobProfile $jobProfile): void
+    {
+        $this->generateTitle($jobProfile);
+    }
+
+    /**
+     * Handle the JobProfile "updating" event.
+     * Se ejecuta antes de actualizar el registro.
+     */
+    public function updating(JobProfile $jobProfile): void
+    {
+        // Solo regenerar el título si cambiaron profile_name o organizational_unit_id
+        if ($jobProfile->isDirty(['profile_name', 'organizational_unit_id'])) {
+            $this->generateTitle($jobProfile);
+        }
+    }
+
+    /**
+     * Genera automáticamente el título concatenando profile_name con unidad organizacional
+     */
+    protected function generateTitle(JobProfile $jobProfile): void
+    {
+        if (!$jobProfile->profile_name) {
+            return;
+        }
+
+        // Cargar la relación si no está cargada
+        if (!$jobProfile->relationLoaded('organizationalUnit')) {
+            $jobProfile->load('organizationalUnit');
+        }
+
+        $organizationalUnitName = $jobProfile->organizationalUnit?->name ?? '';
+
+        // Concatenar: "NOMBRE DEL PUESTO - UNIDAD ORGANIZACIONAL"
+        $jobProfile->title = trim($jobProfile->profile_name . ($organizationalUnitName ? ' - ' . $organizationalUnitName : ''));
+    }
+
+    /**
      * Handle the JobProfile "created" event.
      */
     public function created(JobProfile $jobProfile): void

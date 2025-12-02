@@ -42,25 +42,33 @@
 
         <!-- Información General -->
         <x-card title="📋 Información General">
+            <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-info-circle text-blue-400"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-blue-700">
+                            El <strong>título del puesto</strong> se generará automáticamente concatenando el nombre del puesto con la unidad organizacional.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="md:col-span-2">
                     <x-form.input
                         type="text"
-                        name="title"
-                        label="Título del Puesto"
-                        :value="old('title')"
+                        name="profile_name"
+                        label="Nombre del Puesto"
+                        :value="old('profile_name')"
                         required
-                        placeholder="Ej: Especialista en Recursos Humanos"
+                        placeholder="Ej: ESPECIALISTA EN RECURSOS HUMANOS"
                     />
+                    <p class="mt-1 text-xs text-gray-500">
+                        Este nombre se combinará con la unidad organizacional para formar el título completo del puesto
+                    </p>
                 </div>
-
-                <x-form.input
-                    type="text"
-                    name="profile_name"
-                    label="Nombre del Perfil"
-                    :value="old('profile_name')"
-                    placeholder="Nombre interno del perfil (opcional)"
-                />
 
                 <!-- Código de Posición - Mejorado con autocompletado -->
                 <div>
@@ -249,22 +257,6 @@
         <!-- Información del Contrato -->
         <x-card title="📅 Información del Contrato">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <x-form.input
-                    type="date"
-                    name="contract_start_date"
-                    label="Fecha de Inicio del Contrato"
-                    :value="old('contract_start_date')"
-                    placeholder="dd/mm/yyyy"
-                />
-
-                <x-form.input
-                    type="date"
-                    name="contract_end_date"
-                    label="Fecha de Fin del Contrato"
-                    :value="old('contract_end_date')"
-                    placeholder="dd/mm/yyyy"
-                />
-
                 <div class="md:col-span-2">
                     <x-form.input
                         type="text"
@@ -285,30 +277,100 @@
                 </p>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="md:col-span-2">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                        Nivel Educativo <span class="text-red-500">*</span>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Niveles Educativos Aceptados <span class="text-red-500">*</span>
                     </label>
-                    <select
-                        id="education_level"
-                        name="education_level"
-                        class="border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm w-full"
-                        required>
-                        <option value="">Seleccione un nivel</option>
-                        @foreach($educationOptions as $value => $label)
-                            <option value="{{ $value }}" {{ old('education_level') == $value ? 'selected' : '' }}>
-                                {{ $label }}
-                            </option>
-                        @endforeach
-                    </select>
-                    <span id="education_level_indicator" class="hidden text-xs text-green-600 mt-1">
+                    <p class="text-xs text-gray-500 mb-3">
+                        Seleccione uno o más niveles educativos que aceptará este puesto
+                    </p>
+
+                    <div id="education_levels_container" class="space-y-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <!-- Educación Técnica -->
+                        <div class="border-b border-gray-200 pb-3">
+                            <p class="text-xs font-semibold text-gray-600 mb-2">NIVEL TÉCNICO</p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                @php
+                                    $technicalLevels = ['estudios_tecnicos', 'egresado_tecnico', 'titulo_tecnico'];
+                                    $oldLevels = old('education_levels', []);
+                                @endphp
+                                @foreach($technicalLevels as $level)
+                                    @if(isset($educationOptions[$level]))
+                                    <label class="flex items-start space-x-2 cursor-pointer hover:bg-white p-2 rounded">
+                                        <input
+                                            type="checkbox"
+                                            name="education_levels[]"
+                                            value="{{ $level }}"
+                                            class="education-level-checkbox mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                            {{ in_array($level, $oldLevels) ? 'checked' : '' }}>
+                                        <span class="text-sm text-gray-700">{{ $educationOptions[$level] }}</span>
+                                    </label>
+                                    @endif
+                                @endforeach
+                            </div>
+                        </div>
+
+                        <!-- Educación Universitaria -->
+                        <div class="border-b border-gray-200 pb-3">
+                            <p class="text-xs font-semibold text-gray-600 mb-2">NIVEL UNIVERSITARIO</p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                @php
+                                    $universityLevels = ['estudios_universitarios', 'egresado_universitario', 'bachiller', 'titulo_profesional'];
+                                @endphp
+                                @foreach($universityLevels as $level)
+                                    @if(isset($educationOptions[$level]))
+                                    <label class="flex items-start space-x-2 cursor-pointer hover:bg-white p-2 rounded">
+                                        <input
+                                            type="checkbox"
+                                            name="education_levels[]"
+                                            value="{{ $level }}"
+                                            class="education-level-checkbox mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                            {{ in_array($level, $oldLevels) ? 'checked' : '' }}>
+                                        <span class="text-sm text-gray-700">{{ $educationOptions[$level] }}</span>
+                                    </label>
+                                    @endif
+                                @endforeach
+                            </div>
+                        </div>
+
+                        <!-- Postgrado y Otros -->
+                        <div>
+                            <p class="text-xs font-semibold text-gray-600 mb-2">OTROS NIVELES</p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                @php
+                                    $otherLevels = ['secundaria', 'postgrado'];
+                                @endphp
+                                @foreach($otherLevels as $level)
+                                    @if(isset($educationOptions[$level]))
+                                    <label class="flex items-start space-x-2 cursor-pointer hover:bg-white p-2 rounded">
+                                        <input
+                                            type="checkbox"
+                                            name="education_levels[]"
+                                            value="{{ $level }}"
+                                            class="education-level-checkbox mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                            {{ in_array($level, $oldLevels) ? 'checked' : '' }}>
+                                        <span class="text-sm text-gray-700">{{ $educationOptions[$level] }}</span>
+                                    </label>
+                                    @endif
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+
+                    <span id="education_level_indicator" class="hidden text-xs text-green-600 mt-2 block">
                         <i class="fas fa-check-circle"></i> Autocompletado desde Código de Posición
                     </span>
-                    @error('education_level')
+                    @error('education_levels')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                    @error('education_levels.*')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
                 </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
                 <x-form.input
                     type="text"
@@ -618,9 +680,21 @@ function autoFillFromPositionCode() {
 
     const data = positionCodesData[positionCodeId];
 
-    // Autocompletar Nivel Educativo
-    if (data.education_level) {
-        document.getElementById('education_level').value = data.education_level;
+    // Autocompletar Niveles Educativos (checkboxes)
+    if (data.education_levels && Array.isArray(data.education_levels)) {
+        // Primero desmarcar todos los checkboxes
+        document.querySelectorAll('.education-level-checkbox').forEach(checkbox => {
+            checkbox.checked = false;
+        });
+
+        // Marcar solo los niveles educativos del position code seleccionado
+        data.education_levels.forEach(level => {
+            const checkbox = document.querySelector(`.education-level-checkbox[value="${level}"]`);
+            if (checkbox) {
+                checkbox.checked = true;
+            }
+        });
+
         showIndicator('education_level_indicator');
     }
 

@@ -205,7 +205,7 @@ class ReviewService
             $errors[] = 'Debe seleccionar un código de posición';
         }
 
-        if (empty($jobProfile->education_level)) {
+        if (empty($jobProfile->education_level) && empty($jobProfile->education_levels)) {
             $errors[] = 'El nivel educativo es obligatorio';
         }
 

@@ -26,7 +26,8 @@ class PositionCodeSeeder extends Seeder
                 'min_specific_experience' => 3.0,
                 'requires_professional_title' => true,
                 'requires_professional_license' => true,
-                'education_level_required' => 'universitario',
+                'education_level_required' => 'titulo_profesional',
+                'education_levels_accepted' => ['titulo_profesional'],
             ],
             [
                 'code' => 'PA II',
@@ -41,7 +42,8 @@ class PositionCodeSeeder extends Seeder
                 'min_specific_experience' => 2.0,
                 'requires_professional_title' => true,
                 'requires_professional_license' => true,
-                'education_level_required' => 'universitario',
+                'education_level_required' => 'titulo_profesional',
+                'education_levels_accepted' => ['titulo_profesional'],
             ],
             [
                 'code' => 'ESP I',
@@ -56,7 +58,8 @@ class PositionCodeSeeder extends Seeder
                 'min_specific_experience' => 1.0,
                 'requires_professional_title' => true,
                 'requires_professional_license' => true,
-                'education_level_required' => 'universitario',
+                'education_level_required' => 'titulo_profesional',
+                'education_levels_accepted' => ['titulo_profesional'],
             ],
             [
                 'code' => 'PP I',
@@ -71,7 +74,8 @@ class PositionCodeSeeder extends Seeder
                 'min_specific_experience' => 0.0,
                 'requires_professional_title' => true,
                 'requires_professional_license' => true,
-                'education_level_required' => 'universitario',
+                'education_level_required' => 'titulo_profesional',
+                'education_levels_accepted' => ['titulo_profesional'],
             ],
             [
                 'code' => 'PP II',
@@ -86,7 +90,8 @@ class PositionCodeSeeder extends Seeder
                 'min_specific_experience' => 0.0,
                 'requires_professional_title' => false, // Puede ser bachiller
                 'requires_professional_license' => false,
-                'education_level_required' => 'universitario', // Nivel universitario (incluye bachiller y título)
+                'education_level_required' => 'bachiller',
+                'education_levels_accepted' => ['bachiller', 'titulo_profesional'],
             ],
             [
                 'code' => 'PP III',
@@ -101,7 +106,8 @@ class PositionCodeSeeder extends Seeder
                 'min_specific_experience' => 0.0,
                 'requires_professional_title' => false, // Puede ser bachiller
                 'requires_professional_license' => false,
-                'education_level_required' => 'universitario',
+                'education_level_required' => 'bachiller',
+                'education_levels_accepted' => ['bachiller', 'titulo_profesional'],
             ],
             [
                 'code' => 'AA I',
@@ -116,7 +122,8 @@ class PositionCodeSeeder extends Seeder
                 'min_specific_experience' => 0.0,
                 'requires_professional_title' => false,
                 'requires_professional_license' => false,
-                'education_level_required' => 'tecnico', // Título técnico o bachiller
+                'education_level_required' => 'titulo_tecnico',
+                'education_levels_accepted' => ['titulo_tecnico', 'bachiller'],
             ],
             [
                 'code' => 'TEC I',
@@ -131,7 +138,8 @@ class PositionCodeSeeder extends Seeder
                 'min_specific_experience' => 0.0,
                 'requires_professional_title' => false,
                 'requires_professional_license' => false,
-                'education_level_required' => 'tecnico', // Egresado nivel técnico/superior
+                'education_level_required' => 'egresado_tecnico',
+                'education_levels_accepted' => ['egresado_tecnico', 'egresado_universitario'],
             ],
             [
                 'code' => 'TEC II',
@@ -146,7 +154,8 @@ class PositionCodeSeeder extends Seeder
                 'min_specific_experience' => 0.0,
                 'requires_professional_title' => false,
                 'requires_professional_license' => false,
-                'education_level_required' => 'tecnico', // Egresado
+                'education_level_required' => 'egresado_tecnico',
+                'education_levels_accepted' => ['egresado_tecnico', 'egresado_universitario'],
             ],
             [
                 'code' => 'AUXI',
@@ -161,7 +170,8 @@ class PositionCodeSeeder extends Seeder
                 'min_specific_experience' => 0.0,
                 'requires_professional_title' => false,
                 'requires_professional_license' => false,
-                'education_level_required' => 'tecnico', // Estudios técnicos
+                'education_level_required' => 'estudios_tecnicos',
+                'education_levels_accepted' => ['estudios_tecnicos', 'estudios_universitarios'],
             ],
             [
                 'code' => 'AUXII',
@@ -176,7 +186,8 @@ class PositionCodeSeeder extends Seeder
                 'min_specific_experience' => 0.0,
                 'requires_professional_title' => false,
                 'requires_professional_license' => false,
-                'education_level_required' => 'tecnico', // Estudios técnicos
+                'education_level_required' => 'estudios_tecnicos',
+                'education_levels_accepted' => ['estudios_tecnicos', 'estudios_universitarios'],
             ],
             [
                 'code' => 'AUXIII',
@@ -191,7 +202,8 @@ class PositionCodeSeeder extends Seeder
                 'min_specific_experience' => 0.0,
                 'requires_professional_title' => false,
                 'requires_professional_license' => false,
-                'education_level_required' => 'secundaria', // Secundaria completa
+                'education_level_required' => 'secundaria',
+                'education_levels_accepted' => ['secundaria'],
             ],
         ];
 

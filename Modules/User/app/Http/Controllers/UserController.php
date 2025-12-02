@@ -116,7 +116,7 @@ class UserController extends Controller
     {
         $this->authorize('view', $user);
 
-        $user->load(['roles', 'profile', 'preference', 'organizationUnits.organizationalUnit']);
+        $user->load(['roles', 'profile', 'preference', 'organizationUnits.userOrganizationUnits']);
 
         return view('user::show', compact('user'));
     }

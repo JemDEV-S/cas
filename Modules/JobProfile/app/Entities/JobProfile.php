@@ -30,7 +30,8 @@ class JobProfile extends BaseSoftDelete
         'working_conditions',
 
         // Requisitos académicos
-        'education_level',
+        'education_level', // Mantener por compatibilidad
+        'education_levels', // Nuevo campo para múltiples niveles
         'career_field',
         'title_required',
         'colegiatura_required',
@@ -84,6 +85,7 @@ class JobProfile extends BaseSoftDelete
         'knowledge_areas' => 'array',
         'required_competencies' => 'array',
         'main_functions' => 'array',
+        'education_levels' => 'array', // Cast para múltiples niveles educativos
         'total_vacancies' => 'integer',
         'contract_start_date' => 'date',
         'contract_end_date' => 'date',
@@ -300,9 +302,15 @@ class JobProfile extends BaseSoftDelete
 
     public function getEducationLevelLabelAttribute(): string
     {
+        // Priorizar education_levels (múltiples) sobre education_level (único)
+        if (!empty($this->education_levels)) {
+            return \Modules\JobProfile\Enums\EducationLevelEnum::formatMultiple($this->education_levels);
+        }
+
         if (!$this->education_level) {
             return 'No especificado';
         }
+
         return \Modules\JobProfile\Enums\EducationLevelEnum::from($this->education_level)->label();
     }
 
@@ -431,7 +439,11 @@ class JobProfile extends BaseSoftDelete
 
         $parts = [];
 
-        if ($this->positionCode->education_level_required) {
+        // Usar education_levels_accepted si está disponible
+        if (!empty($this->positionCode->education_levels_accepted)) {
+            $educationText = $this->positionCode->formatted_education_levels;
+            $parts[] = $educationText;
+        } elseif ($this->positionCode->education_level_required) {
             $parts[] = 'Nivel educativo: ' . ucfirst($this->positionCode->education_level_required);
         }
 

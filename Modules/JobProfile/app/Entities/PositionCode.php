@@ -19,14 +19,15 @@ class PositionCode extends BaseSoftDelete
         'essalud_percentage',
         'contract_months',
         'is_active',
-        
+
         // Nuevos campos desde el JSON
         'min_professional_experience',
         'min_specific_experience',
         'requires_professional_title',
         'requires_professional_license',
-        'education_level_required',
-        
+        'education_level_required', // Mantener por compatibilidad
+        'education_levels_accepted', // Nuevo campo para múltiples niveles
+
         'metadata',
     ];
 
@@ -42,6 +43,7 @@ class PositionCode extends BaseSoftDelete
         'min_specific_experience' => 'decimal:1',
         'requires_professional_title' => 'boolean',
         'requires_professional_license' => 'boolean',
+        'education_levels_accepted' => 'array', // Cast a array
         'metadata' => 'array',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
@@ -141,10 +143,25 @@ class PositionCode extends BaseSoftDelete
             'salary_min' => $this->base_salary,
             'salary_max' => $this->base_salary, // Solo el salario base
             'education_level' => $this->education_level_required,
+            'education_levels' => $this->education_levels_accepted ?? [$this->education_level_required],
             'title_required' => $this->requires_professional_title,
             'colegiatura_required' => $this->requires_professional_license,
             'general_experience_years' => $this->min_professional_experience,
             'specific_experience_years' => $this->min_specific_experience,
         ];
+    }
+
+    /**
+     * Obtiene los niveles educativos formateados como string
+     */
+    public function getFormattedEducationLevelsAttribute(): string
+    {
+        $levels = $this->education_levels_accepted ?? [$this->education_level_required];
+
+        if (empty($levels)) {
+            return 'No especificado';
+        }
+
+        return \Modules\JobProfile\Enums\EducationLevelEnum::formatMultiple($levels);
     }
 }

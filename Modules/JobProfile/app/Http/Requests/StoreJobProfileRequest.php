@@ -17,21 +17,27 @@ class StoreJobProfileRequest extends FormRequest
     {
         return [
             // Información General
-            'title' => 'required|string|max:255',
-            'profile_name' => 'nullable|string|max:255',
+            'title' => 'nullable|string|max:255', // Se genera automáticamente
+            'profile_name' => 'required|string|max:255',
             'organizational_unit_id' => 'required|uuid|exists:organizational_units,id',
             'position_code_id' => 'nullable|uuid|exists:position_codes,id',
             'work_regime' => ['required', 'string', Rule::in(['cas', '276', '728', '1057'])],
             'total_vacancies' => 'required|integer|min:1|max:100',
             'description' => 'nullable|string|max:2000',
             'mission' => 'nullable|string|max:2000',
-            'justification' => 'required|string|min:50|max:2000',
+            'justification' => 'required|string|min:1|max:2000',
             'working_conditions' => 'nullable|string|max:1000',
             'job_level' => 'nullable|string|max:100',
             'contract_type' => 'nullable|string|max:100',
 
             // Requisitos Académicos
             'education_level' => [
+                'nullable',
+                'string',
+                Rule::in(EducationLevelEnum::values())
+            ],
+            'education_levels' => 'required|array|min:1',
+            'education_levels.*' => [
                 'required',
                 'string',
                 Rule::in(EducationLevelEnum::values())
@@ -61,6 +67,12 @@ class StoreJobProfileRequest extends FormRequest
             'salary_min' => 'nullable|numeric|min:0',
             'salary_max' => 'nullable|numeric|min:0|gte:salary_min',
 
+            // Información del Contrato
+            'contract_start_date' => 'nullable|date',
+            'contract_end_date' => 'nullable|date|after_or_equal:contract_start_date',
+            'work_location' => 'nullable|string|max:255',
+            'selection_process_name' => 'nullable|string|max:255',
+
             // Metadata
             'metadata' => 'nullable|array',
         ];
@@ -69,8 +81,8 @@ class StoreJobProfileRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'title.required' => 'El título del puesto es obligatorio.',
-            'title.max' => 'El título no puede exceder 255 caracteres.',
+            'profile_name.required' => 'El nombre del puesto es obligatorio.',
+            'profile_name.max' => 'El nombre del puesto no puede exceder 255 caracteres.',
 
             'organizational_unit_id.required' => 'Debe seleccionar una unidad organizacional.',
             'organizational_unit_id.exists' => 'La unidad organizacional seleccionada no es válida.',
@@ -83,11 +95,15 @@ class StoreJobProfileRequest extends FormRequest
             'total_vacancies.max' => 'No puede exceder 100 vacantes.',
 
             'justification.required' => 'La justificación es obligatoria.',
-            'justification.min' => 'La justificación debe tener al menos 50 caracteres.',
+            'justification.min' => 'La justificación debe tener al menos 10 caracteres.',
             'justification.max' => 'La justificación no puede exceder 2000 caracteres.',
 
-            'education_level.required' => 'El nivel educativo es obligatorio.',
             'education_level.in' => 'El nivel educativo seleccionado no es válido.',
+
+            'education_levels.required' => 'Debe seleccionar al menos un nivel educativo.',
+            'education_levels.min' => 'Debe seleccionar al menos un nivel educativo.',
+            'education_levels.*.required' => 'Todos los niveles educativos son obligatorios.',
+            'education_levels.*.in' => 'Uno o más niveles educativos seleccionados no son válidos.',
 
             'general_experience_years.min' => 'La experiencia general no puede ser negativa.',
             'general_experience_years.max' => 'La experiencia general no puede exceder 50 años.',
@@ -101,6 +117,8 @@ class StoreJobProfileRequest extends FormRequest
             'main_functions.*.max' => 'Las funciones no pueden exceder 500 caracteres.',
 
             'salary_max.gte' => 'El salario máximo debe ser mayor o igual al salario mínimo.',
+
+            'contract_end_date.after_or_equal' => 'La fecha de fin del contrato debe ser posterior a la fecha de inicio.',
         ];
     }
 
@@ -117,6 +135,7 @@ class StoreJobProfileRequest extends FormRequest
             'mission' => 'misión',
             'justification' => 'justificación',
             'education_level' => 'nivel educativo',
+            'education_levels' => 'niveles educativos',
             'career_field' => 'área de estudios',
             'title_required' => 'título requerido',
             'colegiatura_required' => 'colegiatura requerida',
@@ -126,6 +145,10 @@ class StoreJobProfileRequest extends FormRequest
             'main_functions' => 'funciones principales',
             'salary_min' => 'salario mínimo',
             'salary_max' => 'salario máximo',
+            'contract_start_date' => 'fecha de inicio del contrato',
+            'contract_end_date' => 'fecha de fin del contrato',
+            'work_location' => 'lugar de prestación del servicio',
+            'selection_process_name' => 'nombre del proceso de selección',
         ];
     }
 

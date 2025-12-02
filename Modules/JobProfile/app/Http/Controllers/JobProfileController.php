@@ -64,6 +64,7 @@ class JobProfileController extends Controller
             ->map(function($pc) {
                 return [
                     'education_level' => $pc->education_level_required,
+                    'education_levels' => $pc->education_levels_accepted ?? [$pc->education_level_required],
                     'title_required' => $pc->requires_professional_title,
                     'colegiatura_required' => $pc->requires_professional_license,
                     'general_experience_years' => $pc->min_professional_experience,
@@ -199,6 +200,7 @@ class JobProfileController extends Controller
             ->map(function($pc) {
                 return [
                     'education_level' => $pc->education_level_required,
+                    'education_levels' => $pc->education_levels_accepted ?? [$pc->education_level_required],
                     'title_required' => $pc->requires_professional_title,
                     'colegiatura_required' => $pc->requires_professional_license,
                     'general_experience_years' => $pc->min_professional_experience,
