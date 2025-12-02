@@ -351,50 +351,50 @@
           },
           {
             "dependencia": "OFICINA MUNICIPAL DE ATENCIÓN AL USUARIO",
-            "nivel": 4,
+            "nivel": 3,
             "codigo": "00009",
             "padre": "GERENCIA MUNICIPAL",
             "local": "PALACIO MUNICIPAL",
             "responsable": "JEFE",
             "hijos": []
-          }
+          },
+          {
+            "dependencia": "OFICINA DE SECRETARÍA GENERAL Y GESTIÓN DOCUMENTARIA",
+            "nivel": 3,
+            "codigo": "00019",
+            "padre": "GERENCIA MUNICIPAL",
+            "local": "PALACIO MUNICIPAL",
+            "responsable": "SECRETARIA",
+            "hijos": []
+        },
+        {
+            "dependencia": "OFICINA DE IMÁGEN INSTITUCIONAL Y COMUNICACIONES",
+            "nivel": 3,
+            "codigo": "00004",
+            "padre": "GERENCIA MUNICIPAL",
+            "local": "CASA CABILDO",
+            "responsable": "JEFE DE OFICINA",
+            "hijos": []
+        },
+        {
+            "dependencia": "OFICINA DE EJECUCIÓN COACTIVA",
+            "nivel": 3,
+            "codigo": "00005",
+            "padre": "GERENCIA MUNICIPAL",
+            "local": "CASA CABILDO",
+            "responsable": "EJECUTOR COACTIVO",
+            "hijos": []
+        },
+        {
+            "dependencia": "OFICINA EJECUTOR DE RIESGO DE DESASTRES",
+            "nivel": 3,
+            "codigo": "00006",
+            "padre": "GERENCIA MUNICIPAL",
+            "local": "CASA DE LA CULTURA",
+            "responsable": "DIRECTOR",
+            "hijos": []
+        }
         ]
-      },
-      {
-          "dependencia": "OFICINA DE SECRETARÍA GENERAL Y GESTIÓN DOCUMENTARIA",
-          "nivel": 4,
-          "codigo": "00019",
-          "padre": "GERENCIA MUNICIPAL",
-          "local": "PALACIO MUNICIPAL",
-          "responsable": "SECRETARIA",
-          "hijos": []
-      },
-      {
-          "dependencia": "OFICINA DE IMÁGEN INSTITUCIONAL Y COMUNICACIONES",
-          "nivel": 4,
-          "codigo": "00004",
-          "padre": "GERENCIA MUNICIPAL",
-          "local": "CASA CABILDO",
-          "responsable": "JEFE DE OFICINA",
-          "hijos": []
-      },
-      {
-          "dependencia": "OFICINA DE EJECUCIÓN COACTIVA",
-          "nivel": 4,
-          "codigo": "00005",
-          "padre": "GERENCIA MUNICIPAL",
-          "local": "CASA CABILDO",
-          "responsable": "EJECUTOR COACTIVO",
-          "hijos": []
-      },
-      {
-          "dependencia": "OFICINA EJECUTOR DE RIESGO DE DESASTRES",
-          "nivel": 4,
-          "codigo": "00006",
-          "padre": "GERENCIA MUNICIPAL",
-          "local": "CASA DE LA CULTURA",
-          "responsable": "DIRECTOR",
-          "hijos": []
       }
     ]
   }
