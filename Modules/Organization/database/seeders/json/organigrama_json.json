@@ -8,7 +8,7 @@
       {
         "dependencia": "GERENCIA MUNICIPAL",
         "nivel": 2,
-        "codigo": "00002",
+        "codigo": "ALC",
         "padre": "ALCALDIA",
         "local": "PALACIO MUNICIPAL",
         "responsable": "GERENTE MUNICIPAL",
@@ -16,7 +16,7 @@
           {
               "dependencia": "OFICINA GENERAL DE ADMINISTRACIÓN",
               "nivel": 3,
-              "codigo": "00007",
+              "codigo": "GM",
               "padre": "GERENCIA MUNICIPAL",
               "local": "PALACIO MUNICIPAL",
               "responsable": "DIRECTOR",
@@ -24,35 +24,35 @@
                   {
                       "dependencia": "OFICINA DE RECURSOS HUMANOS",
                       "nivel": 4,
-                      "codigo": "00020",
+                      "codigo": "RRHH",
                       "local": "PALACIO MUNICIPAL",
                       "responsable": "DIRECTOR"
                   },
                   {
                       "dependencia": "OFICINA DE ABASTECIMIENTO",
                       "nivel": 4,
-                      "codigo": "00021",
+                      "codigo": "OAB",
                       "local": "PALACIO MUNICIPAL",
                       "responsable": "DIRECTOR"
                   },
                   {
                       "dependencia": "OFICINA DE CONTABILIDAD",
                       "nivel": 4,
-                      "codigo": "00022",
+                      "codigo": "OC",
                       "local": "PALACIO MUNICIPAL",
                       "responsable": "DIRECTOR"
                   },
                   {
                       "dependencia": "OFICINA DE GESTIÓN PATRIMONIAL",
                       "nivel": 4,
-                      "codigo": "00023",
+                      "codigo": "OGP",
                       "local": "CASA CABILDO",
                       "responsable": "DIRECTOR"
                   },
                   {
                       "dependencia": "OFICINA DE TESORERÍA",
                       "nivel": 4,
-                      "codigo": "00024",
+                      "codigo": "OT",
                       "local": "PALACIO MUNICIPAL",
                       "responsable": "DIRECTOR"
                   }
@@ -61,7 +61,7 @@
           {
               "dependencia": "OFICINA GENERAL DE SUPERVISIÓN Y LIQUIDACIÓN DE INVERSIONES",
               "nivel": 3,
-              "codigo": "00015",
+              "codigo": "OGSLI",
               "padre": "GERENCIA MUNICIPAL",
               "local": "CASA DE LA CULTURA",
               "responsable": "DIRECTOR GENERAL",
@@ -70,7 +70,7 @@
           {
               "dependencia": "OFICINA GENERAL DE PLANEAMIENTO Y PRESUPUESTO",
               "nivel": 3,
-              "codigo": "00013",
+              "codigo": "OGPP",
               "padre": "GERENCIA MUNICIPAL",
               "local": "PALACIO MUNICIPAL",
               "responsable": "DIRECTOR GENERAL",
@@ -78,35 +78,35 @@
                   {
                       "dependencia": "OFICINA DE PRESUPUESTO",
                       "nivel": 4,
-                      "codigo": "00032",
+                      "codigo": "OP",
                       "local": "PALACIO MUNICIPAL",
                       "responsable": "DIRECTOR"
                   },
                   {
                       "dependencia": "OFICINA DE PLANEAMIENTO Y MODERNIZACIÓN",
                       "nivel": 4,
-                      "codigo": "00029",
+                      "codigo": "OPM",
                       "local": "PALACIO MUNICIPAL",
                       "responsable": "DIRECTOR"
                   },
                   {
                       "dependencia": "OFICINA DE TECNOLOGÍAS DE LA INFORMACIÓN",
                       "nivel": 4,
-                      "codigo": "00025",
+                      "codigo": "OTI",
                       "local": "PALACIO MUNICIPAL",
                       "responsable": "DIRECTOR"
                   },
                   {
                       "dependencia": "OFICINA DE COOPERACIÓN TÉCNICA NACIONAL E INTERNACIONAL",
                       "nivel": 4,
-                      "codigo": "00018",
+                      "codigo": "OCTNI",
                       "local": "PALACIO MUNICIPAL",
                       "responsable": "DIRECTOR"
                   },
                   {
                       "dependencia": "OFICINA DE PROGRAMACIÓN MULTIANUAL DE INVERSIONES",
                       "nivel": 4,
-                      "codigo": "00026",
+                      "codigo": "OPMI",
                       "local": "PALACIO MUNICIPAL",
                       "responsable": "DIRECTOR"
                   }
@@ -115,7 +115,7 @@
           {
               "dependencia": "OFICINA GENERAL DE ASESORÍA JURÍDICA",
               "nivel": 3,
-              "codigo": "00008",
+              "codigo": "OGAJ",
               "padre": "GERENCIA MUNICIPAL",
               "local": "PALACIO MUNICIPAL",
               "responsable": "DIRECTOR GENERAL",
@@ -124,7 +124,7 @@
           {
               "dependencia": "GERENCIA DE GESTIÓN DE INVERSIONES",
               "nivel": 3,
-              "codigo": "00016",
+              "codigo": "GGI",
               "padre": "GERENCIA MUNICIPAL",
               "local": "CASA DE LA CULTURA",
               "responsable": "DIRECTOR GENERAL",
@@ -132,14 +132,14 @@
                   {
                       "dependencia": "OFICINA DE FORMULACIÓN Y EVALUACIÓN DE INVERSIONES",
                       "nivel": 4,
-                      "codigo": "00040",
+                      "codigo": "OFEI",
                       "local": "PALACIO MUNICIPAL",
                       "responsable": "DIRECTOR"
                   },
                   {
                       "dependencia": "OFICINA DE ELABORACIÓN DE EXPEDIENTES TÉCNICOS",
                       "nivel": 4,
-                      "codigo": "00041",
+                      "codigo": "OEET",
                       "local": "PALACIO MUNICIPAL",
                       "responsable": "DIRECTOR"
                   }
@@ -148,7 +148,7 @@
           {
               "dependencia": "GERENCIA DE ADMINISTRACIÓN TRIBUTARIA",
               "nivel": 3,
-              "codigo": "00034",
+              "codigo": "GAT",
               "padre": "GERENCIA MUNICIPAL",
               "local": "CASA CABILDO",
               "responsable": "RECAUDADOR DE CONTROL DE DEUDA",
@@ -156,7 +156,7 @@
                   {
                       "dependencia": "SUBGERENCIA DE RENTAS",
                       "nivel": 4,
-                      "codigo": "00035",
+                      "codigo": "SR",
                       "padre": "GERENCIA DE ADMINISTRACIÓN TRIBUTARIA",
                       "local": "PALACIO ANTIGUO",
                       "responsable": "DIRECTOR"
@@ -164,7 +164,7 @@
                   {
                       "dependencia": "SUBGERENCIA DE REGISTRO CIVIL Y CEMENTERIOS",
                       "nivel": 4,
-                      "codigo": "00033",
+                      "codigo": "SRCC",
                       "padre": "GERENCIA DE ADMINISTRACIÓN TRIBUTARIA",
                       "local": "PALACIO ANTIGUO",
                       "responsable": "SUBGERENTE"
@@ -172,7 +172,7 @@
                   {
                       "dependencia": "SUBGERENCIA DE FISCALIZACIÓN TRIBUTARIA",
                       "nivel": 4,
-                      "codigo": "00036",
+                      "codigo": "SDFT",
                       "padre": "GERENCIA DE ADMINISTRACIÓN TRIBUTARIA",
                       "local": "PALACIO ANTIGUO",
                       "responsable": "SUBGERENTE"
@@ -182,7 +182,7 @@
           {
               "dependencia": "GERENCIA DE INFRAESTRUCTURA",
               "nivel": 3,
-              "codigo": "00017",
+              "codigo": "GI",
               "padre": "GERENCIA MUNICIPAL",
               "local": "CASA DE LA CULTURA",
               "responsable": "GERENTE",
@@ -190,7 +190,7 @@
                   {
                       "dependencia": "SUBGERENNCIA DE EJECUCIÓN DE INVERSIONES",
                       "nivel": 4,
-                      "codigo": "00037",
+                      "codigo": "SEI",
                       "padre": "GERENCIA DE INFRAESTRUCTURA",
                       "local": "CASA DE LA CULTURA",
                       "responsable": "SUBGERENTE"
@@ -198,7 +198,7 @@
                   {
                       "dependencia": "SUBGERENCIA DE MANTENIMIENTO",
                       "nivel": 4,
-                      "codigo": "00038",
+                      "codigo": "SM",
                       "padre": "GERENCIA DE INFRAESTRUCTURA",
                       "local": "CASA DE LA CULTURA",
                       "responsable": "SUBGERENTE"
@@ -206,7 +206,7 @@
                   {
                       "dependencia": "SUBGERENCIA DE EQUIPO MECÁNICO",
                       "nivel": 4,
-                      "codigo": "00039",
+                      "codigo": "SEM",
                       "padre": "GERENCIA DE INFRAESTRUCTURA",
                       "local": "CASA DE LA CULTURA",
                       "responsable": "SUBGERENTE"
@@ -216,7 +216,7 @@
           {
               "dependencia": "GERENCIA DE DESARROLLO URBANO Y RURAL",
               "nivel": 3,
-              "codigo": "00010",
+              "codigo": "GDUR",
               "padre": "GERENCIA MUNICIPAL",
               "local": "CASA DE LA CULTURA",
               "responsable": "GERENTE",
@@ -224,7 +224,7 @@
                   {
                       "dependencia": "SUBGERENCIA DE ORDENAMIENTO TERRITORIAL Y TRÁNSITO",
                       "nivel": 4,
-                      "codigo": "00042",
+                      "codigo": "SOTT",
                       "padre": "GERENCIA DE DESARROLLO URBANO Y RURAL",
                       "local": "CASA DE LA CULTURA",
                       "responsable": "SUBGERENTE"
@@ -232,7 +232,7 @@
                   {
                       "dependencia": "SUBGERENCIA DE GESTIÓN DE EDIFICACIONES",
                       "nivel": 4,
-                      "codigo": "00043",
+                      "codigo": "SGE",
                       "padre": "GERENCIA DE DESARROLLO URBANO Y RURAL",
                       "local": "CASA DE LA CULTURA",
                       "responsable": "SUBGERENTE"
@@ -240,7 +240,7 @@
                   {
                       "dependencia": "SUBGERENCIA DE CATASTRO Y SANEAMIENTO FÍSICO LEGAL",
                       "nivel": 4,
-                      "codigo": "00044",
+                      "codigo": "SCSFL",
                       "padre": "GERENCIA DE DESARROLLO URBANO Y RURAL",
                       "local": "CASA DE LA CULTURA",
                       "responsable": "SUBGERENTE"
@@ -250,7 +250,7 @@
           {
               "dependencia": "GERENCIA DE DESARROLLO ECONÓMICO LOCAL",
               "nivel": 3,
-              "codigo": "00014",
+              "codigo": "GDEL",
               "padre": "GERENCIA MUNICIPAL",
               "local": "PALACIO ANTIGUO",
               "responsable": "GERENTE",
@@ -258,7 +258,7 @@
                   {
                       "dependencia": "SUBGERENCIA DE COMPETITIIDAD EMPRESARIAL, AGRARIA Y TURISMO",
                       "nivel": 4,
-                      "codigo": "00045",
+                      "codigo": "SCEAT",
                       "padre": "GERENCIA DE DESARROLLO ECONÓMICO LOCAL",
                       "local": "CASA DE LA CULTURA",
                       "responsable": "SUBGERENTE"
@@ -266,7 +266,7 @@
                   {
                       "dependencia": "SUBGERENCIA DE COMERCIO, MERCADOS Y POLICIA MUNICIPA",
                       "nivel": 4,
-                      "codigo": "00046",
+                      "codigo": "SCMPM",
                       "padre": "GERENCIA DE DESARROLLO ECONÓMICO LOCAL",
                       "local": "CASA DE LA CULTURA",
                       "responsable": "SUBGERENTE"
@@ -274,7 +274,7 @@
                   {
                       "dependencia": "SUBGERENCIA DE CONTROL SANITARIO Y CAMAL MUNICIPAL",
                       "nivel": 4,
-                      "codigo": "00047",
+                      "codigo": "SCSCM",
                       "padre": "GERENCIA DE DESARROLLO ECONÓMICO LOCAL",
                       "local": "CASA DE LA CULTURA",
                       "responsable": "SUBGERENTE"
@@ -282,7 +282,7 @@
                   {
                       "dependencia": "SUBGERENCIA DE SEGURIDAD CIUDADANA",
                       "nivel": 4,
-                      "codigo": "00048",
+                      "codigo": "SSC",
                       "padre": "GERENCIA DE DESARROLLO ECONÓMICO LOCAL",
                       "local": "CASA DE LA CULTURA",
                       "responsable": "SUBGERENTE"
@@ -292,7 +292,7 @@
           {
               "dependencia": "GERENCIA DE DESARROLLO SOCIAL",
               "nivel": 3,
-              "codigo": "00011",
+              "codigo": "GDS",
               "padre": "GERENCIA MUNICIPAL",
               "local": "PALACIO MUNICIPAL",
               "responsable": "GERENTE",
@@ -300,7 +300,7 @@
                   {
                       "dependencia": "SUBGERENCIA EDUCACIÓN, CULTURA Y DEPORTE",
                       "nivel": 4,
-                      "codigo": "00049",
+                      "codigo": "SECD",
                       "padre": "GERENCIA DE DESARROLLO SOCIAL",
                       "local": "CASA DE LA CULTURA",
                       "responsable": "SUBGERENTE"
@@ -308,7 +308,7 @@
                   {
                       "dependencia": "SUBGERENCIA DE PROGRAMAS SOCIALES Y PARTICIPACIÓN CIUDADANA",
                       "nivel": 4,
-                      "codigo": "00050",
+                      "codigo": "SPSPC",
                       "padre": "GERENCIA DE DESARROLLO SOCIAL",
                       "local": "CASA DE LA CULTURA",
                       "responsable": "SUBGERENTE"
@@ -318,7 +318,7 @@
           {
               "dependencia": "GERENCIA DE GESTIÓN AMBIENTAL",
               "nivel": 3,
-              "codigo": "00012",
+              "codigo": "GGA",
               "padre": "GERENCIA MUNICIPAL",
               "local": "PALACIO ANTIGUO",
               "responsable": "GERENTE",
@@ -326,7 +326,7 @@
                   {
                       "dependencia": "SUBGERENCIA DE GESTIÓN DE RESIDUOS SOLIDOS",
                       "nivel": 4,
-                      "codigo": "00051",
+                      "codigo": "SGRS",
                       "padre": "GERENCIA DE GESTIÓN AMBIENTAL",
                       "local": "CASA DE LA CULTURA",
                       "responsable": "SUBGERENTE"
@@ -334,7 +334,7 @@
                   {
                       "dependencia": "SUBGERENCIA DE SANEAMIENTO BÁSICO Y ÁREA TÉCNICA MUNICIPAL",
                       "nivel": 4,
-                      "codigo": "00052",
+                      "codigo": "SSBATM",
                       "padre": "GERENCIA DE GESTIÓN AMBIENTAL",
                       "local": "CASA DE LA CULTURA",
                       "responsable": "SUBGERENTE"
@@ -342,7 +342,7 @@
                   {
                       "dependencia": "SUBGERENCIA DE MEDIO AMBIENTE",
                       "nivel": 4,
-                      "codigo": "00053",
+                      "codigo": "SMA",
                       "padre": "GERENCIA DE GESTIÓN AMBIENTAL",
                       "local": "CASA DE LA CULTURA",
                       "responsable": "SUBGERENTE"
@@ -352,7 +352,7 @@
           {
             "dependencia": "OFICINA MUNICIPAL DE ATENCIÓN AL USUARIO",
             "nivel": 3,
-            "codigo": "00009",
+            "codigo": "OMAU",
             "padre": "GERENCIA MUNICIPAL",
             "local": "PALACIO MUNICIPAL",
             "responsable": "JEFE",
@@ -361,7 +361,7 @@
           {
             "dependencia": "OFICINA DE SECRETARÍA GENERAL Y GESTIÓN DOCUMENTARIA",
             "nivel": 3,
-            "codigo": "00019",
+            "codigo": "OSGGD",
             "padre": "GERENCIA MUNICIPAL",
             "local": "PALACIO MUNICIPAL",
             "responsable": "SECRETARIA",
@@ -370,7 +370,7 @@
         {
             "dependencia": "OFICINA DE IMÁGEN INSTITUCIONAL Y COMUNICACIONES",
             "nivel": 3,
-            "codigo": "00004",
+            "codigo": "OIIC",
             "padre": "GERENCIA MUNICIPAL",
             "local": "CASA CABILDO",
             "responsable": "JEFE DE OFICINA",
@@ -379,7 +379,7 @@
         {
             "dependencia": "OFICINA DE EJECUCIÓN COACTIVA",
             "nivel": 3,
-            "codigo": "00005",
+            "codigo": "OEC",
             "padre": "GERENCIA MUNICIPAL",
             "local": "CASA CABILDO",
             "responsable": "EJECUTOR COACTIVO",
@@ -388,7 +388,7 @@
         {
             "dependencia": "OFICINA EJECUTOR DE RIESGO DE DESASTRES",
             "nivel": 3,
-            "codigo": "00006",
+            "codigo": "OERD",
             "padre": "GERENCIA MUNICIPAL",
             "local": "CASA DE LA CULTURA",
             "responsable": "DIRECTOR",
