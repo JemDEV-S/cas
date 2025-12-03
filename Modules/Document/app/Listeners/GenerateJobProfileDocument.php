@@ -142,11 +142,11 @@ class GenerateJobProfileDocument
             'base_salary' => $jobProfile->positionCode?->base_salary,
 
             // Aprobación
-            'requested_by' => $jobProfile->requestedBy?->name,
+            'requested_by' => $jobProfile->requestedBy?->getFullNameAttribute(),
             'requested_at' => $jobProfile->requested_at?->format('d/m/Y'),
-            'reviewed_by' => $jobProfile->reviewedBy?->name,
+            'reviewed_by' => $jobProfile->reviewedBy?->getFullNameAttribute(),
             'reviewed_at' => $jobProfile->reviewed_at?->format('d/m/Y'),
-            'approved_by' => $jobProfile->approvedBy?->name,
+            'approved_by' => $jobProfile->approvedBy?->getFullNameAttribute(),
             'approved_at' => $jobProfile->approved_at?->format('d/m/Y'),
 
             // Fechas
