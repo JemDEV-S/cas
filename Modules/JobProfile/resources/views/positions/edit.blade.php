@@ -1,173 +1,378 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container-fluid">
-    <div class="row mb-3">
-        <div class="col-md-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <h2>Editar Código de Posición</h2>
-                <a href="{{ route('jobprofile.positions.show', $positionCode->id) }}" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left"></i> Cancelar
-                </a>
-            </div>
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    {{-- Header --}}
+    <div class="mb-6 flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Editar Código de Posición</h1>
+            <p class="mt-1 text-sm text-gray-600">Modifica la información del código <code class="px-2 py-1 bg-gray-100 rounded text-sm">{{ $positionCode->code }}</code></p>
         </div>
+        <a href="{{ route('jobprofile.positions.show', $positionCode->id) }}"
+           class="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-colors shadow-sm">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+            Cancelar
+        </a>
     </div>
 
-    <div class="row">
-        <div class="col-md-8 offset-md-2">
-            @if($positionCode->jobProfiles()->whereNotIn('status', ['draft', 'rejected'])->exists())
-                <div class="alert alert-warning">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <strong>Advertencia:</strong> Este código de posición tiene perfiles asociados en proceso o aprobados.
-                    Los cambios en el salario no afectarán a los perfiles existentes.
+    {{-- Warning Alert --}}
+    @if($positionCode->jobProfiles()->whereNotIn('status', ['draft', 'rejected'])->exists())
+        <div class="mb-6 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded">
+            <div class="flex">
+                <svg class="w-5 h-5 text-yellow-400 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                </svg>
+                <div>
+                    <h3 class="text-sm font-semibold text-yellow-800">Advertencia</h3>
+                    <p class="text-sm text-yellow-700 mt-1">
+                        Este código de posición tiene perfiles asociados en proceso o aprobados.
+                        Los cambios en el salario no afectarán a los perfiles existentes.
+                    </p>
                 </div>
-            @endif
+            </div>
+        </div>
+    @endif
 
-            <div class="card">
-                <div class="card-body">
-                    <form action="{{ route('jobprofile.positions.update', $positionCode->id) }}" method="POST">
-                        @csrf
-                        @method('PUT')
+    {{-- Form Card --}}
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+        <form action="{{ route('jobprofile.positions.update', $positionCode->id) }}" method="POST">
+            @csrf
+            @method('PUT')
 
-                        <div class="form-group">
-                            <label for="code">Código <span class="text-danger">*</span></label>
+            <div class="px-6 py-5 space-y-6">
+                {{-- Información Básica --}}
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">Información Básica</h2>
+
+                    <div class="space-y-4">
+                        {{-- Código --}}
+                        <div>
+                            <label for="code" class="block text-sm font-medium text-gray-700 mb-1">
+                                Código <span class="text-red-500">*</span>
+                            </label>
                             <input type="text"
-                                   class="form-control @error('code') is-invalid @enderror"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent @error('code') border-red-500 @enderror"
                                    id="code"
                                    name="code"
                                    value="{{ old('code', $positionCode->code) }}"
                                    required>
-                            <small class="form-text text-muted">
-                                Use letras mayúsculas, números y guiones. Ej: CAP-001, ESP-001
-                            </small>
+                            <p class="mt-1 text-sm text-gray-500">Use letras mayúsculas, números y guiones. Ej: CAP-001, ESP-001</p>
                             @error('code')
-                                <div class="invalid-feedback">{{ $message }}</div>
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
                         </div>
 
-                        <div class="form-group">
-                            <label for="name">Nombre del Puesto <span class="text-danger">*</span></label>
+                        {{-- Nombre del Puesto --}}
+                        <div>
+                            <label for="name" class="block text-sm font-medium text-gray-700 mb-1">
+                                Nombre del Puesto <span class="text-red-500">*</span>
+                            </label>
                             <input type="text"
-                                   class="form-control @error('name') is-invalid @enderror"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent @error('name') border-red-500 @enderror"
                                    id="name"
                                    name="name"
                                    value="{{ old('name', $positionCode->name) }}"
                                    required>
                             @error('name')
-                                <div class="invalid-feedback">{{ $message }}</div>
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
                         </div>
 
-                        <div class="form-group">
-                            <label for="description">Descripción</label>
-                            <textarea class="form-control @error('description') is-invalid @enderror"
+                        {{-- Descripción --}}
+                        <div>
+                            <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+                            <textarea class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent @error('description') border-red-500 @enderror"
                                       id="description"
                                       name="description"
                                       rows="3">{{ old('description', $positionCode->description) }}</textarea>
                             @error('description')
-                                <div class="invalid-feedback">{{ $message }}</div>
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
                         </div>
+                    </div>
+                </div>
 
-                        <hr class="my-4">
-                        <h5 class="mb-3">Información Salarial</h5>
+                <div class="border-t border-gray-200"></div>
 
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="base_salary">Salario Base (S/) <span class="text-danger">*</span></label>
-                                    <input type="number"
-                                           class="form-control @error('base_salary') is-invalid @enderror"
-                                           id="base_salary"
-                                           name="base_salary"
-                                           value="{{ old('base_salary', $positionCode->base_salary) }}"
-                                           step="0.01"
-                                           min="0"
-                                           required>
-                                    @error('base_salary')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
+                {{-- Información Salarial --}}
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">Información Salarial</h2>
 
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="essalud_percentage">Porcentaje EsSalud (%)</label>
-                                    <input type="number"
-                                           class="form-control @error('essalud_percentage') is-invalid @enderror"
-                                           id="essalud_percentage"
-                                           name="essalud_percentage"
-                                           value="{{ old('essalud_percentage', $positionCode->essalud_percentage) }}"
-                                           step="0.01"
-                                           min="0"
-                                           max="100">
-                                    @error('essalud_percentage')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="contract_months">Meses de Contrato <span class="text-danger">*</span></label>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {{-- Salario Base --}}
+                        <div>
+                            <label for="base_salary" class="block text-sm font-medium text-gray-700 mb-1">
+                                Salario Base (S/) <span class="text-red-500">*</span>
+                            </label>
                             <input type="number"
-                                   class="form-control @error('contract_months') is-invalid @enderror"
-                                   id="contract_months"
-                                   name="contract_months"
-                                   value="{{ old('contract_months', $positionCode->contract_months) }}"
-                                   min="1"
-                                   max="12"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent @error('base_salary') border-red-500 @enderror"
+                                   id="base_salary"
+                                   name="base_salary"
+                                   value="{{ old('base_salary', $positionCode->base_salary) }}"
+                                   step="0.01"
+                                   min="0"
                                    required>
-                            @error('contract_months')
-                                <div class="invalid-feedback">{{ $message }}</div>
+                            @error('base_salary')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
                         </div>
 
-                        <div class="form-group">
-                            <div class="form-check">
-                                <input class="form-check-input"
-                                       type="checkbox"
-                                       id="is_active"
-                                       name="is_active"
-                                       value="1"
-                                       {{ old('is_active', $positionCode->is_active) ? 'checked' : '' }}>
-                                <label class="form-check-label" for="is_active">
-                                    Código activo
+                        {{-- Porcentaje EsSalud --}}
+                        <div>
+                            <label for="essalud_percentage" class="block text-sm font-medium text-gray-700 mb-1">
+                                Porcentaje EsSalud (%)
+                            </label>
+                            <input type="number"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent @error('essalud_percentage') border-red-500 @enderror"
+                                   id="essalud_percentage"
+                                   name="essalud_percentage"
+                                   value="{{ old('essalud_percentage', $positionCode->essalud_percentage) }}"
+                                   step="0.01"
+                                   min="0"
+                                   max="100">
+                            @error('essalud_percentage')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+
+                    {{-- Meses de Contrato --}}
+                    <div class="mt-4">
+                        <label for="contract_months" class="block text-sm font-medium text-gray-700 mb-1">
+                            Meses de Contrato <span class="text-red-500">*</span>
+                        </label>
+                        <input type="number"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent @error('contract_months') border-red-500 @enderror"
+                               id="contract_months"
+                               name="contract_months"
+                               value="{{ old('contract_months', $positionCode->contract_months) }}"
+                               min="1"
+                               max="12"
+                               required>
+                        @error('contract_months')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    {{-- Current Values --}}
+                    <div class="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                        <h3 class="text-sm font-semibold text-gray-900 mb-2">Valores Actuales</h3>
+                        <div class="space-y-1 text-sm text-gray-700">
+                            <div class="flex justify-between">
+                                <span>EsSalud:</span>
+                                <span class="font-semibold">S/ {{ number_format($positionCode->essalud_amount, 2) }}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Total Mensual:</span>
+                                <span class="font-semibold">{{ $positionCode->formatted_monthly_total }}</span>
+                            </div>
+                            <div class="flex justify-between border-t border-gray-300 pt-1">
+                                <span class="font-semibold">Total Periodo:</span>
+                                <span class="font-bold">{{ $positionCode->formatted_quarterly_total }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Preview Card --}}
+                    <div id="salary-preview" class="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg hidden">
+                        <h3 class="text-sm font-semibold text-blue-900 mb-2">Nuevos Valores Calculados</h3>
+                        <div class="space-y-1 text-sm text-blue-800">
+                            <div class="flex justify-between">
+                                <span>EsSalud:</span>
+                                <span id="preview-essalud" class="font-semibold">S/ 0.00</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Total Mensual:</span>
+                                <span id="preview-monthly" class="font-semibold">S/ 0.00</span>
+                            </div>
+                            <div class="flex justify-between border-t border-blue-300 pt-1">
+                                <span class="font-semibold">Total Periodo:</span>
+                                <span id="preview-period" class="font-bold text-base">S/ 0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border-t border-gray-200"></div>
+
+                {{-- Requisitos Profesionales --}}
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">Requisitos Profesionales</h2>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {{-- Experiencia Profesional General --}}
+                        <div>
+                            <label for="min_professional_experience" class="block text-sm font-medium text-gray-700 mb-1">
+                                Experiencia Profesional General (años)
+                            </label>
+                            <input type="number"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent @error('min_professional_experience') border-red-500 @enderror"
+                                   id="min_professional_experience"
+                                   name="min_professional_experience"
+                                   value="{{ old('min_professional_experience', $positionCode->min_professional_experience) }}"
+                                   step="0.5"
+                                   min="0"
+                                   placeholder="Ej: 2.0">
+                            <p class="mt-1 text-xs text-gray-500">Años mínimos de experiencia profesional total</p>
+                            @error('min_professional_experience')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        {{-- Experiencia Específica --}}
+                        <div>
+                            <label for="min_specific_experience" class="block text-sm font-medium text-gray-700 mb-1">
+                                Experiencia Específica del Puesto (años)
+                            </label>
+                            <input type="number"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent @error('min_specific_experience') border-red-500 @enderror"
+                                   id="min_specific_experience"
+                                   name="min_specific_experience"
+                                   value="{{ old('min_specific_experience', $positionCode->min_specific_experience) }}"
+                                   step="0.5"
+                                   min="0"
+                                   placeholder="Ej: 1.0">
+                            <p class="mt-1 text-xs text-gray-500">Años mínimos en el puesto o área específica</p>
+                            @error('min_specific_experience')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                        {{-- Título Profesional --}}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Título Profesional</label>
+                            <div class="flex items-center space-x-4">
+                                <label class="inline-flex items-center">
+                                    <input type="radio"
+                                           class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                                           name="requires_professional_title"
+                                           value="1"
+                                           {{ old('requires_professional_title', $positionCode->requires_professional_title) == '1' ? 'checked' : '' }}>
+                                    <span class="ml-2 text-sm text-gray-700">Requerido</span>
+                                </label>
+                                <label class="inline-flex items-center">
+                                    <input type="radio"
+                                           class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                                           name="requires_professional_title"
+                                           value="0"
+                                           {{ old('requires_professional_title', $positionCode->requires_professional_title) == '0' ? 'checked' : '' }}>
+                                    <span class="ml-2 text-sm text-gray-700">No requerido</span>
                                 </label>
                             </div>
+                            @error('requires_professional_title')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
                         </div>
 
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle"></i>
-                            Los montos de EsSalud, total mensual y total por periodo se calcularán automáticamente.
-                        </div>
-
-                        <div class="card bg-light">
-                            <div class="card-body">
-                                <h6>Valores Actuales:</h6>
-                                <ul class="mb-0">
-                                    <li>EsSalud: S/ {{ number_format($positionCode->essalud_amount, 2) }}</li>
-                                    <li>Total Mensual: {{ $positionCode->formatted_monthly_total }}</li>
-                                    <li>Total Periodo: {{ $positionCode->formatted_quarterly_total }}</li>
-                                </ul>
+                        {{-- Colegiatura --}}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Colegiatura Profesional</label>
+                            <div class="flex items-center space-x-4">
+                                <label class="inline-flex items-center">
+                                    <input type="radio"
+                                           class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                                           name="requires_professional_license"
+                                           value="1"
+                                           {{ old('requires_professional_license', $positionCode->requires_professional_license) == '1' ? 'checked' : '' }}>
+                                    <span class="ml-2 text-sm text-gray-700">Requerida</span>
+                                </label>
+                                <label class="inline-flex items-center">
+                                    <input type="radio"
+                                           class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                                           name="requires_professional_license"
+                                           value="0"
+                                           {{ old('requires_professional_license', $positionCode->requires_professional_license) == '0' ? 'checked' : '' }}>
+                                    <span class="ml-2 text-sm text-gray-700">No requerida</span>
+                                </label>
                             </div>
+                            @error('requires_professional_license')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
                         </div>
+                    </div>
 
-                        <hr class="my-4">
-
-                        <div class="d-flex justify-content-end">
-                            <a href="{{ route('jobprofile.positions.show', $positionCode->id) }}"
-                               class="btn btn-secondary mr-2">
-                                Cancelar
-                            </a>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save"></i> Actualizar Código
-                            </button>
+                    {{-- Niveles Educativos --}}
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Niveles Educativos Aceptados</label>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            @php
+                                $educationLevels = [
+                                    'secundaria_completa' => 'Secundaria Completa',
+                                    'tecnico' => 'Técnico',
+                                    'bachiller' => 'Bachiller',
+                                    'titulado' => 'Titulado',
+                                    'maestria' => 'Maestría',
+                                    'doctorado' => 'Doctorado'
+                                ];
+                                $selectedLevels = old('education_levels_accepted', $positionCode->education_levels_accepted ?? []);
+                            @endphp
+                            @foreach($educationLevels as $value => $label)
+                                <label class="inline-flex items-center">
+                                    <input type="checkbox"
+                                           class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                           name="education_levels_accepted[]"
+                                           value="{{ $value }}"
+                                           {{ in_array($value, $selectedLevels) ? 'checked' : '' }}>
+                                    <span class="ml-2 text-sm text-gray-700">{{ $label }}</span>
+                                </label>
+                            @endforeach
                         </div>
-                    </form>
+                        <p class="mt-1 text-xs text-gray-500">Selecciona uno o más niveles educativos aceptados para este puesto</p>
+                        @error('education_levels_accepted')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+                </div>
+
+                <div class="border-t border-gray-200"></div>
+
+                {{-- Estado --}}
+                <div>
+                    <div class="flex items-center">
+                        <input class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                               type="checkbox"
+                               id="is_active"
+                               name="is_active"
+                               value="1"
+                               {{ old('is_active', $positionCode->is_active) ? 'checked' : '' }}>
+                        <label class="ml-2 text-sm font-medium text-gray-700" for="is_active">
+                            Código activo
+                        </label>
+                    </div>
+                </div>
+
+                {{-- Info Alert --}}
+                <div class="p-4 bg-blue-50 border-l-4 border-blue-400 rounded">
+                    <div class="flex">
+                        <svg class="w-5 h-5 text-blue-400 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                        </svg>
+                        <p class="text-sm text-blue-700">
+                            Los montos de EsSalud, total mensual y total por periodo se calcularán automáticamente al guardar.
+                        </p>
+                    </div>
                 </div>
             </div>
-        </div>
+
+            {{-- Footer Actions --}}
+            <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 rounded-b-lg flex justify-end space-x-3">
+                <a href="{{ route('jobprofile.positions.show', $positionCode->id) }}"
+                   class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors">
+                    Cancelar
+                </a>
+                <button type="submit"
+                        class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors shadow-sm">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    Actualizar Código
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 @endsection
@@ -178,27 +383,46 @@ document.addEventListener('DOMContentLoaded', function() {
     const baseSalaryInput = document.getElementById('base_salary');
     const essaludPercentageInput = document.getElementById('essalud_percentage');
     const contractMonthsInput = document.getElementById('contract_months');
+    const previewDiv = document.getElementById('salary-preview');
+    const previewEssalud = document.getElementById('preview-essalud');
+    const previewMonthly = document.getElementById('preview-monthly');
+    const previewPeriod = document.getElementById('preview-period');
+
+    // Store original values
+    const originalBaseSalary = parseFloat(baseSalaryInput.value) || 0;
+    const originalEssaludPercentage = parseFloat(essaludPercentageInput.value) || 9.0;
+    const originalContractMonths = parseInt(contractMonthsInput.value) || 3;
 
     function calculateTotals() {
         const baseSalary = parseFloat(baseSalaryInput.value) || 0;
         const essaludPercentage = parseFloat(essaludPercentageInput.value) || 9.0;
         const contractMonths = parseInt(contractMonthsInput.value) || 3;
 
-        const essaludAmount = baseSalary * (essaludPercentage / 100);
-        const monthlyTotal = baseSalary + essaludAmount;
-        const periodTotal = monthlyTotal * contractMonths;
+        // Check if values have changed
+        const hasChanged = baseSalary !== originalBaseSalary ||
+                          essaludPercentage !== originalEssaludPercentage ||
+                          contractMonths !== originalContractMonths;
 
-        // Update preview in info card
-        console.log('New values:', {
-            essalud: essaludAmount.toFixed(2),
-            monthly: monthlyTotal.toFixed(2),
-            period: periodTotal.toFixed(2)
-        });
+        if (baseSalary > 0 && hasChanged) {
+            const essaludAmount = baseSalary * (essaludPercentage / 100);
+            const monthlyTotal = baseSalary + essaludAmount;
+            const periodTotal = monthlyTotal * contractMonths;
+
+            previewDiv.classList.remove('hidden');
+            previewEssalud.textContent = `S/ ${essaludAmount.toFixed(2)}`;
+            previewMonthly.textContent = `S/ ${monthlyTotal.toFixed(2)}`;
+            previewPeriod.textContent = `S/ ${periodTotal.toFixed(2)} (${contractMonths} meses)`;
+        } else {
+            previewDiv.classList.add('hidden');
+        }
     }
 
     baseSalaryInput.addEventListener('input', calculateTotals);
     essaludPercentageInput.addEventListener('input', calculateTotals);
     contractMonthsInput.addEventListener('input', calculateTotals);
+
+    // Calculate on page load
+    calculateTotals();
 });
 </script>
 @endpush

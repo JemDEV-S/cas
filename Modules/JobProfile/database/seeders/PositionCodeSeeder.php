@@ -158,7 +158,7 @@ class PositionCodeSeeder extends Seeder
                 'education_levels_accepted' => ['egresado_tecnico', 'egresado_universitario'],
             ],
             [
-                'code' => 'AUXI',
+                'code' => 'AAI',
                 'name' => 'AUXILIAR',
                 'description' => 'Auxiliar nivel I - Estudios universitarios y/o estudios técnicos',
                 'base_salary' => 1500.00,
@@ -174,7 +174,7 @@ class PositionCodeSeeder extends Seeder
                 'education_levels_accepted' => ['estudios_tecnicos', 'estudios_universitarios'],
             ],
             [
-                'code' => 'AUXII',
+                'code' => 'AAII',
                 'name' => 'AUXILIAR',
                 'description' => 'Auxiliar nivel II - Estudios universitarios y/o estudios técnicos',
                 'base_salary' => 1400.00,
@@ -190,7 +190,7 @@ class PositionCodeSeeder extends Seeder
                 'education_levels_accepted' => ['estudios_tecnicos', 'estudios_universitarios'],
             ],
             [
-                'code' => 'AUXIII',
+                'code' => 'AAAIII',
                 'name' => 'AUXILIAR',
                 'description' => 'Auxiliar nivel III - Secundaria completa',
                 'base_salary' => 1200.00,
