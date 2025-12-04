@@ -105,7 +105,7 @@
                             @endif
 
                             <div class="space-y-6">
-                                @forelse($selectedGroup->systemConfigs as $config)
+                                @forelse($selectedGroup->configs as $config)
                                 <div class="border border-gray-200 rounded-xl p-6 hover:border-indigo-300 hover:shadow-lg transition-all">
                                     <div class="flex items-start justify-between mb-4">
                                         <div class="flex-1">
@@ -171,7 +171,7 @@
                             </div>
                         </div>
 
-                        @if($selectedGroup->systemConfigs->count() > 0)
+                        @if($selectedGroup->configs->count() > 0)
                         <div class="px-8 py-6 bg-gray-50 border-t border-gray-200">
                             <div class="flex items-center justify-between">
                                 <div class="flex-1 mr-4">
