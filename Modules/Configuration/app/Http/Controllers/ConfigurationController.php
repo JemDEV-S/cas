@@ -4,19 +4,146 @@ namespace Modules\Configuration\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Modules\Configuration\Entities\ConfigGroup;
+use Modules\Configuration\Entities\SystemConfig;
+use Modules\Configuration\Services\ConfigService;
+use Illuminate\Support\Facades\DB;
 
 class ConfigurationController extends Controller
 {
+    public function __construct(
+        protected ConfigService $configService
+    ) {}
+
     /**
-     * Display a listing of the resource.
+     * Display a listing of configuration groups
      */
     public function index()
     {
-        return view('configuration::index');
+        $groups = ConfigGroup::with(['configs' => function ($query) {  // ✅ Cambiar systemConfigs a configs
+            $query->editable()->ordered();
+        }])
+            ->active()
+            ->ordered()
+            ->get();
+
+        return view('configuration::index', compact('groups'));
     }
 
     /**
-     * Show the form for creating a new resource.
+     * Show the form for editing configurations
+     */
+    public function edit($groupId = null)
+    {
+        $groups = ConfigGroup::with(['configs' => function ($query) {  // ✅ Cambiar systemConfigs a configs
+            $query->editable()->ordered();
+        }])
+            ->active()
+            ->ordered()
+            ->get();
+
+        $selectedGroup = $groupId
+            ? $groups->firstWhere('id', $groupId)
+            : $groups->first();
+
+        return view('configuration::edit', compact('groups', 'selectedGroup'));
+    }
+
+    /**
+     * Update the specified configurations
+     */
+    public function update(Request $request, $groupId)
+    {
+        try {
+            DB::beginTransaction();
+
+            $configs = $request->input('configs', []);
+            $changeReason = $request->input('change_reason', 'Actualización manual');
+
+            foreach ($configs as $configId => $value) {
+                $config = SystemConfig::findOrFail($configId);
+
+                // Verificar si es editable
+                if (!$config->is_editable) {
+                    continue;
+                }
+
+                // Actualizar usando el servicio
+                $this->configService->set(
+                    $config->key,
+                    $value,
+                    $changeReason,
+                    auth()->id(),
+                    $request->ip()
+                );
+            }
+
+            DB::commit();
+
+            return redirect()
+                ->back()
+                ->with('success', 'Configuraciones actualizadas correctamente');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return redirect()
+                ->back()
+                ->with('error', 'Error al actualizar configuraciones: ' . $e->getMessage())
+                ->withInput();
+        }
+    }
+
+    /**
+     * Reset configuration to default value
+     */
+    public function reset($id)
+    {
+        try {
+            $config = SystemConfig::findOrFail($id);
+
+            if (!$config->is_editable) {
+                return redirect()
+                    ->back()
+                    ->with('error', 'Esta configuración no puede ser editada');
+            }
+
+            $this->configService->reset(
+                $config->key,
+                'Restauración a valor por defecto',
+                auth()->id(),
+                request()->ip()
+            );
+
+            return redirect()
+                ->back()
+                ->with('success', 'Configuración restaurada a valor por defecto');
+
+        } catch (\Exception $e) {
+            return redirect()
+                ->back()
+                ->with('error', 'Error al restaurar configuración: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Show configuration history
+     */
+    public function history($id)
+    {
+        $config = SystemConfig::with(['history.changedBy', 'group'])  // ✅ Cambiar configGroup a group
+            ->findOrFail($id);
+
+        $history = $config->history()
+            ->with('changedBy')
+            ->orderBy('changed_at', 'desc')
+            ->paginate(20);
+
+        return view('configuration::history', compact('config', 'history'));
+    }
+
+    /**
+     * Show the form for creating a new resource (no usado por ahora)
      */
     public function create()
     {
@@ -24,12 +151,15 @@ class ConfigurationController extends Controller
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Store a newly created resource in storage (no usado por ahora)
      */
-    public function store(Request $request) {}
+    public function store(Request $request)
+    {
+        // No implementado - las configs se crean via seeders
+    }
 
     /**
-     * Show the specified resource.
+     * Show the specified resource (no usado por ahora)
      */
     public function show($id)
     {
@@ -37,20 +167,10 @@ class ConfigurationController extends Controller
     }
 
     /**
-     * Show the form for editing the specified resource.
+     * Remove the specified resource from storage (no usado por ahora)
      */
-    public function edit($id)
+    public function destroy($id)
     {
-        return view('configuration::edit');
+        // No implementado - las configs no se eliminan desde UI
     }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, $id) {}
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy($id) {}
 }

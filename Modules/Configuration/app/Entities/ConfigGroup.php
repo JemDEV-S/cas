@@ -39,4 +39,9 @@ class ConfigGroup extends BaseModel
     {
         return $query->where('is_active', true);
     }
+
+    public function scopeOrdered($query)
+    {
+        return $query->orderBy('order');
+    }
 }
