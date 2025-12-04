@@ -166,13 +166,13 @@
                     <div class="grid grid-cols-3 gap-4">
                         <dt class="text-sm font-medium text-gray-500">Experiencia General</dt>
                         <dd class="text-sm text-gray-900 col-span-2">
-                            <span class="font-semibold">{{ $jobProfile->general_experience_years ?? 0 }}</span> años
+                            <span class="font-semibold">{{ $jobProfile->general_experience_years?->toHuman() ?? 'Sin experiencia' }}</span>
                         </dd>
                     </div>
                     <div class="grid grid-cols-3 gap-4 border-t border-gray-200 pt-4">
                         <dt class="text-sm font-medium text-gray-500">Experiencia Específica</dt>
                         <dd class="text-sm text-gray-900 col-span-2">
-                            <span class="font-semibold">{{ $jobProfile->specific_experience_years ?? 0 }}</span> años
+                            <span class="font-semibold">{{ $jobProfile->specific_experience_years?->toHuman() ?? 'Sin experiencia' }}</span>
                         </dd>
                     </div>
                     @if($jobProfile->specific_experience_description)
@@ -253,7 +253,7 @@
                 <div class="space-y-3">
                     <div>
                         <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Solicitado por</p>
-                        <p class="mt-1 text-sm font-medium text-gray-900">{{ $jobProfile->requestedBy->name ?? 'N/A' }}</p>
+                        <p class="mt-1 text-sm font-medium text-gray-900">{{ $jobProfile->requestedBy->getFullNameAttribute() ?? 'N/A' }}</p>
                         <p class="mt-0.5 text-xs text-gray-500">{{ $jobProfile->requestedBy->email ?? '' }}</p>
                     </div>
                     <div class="border-t border-gray-200 pt-3">

@@ -8,6 +8,7 @@ use Modules\Core\Traits\HasStatus;
 use Modules\Core\Traits\HasMetadata;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Modules\Core\Casts\ExperienceDurationCast;
 
 class JobProfile extends BaseSoftDelete
 {
@@ -79,8 +80,8 @@ class JobProfile extends BaseSoftDelete
         'salary_min' => 'decimal:2',
         'salary_max' => 'decimal:2',
         'colegiatura_required' => 'boolean',
-        'general_experience_years' => 'decimal:1',
-        'specific_experience_years' => 'decimal:1',
+        'general_experience_years' => ExperienceDurationCast::class,
+        'specific_experience_years' => ExperienceDurationCast::class,
         'required_courses' => 'array',
         'knowledge_areas' => 'array',
         'required_competencies' => 'array',
@@ -334,7 +335,12 @@ class JobProfile extends BaseSoftDelete
 
     public function getTotalExperienceYearsAttribute(): float
     {
-        return ($this->general_experience_years ?? 0) + ($this->specific_experience_years ?? 0);
+        // Usamos 'attributes' para obtener el número crudo (float) de la BD
+        // y evitamos que Laravel lo convierta en objeto ExperienceDuration
+        $general = $this->attributes['general_experience_years'] ?? 0;
+        $specific = $this->attributes['specific_experience_years'] ?? 0;
+
+        return (float) $general + (float) $specific;
     }
     // En tu modelo JobProfile (después de los métodos existentes)
 

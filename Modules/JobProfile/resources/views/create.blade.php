@@ -411,41 +411,81 @@
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Experiencia General -->
                     <div>
-                        <label for="general_experience_years" class="block text-sm font-medium text-gray-700 mb-1">
-                            Experiencia General (años)
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Experiencia General <span class="text-red-500">*</span>
                         </label>
-                        <input
-                            type="number"
-                            id="general_experience_years"
-                            name="general_experience_years"
-                            value="{{ old('general_experience_years', 0) }}"
-                            step="0.5"
-                            min="0"
-                            class="border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm w-full">
-                        <span id="general_experience_indicator" class="hidden text-xs text-green-600 mt-1">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label for="general_experience_years" class="block text-xs text-gray-600 mb-1">Años</label>
+                                <input
+                                    type="number"
+                                    id="general_experience_years"
+                                    name="general_experience_years"
+                                    value="{{ old('general_experience_years', 0) }}"
+                                    min="0"
+                                    max="50"
+                                    class="border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm w-full"
+                                    placeholder="0">
+                            </div>
+                            <div>
+                                <label for="general_experience_months" class="block text-xs text-gray-600 mb-1">Meses</label>
+                                <input
+                                    type="number"
+                                    id="general_experience_months"
+                                    name="general_experience_months"
+                                    value="{{ old('general_experience_months', 0) }}"
+                                    min="0"
+                                    max="11"
+                                    class="border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm w-full"
+                                    placeholder="0">
+                            </div>
+                        </div>
+                        <span id="general_experience_indicator" class="hidden text-xs text-green-600 mt-1 block">
                             <i class="fas fa-check-circle"></i> Autocompletado desde Código de Posición
                         </span>
+                        <p id="general_experience_preview" class="mt-1 text-xs text-gray-500 italic"></p>
                         @error('general_experience_years')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </div>
 
+                    <!-- Experiencia Específica -->
                     <div>
-                        <label for="specific_experience_years" class="block text-sm font-medium text-gray-700 mb-1">
-                            Experiencia Específica (años)
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Experiencia Específica <span class="text-red-500">*</span>
                         </label>
-                        <input
-                            type="number"
-                            id="specific_experience_years"
-                            name="specific_experience_years"
-                            value="{{ old('specific_experience_years', 0) }}"
-                            step="0.5"
-                            min="0"
-                            class="border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm w-full">
-                        <span id="specific_experience_indicator" class="hidden text-xs text-green-600 mt-1">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label for="specific_experience_years" class="block text-xs text-gray-600 mb-1">Años</label>
+                                <input
+                                    type="number"
+                                    id="specific_experience_years"
+                                    name="specific_experience_years"
+                                    value="{{ old('specific_experience_years', 0) }}"
+                                    min="0"
+                                    max="50"
+                                    class="border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm w-full"
+                                    placeholder="0">
+                            </div>
+                            <div>
+                                <label for="specific_experience_months" class="block text-xs text-gray-600 mb-1">Meses</label>
+                                <input
+                                    type="number"
+                                    id="specific_experience_months"
+                                    name="specific_experience_months"
+                                    value="{{ old('specific_experience_months', 0) }}"
+                                    min="0"
+                                    max="11"
+                                    class="border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm w-full"
+                                    placeholder="0">
+                            </div>
+                        </div>
+                        <span id="specific_experience_indicator" class="hidden text-xs text-green-600 mt-1 block">
                             <i class="fas fa-check-circle"></i> Autocompletado desde Código de Posición
                         </span>
+                        <p id="specific_experience_preview" class="mt-1 text-xs text-gray-500 italic"></p>
                         @error('specific_experience_years')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
@@ -701,15 +741,24 @@ function autoFillFromPositionCode() {
         }
     }
 
-    // Autocompletar Experiencia General
     if (data.general_experience_years !== null && data.general_experience_years !== undefined) {
-        document.getElementById('general_experience_years').value = data.general_experience_years;
+        const { years, months } = decimalToYearsMonths(data.general_experience_years);
+        
+        document.getElementById('general_experience_years').value = years;
+        document.getElementById('general_experience_months').value = months;
+        
+        updateExperiencePreview('general');
         showIndicator('general_experience_indicator');
     }
 
-    // Autocompletar Experiencia Específica
+    // ✅ AUTOCOMPLETAR EXPERIENCIA ESPECÍFICA
     if (data.specific_experience_years !== null && data.specific_experience_years !== undefined) {
-        document.getElementById('specific_experience_years').value = data.specific_experience_years;
+        const { years, months } = decimalToYearsMonths(data.specific_experience_years);
+        
+        document.getElementById('specific_experience_years').value = years;
+        document.getElementById('specific_experience_months').value = months;
+        
+        updateExperiencePreview('specific');
         showIndicator('specific_experience_indicator');
     }
 
@@ -863,6 +912,68 @@ function removeCompetency(button) {
         button.closest('.competency-item').remove();
     }
 }
+
+// Función para convertir decimal a años y meses
+function decimalToYearsMonths(decimal) {
+    if (!decimal || isNaN(decimal)) {
+        return { years: 0, months: 0 };
+    }
+    
+    const years = Math.floor(decimal);
+    const months = Math.round((decimal - years) * 12);
+    
+    return { years, months };
+}
+
+// Función para generar texto legible
+function experienceToHuman(years, months) {
+    const parts = [];
+    
+    if (years > 0) {
+        parts.push(`${years} ${years === 1 ? 'año' : 'años'}`);
+    }
+    
+    if (months > 0) {
+        parts.push(`${months} ${months === 1 ? 'mes' : 'meses'}`);
+    }
+    
+    if (parts.length === 0) {
+        return 'Sin experiencia requerida';
+    }
+    
+    return parts.join(' y ');
+}
+function updateExperiencePreview(type) {
+    const yearsInput = document.getElementById(`${type}_experience_years`);
+    const monthsInput = document.getElementById(`${type}_experience_months`);
+    const preview = document.getElementById(`${type}_experience_preview`);
+    
+    const years = parseInt(yearsInput.value) || 0;
+    const months = parseInt(monthsInput.value) || 0;
+    
+    preview.textContent = `Vista previa: ${experienceToHuman(years, months)}`;
+}
+
+// Event listeners para actualizar preview
+['general', 'specific'].forEach(type => {
+    const yearsInput = document.getElementById(`${type}_experience_years`);
+    const monthsInput = document.getElementById(`${type}_experience_months`);
+    
+    if (yearsInput) {
+        yearsInput.addEventListener('input', () => updateExperiencePreview(type));
+    }
+    
+    if (monthsInput) {
+        monthsInput.addEventListener('input', () => {
+            // Validar que no exceda 11 meses
+            if (parseInt(monthsInput.value) > 11) {
+                monthsInput.value = 11;
+            }
+            updateExperiencePreview(type);
+        });
+    }
+});
+
 </script>
 
 <style>

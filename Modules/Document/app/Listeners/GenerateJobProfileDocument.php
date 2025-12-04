@@ -105,8 +105,8 @@ class GenerateJobProfileDocument
             'colegiatura_required' => $jobProfile->colegiatura_required ? 'Sí' : 'No',
 
             // Experiencia
-            'general_experience_years' => $jobProfile->general_experience_years,
-            'specific_experience_years' => $jobProfile->specific_experience_years,
+            'general_experience_years' => $jobProfile->general_experience_years?->toHuman() ?? 'Sin experiencia',
+            'specific_experience_years' => $jobProfile->specific_experience_years?->toHuman() ?? 'Sin experiencia',
             'specific_experience_description' => $jobProfile->specific_experience_description,
             'total_experience_years' => $jobProfile->total_experience_years,
 

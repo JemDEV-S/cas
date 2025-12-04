@@ -47,8 +47,10 @@ class StoreJobProfileRequest extends FormRequest
             'colegiatura_required' => 'nullable|boolean',
 
             // Experiencia
-            'general_experience_years' => 'nullable|numeric|min:0|max:50',
-            'specific_experience_years' => 'nullable|numeric|min:0|max:50',
+            'general_experience_years' => 'nullable|integer|min:0|max:50',
+            'general_experience_months' => 'nullable|integer|min:0|max:11',
+            'specific_experience_years' => 'nullable|integer|min:0|max:50',
+            'specific_experience_months' => 'nullable|integer|min:0|max:11',
             'specific_experience_description' => 'nullable|string|max:1000',
 
             // Capacitación, conocimientos, competencias
@@ -105,8 +107,21 @@ class StoreJobProfileRequest extends FormRequest
             'education_levels.*.required' => 'Todos los niveles educativos son obligatorios.',
             'education_levels.*.in' => 'Uno o más niveles educativos seleccionados no son válidos.',
 
-            'general_experience_years.min' => 'La experiencia general no puede ser negativa.',
-            'general_experience_years.max' => 'La experiencia general no puede exceder 50 años.',
+            'general_experience_years.integer' => 'Los años de experiencia general deben ser un número entero',
+            'general_experience_years.min' => 'Los años de experiencia general no pueden ser negativos',
+            'general_experience_years.max' => 'Los años de experiencia general no pueden exceder 50',
+            
+            'general_experience_months.integer' => 'Los meses de experiencia general deben ser un número entero',
+            'general_experience_months.min' => 'Los meses de experiencia general no pueden ser negativos',
+            'general_experience_months.max' => 'Los meses de experiencia general no pueden exceder 11',
+            
+            'specific_experience_years.integer' => 'Los años de experiencia específica deben ser un número entero',
+            'specific_experience_years.min' => 'Los años de experiencia específica no pueden ser negativos',
+            'specific_experience_years.max' => 'Los años de experiencia específica no pueden exceder 50',
+            
+            'specific_experience_months.integer' => 'Los meses de experiencia específica deben ser un número entero',
+            'specific_experience_months.min' => 'Los meses de experiencia específica no pueden ser negativos',
+            'specific_experience_months.max' => 'Los meses de experiencia específica no pueden exceder 11',
 
             'specific_experience_years.min' => 'La experiencia específica no puede ser negativa.',
             'specific_experience_years.max' => 'La experiencia específica no puede exceder 50 años.',
@@ -139,8 +154,10 @@ class StoreJobProfileRequest extends FormRequest
             'career_field' => 'área de estudios',
             'title_required' => 'título requerido',
             'colegiatura_required' => 'colegiatura requerida',
-            'general_experience_years' => 'experiencia general',
-            'specific_experience_years' => 'experiencia específica',
+            'general_experience_years' => 'años de experiencia general',
+            'general_experience_months' => 'meses de experiencia general',
+            'specific_experience_years' => 'años de experiencia específica',
+            'specific_experience_months' => 'meses de experiencia específica',
             'specific_experience_description' => 'detalle de experiencia',
             'main_functions' => 'funciones principales',
             'salary_min' => 'salario mínimo',
@@ -181,14 +198,46 @@ class StoreJobProfileRequest extends FormRequest
             $competencies = array_filter($this->required_competencies ?? [], fn($value) => !empty(trim($value ?? '')));
             $this->merge(['required_competencies' => array_values($competencies)]);
         }
+    }
+    /**
+     * Procesa los datos después de la validación
+     * Este es el método clave donde convertimos años+meses a decimal
+     */
+    public function validated($key = null, $default = null)
+    {
+        $data = parent::validated($key, $default);
 
-        // Valores por defecto
-        if (!$this->has('general_experience_years')) {
-            $this->merge(['general_experience_years' => 0]);
+        // ✅ Convertir Experiencia General (años + meses) a decimal
+        $generalYears = (int) ($data['general_experience_years'] ?? 0);
+        $generalMonths = (int) ($data['general_experience_months'] ?? 0);
+        $data['general_experience_years'] = $generalYears + round($generalMonths / 12, 2);
+
+        // ✅ Convertir Experiencia Específica (años + meses) a decimal
+        $specificYears = (int) ($data['specific_experience_years'] ?? 0);
+        $specificMonths = (int) ($data['specific_experience_months'] ?? 0);
+        $data['specific_experience_years'] = $specificYears + round($specificMonths / 12, 2);
+
+        // Limpiar los campos de meses (ya no los necesitamos en BD)
+        unset($data['general_experience_months']);
+        unset($data['specific_experience_months']);
+
+        // ✅ Limpiar arrays vacíos (opcional pero recomendado)
+        $arrayFields = ['required_courses', 'knowledge_areas', 'required_competencies', 'main_functions'];
+        
+        foreach ($arrayFields as $field) {
+            if (isset($data[$field]) && is_array($data[$field])) {
+                // Filtrar elementos vacíos
+                $data[$field] = array_filter($data[$field], function($value) {
+                    return !empty(trim($value));
+                });
+                
+                // Si quedó vacío, convertir a null
+                if (empty($data[$field])) {
+                    $data[$field] = null;
+                }
+            }
         }
 
-        if (!$this->has('specific_experience_years')) {
-            $this->merge(['specific_experience_years' => 0]);
-        }
+        return $data;
     }
 }

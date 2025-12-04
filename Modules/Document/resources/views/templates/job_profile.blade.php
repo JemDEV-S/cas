@@ -217,11 +217,11 @@
         <table>
             <tr>
                 <th>Experiencia General</th>
-                <td>{{ $general_experience_years }} {{ $general_experience_years == 1 ? 'año' : 'años' }}</td>
+                <td>{{ $general_experience_years }}</td>
             </tr>
             <tr>
                 <th>Experiencia Específica</th>
-                <td>{{ $specific_experience_years }} {{ $specific_experience_years == 1 ? 'año' : 'años' }}</td>
+                <td>{{ $specific_experience_years }}</td>
             </tr>
             @if(isset($specific_experience_description) && $specific_experience_description)
             <tr>

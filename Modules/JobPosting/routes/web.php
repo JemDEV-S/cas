@@ -16,10 +16,11 @@ Route::middleware(['auth', 'verified'])->prefix('convocatorias')->name('jobposti
     // CRUD
     Route::get('/crear', [JobPostingController::class, 'create'])->name('create')->can('jobposting.create.posting');
     Route::post('/crear', [JobPostingController::class, 'store'])->name('store')->can('jobposting.create.posting');
-    Route::get('/{jobPosting}', [JobPostingController::class, 'show'])->name('show');
     Route::get('/{jobPosting}/editar', [JobPostingController::class, 'edit'])->name('edit');
     Route::put('/{jobPosting}', [JobPostingController::class, 'update'])->name('update');
     Route::delete('/{jobPosting}', [JobPostingController::class, 'destroy'])->name('destroy');
+
+    Route::get('/{jobPosting}', [JobPostingController::class, 'show'])->name('show');
 
     // Acciones especiales
     Route::post('/{jobPosting}/publicar', [JobPostingController::class, 'publish'])->name('publish');

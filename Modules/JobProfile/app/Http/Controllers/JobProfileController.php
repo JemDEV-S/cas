@@ -120,16 +120,24 @@ class JobProfileController extends Controller
      */
     public function store(StoreJobProfileRequest $request): RedirectResponse
     {
+        $validatedData = $request->validated();
+        
         try {
+            // Excluir campos específicos de los datos validados
+            $dataToCreate = collect($validatedData)
+                ->except(['requirements', 'responsibilities'])
+                ->toArray();
+            
             $jobProfile = $this->jobProfileService->create(
-                $request->except(['requirements', 'responsibilities']),
-                $request->get('requirements', []),
-                $request->get('responsibilities', [])
+                $dataToCreate,
+                $validatedData['requirements'] ?? [],
+                $validatedData['responsibilities'] ?? []
             );
-
+            
             return redirect()
                 ->route('jobprofile.profiles.show', $jobProfile->id)
                 ->with('success', 'Perfil de puesto creado exitosamente.');
+                
         } catch (BusinessRuleException $e) {
             return back()->withInput()->with('error', $e->getMessage());
         } catch (\Exception $e) {

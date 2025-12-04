@@ -362,7 +362,7 @@
                     type="number"
                     name="general_experience_years"
                     label="Experiencia General (años)"
-                    :value="old('general_experience_years', $jobProfile->general_experience_years)"
+                    :value="old('general_experience_years', $jobProfile->general_experience_years?->toDecimal())"
                     step="0.5"
                     min="0"
                 />
@@ -371,7 +371,7 @@
                     type="number"
                     name="specific_experience_years"
                     label="Experiencia Específica (años)"
-                    :value="old('specific_experience_years', $jobProfile->specific_experience_years)"
+                    :value="old('specific_experience_years', $jobProfile->specific_experience_years?->toDecimal())"
                     step="0.5"
                     min="0"
                 />
