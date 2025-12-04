@@ -7,9 +7,12 @@ use Modules\Configuration\Enums\ValueTypeEnum;
 use Modules\Configuration\Enums\InputTypeEnum;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Modules\Core\Traits\HasUuid;
 
 class SystemConfig extends BaseModel
 {
+    use HasUuid;
+
     protected $table = 'system_configs';
 
     protected $fillable = [
@@ -82,6 +85,7 @@ class SystemConfig extends BaseModel
         }
 
         return match ($this->value_type) {
+            ValueTypeEnum::DECIMAL, ValueTypeEnum::FLOAT => (float) $value,
             ValueTypeEnum::INTEGER => (int) $value,
             ValueTypeEnum::DECIMAL => (float) $value,
             ValueTypeEnum::BOOLEAN => filter_var($value, FILTER_VALIDATE_BOOLEAN),
@@ -124,5 +128,10 @@ class SystemConfig extends BaseModel
         return $query->whereHas('group', function ($q) use ($groupCode) {
             $q->where('code', $groupCode);
         });
+    }
+
+    public function scopeOrdered($query)
+    {
+        return $query->orderBy('display_order');
     }
 }

@@ -5,9 +5,12 @@ namespace Modules\Configuration\Entities;
 use Modules\Core\Entities\BaseModel;
 use Modules\User\Entities\User;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Modules\Core\Traits\HasUuid;
 
 class ConfigHistory extends BaseModel
 {
+
+    use HasUuid;
     protected $table = 'config_history';
 
     protected $fillable = [

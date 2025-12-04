@@ -17,10 +17,13 @@ class ConfigService extends BaseService
     protected const CACHE_TTL = 3600; // 1 hora por defecto
     protected const CACHE_KEY_ALL = 'config:all';
 
-    public function __construct(
-        protected ConfigRepository $repository
-    ) {
-        parent::__construct($repository);
+    // ❌ ELIMINAR ESTA LÍNEA - No redefinir la propiedad
+    // protected ConfigRepository $repository;
+
+    public function __construct(ConfigRepository $repository)
+    {
+        // ✅ Solo asignar al padre
+        $this->repository = $repository;
     }
 
     /**
@@ -37,14 +40,14 @@ class ConfigService extends BaseService
                 return $default;
             }
 
-            return $config->parsed_value;
+            return $config->parsed_value ?? $default;
         });
     }
 
     /**
      * Establecer valor de configuración
      */
-    public function set(string $key, $value, ?string $changedBy = null, ?string $reason = null): SystemConfig
+    public function set(string $key, $value, ?string $reason = null, ?string $changedBy = null, ?string $ipAddress = null): SystemConfig
     {
         $config = $this->repository->findByKey($key);
 
@@ -64,7 +67,7 @@ class ConfigService extends BaseService
         $newValue = $this->castValueToString($value, $config);
 
         if ($oldValue !== $newValue) {
-            $this->saveHistory($config, $oldValue, $newValue, $changedBy, $reason);
+            $this->saveHistory($config, $oldValue, $newValue, $changedBy, $reason, $ipAddress);
 
             // Actualizar el valor
             $config->value = $newValue;
@@ -73,11 +76,27 @@ class ConfigService extends BaseService
             // Limpiar caché
             $this->clearCache($key);
 
-            // Disparar evento
-            event(new \Modules\Configuration\Events\ConfigUpdated($config, $changedBy));
+            // Disparar evento si existe
+            if (class_exists(\Modules\Configuration\Events\ConfigUpdated::class)) {
+                event(new \Modules\Configuration\Events\ConfigUpdated($config, $changedBy));
+            }
         }
 
         return $config;
+    }
+
+    /**
+     * Restablecer configuración a su valor por defecto
+     */
+    public function reset(string $key, ?string $reason = null, ?string $changedBy = null, ?string $ipAddress = null): SystemConfig
+    {
+        $config = $this->repository->findByKey($key);
+
+        if (!$config) {
+            throw new BusinessRuleException("Configuración '{$key}' no existe");
+        }
+
+        return $this->set($key, $config->default_value, $reason ?? 'Resetear a valor por defecto', $changedBy, $ipAddress);
     }
 
     /**
@@ -129,7 +148,7 @@ class ConfigService extends BaseService
 
         foreach ($configs as $key => $value) {
             try {
-                $updated[$key] = $this->set($key, $value, $changedBy, $reason);
+                $updated[$key] = $this->set($key, $value, $reason, $changedBy);
             } catch (\Exception $e) {
                 // Registrar el error pero continuar con las demás
                 \Log::error("Error updating config {$key}: " . $e->getMessage());
@@ -137,20 +156,6 @@ class ConfigService extends BaseService
         }
 
         return $updated;
-    }
-
-    /**
-     * Restablecer configuración a su valor por defecto
-     */
-    public function reset(string $key, ?string $changedBy = null, ?string $reason = null): SystemConfig
-    {
-        $config = $this->repository->findByKey($key);
-
-        if (!$config) {
-            throw new BusinessRuleException("Configuración '{$key}' no existe");
-        }
-
-        return $this->set($key, $config->default_value, $changedBy, $reason ?? 'Resetear a valor por defecto');
     }
 
     /**
@@ -168,7 +173,10 @@ class ConfigService extends BaseService
                 Cache::forget(self::CACHE_PREFIX . $config->key);
             }
 
-            event(new \Modules\Configuration\Events\ConfigCacheCleared());
+            // Disparar evento si existe
+            if (class_exists(\Modules\Configuration\Events\ConfigCacheCleared::class)) {
+                event(new \Modules\Configuration\Events\ConfigCacheCleared());
+            }
         }
     }
 
@@ -205,7 +213,11 @@ class ConfigService extends BaseService
 
         // Validar opciones si es select
         if (!empty($config->options) && is_array($config->options)) {
-            if (!in_array($value, $config->options)) {
+            $allowedValues = array_map(function ($option) {
+                return is_array($option) && isset($option['value']) ? $option['value'] : $option;
+            }, $config->options);
+
+            if (!in_array($value, $allowedValues, true)) {
                 throw new ValidationException("El valor debe ser una de las opciones permitidas");
             }
         }
@@ -232,7 +244,8 @@ class ConfigService extends BaseService
         ?string $oldValue,
         ?string $newValue,
         ?string $changedBy,
-        ?string $reason
+        ?string $reason,
+        ?string $ipAddress
     ): void {
         ConfigHistory::create([
             'system_config_id' => $config->id,
@@ -241,11 +254,11 @@ class ConfigService extends BaseService
             'changed_by' => $changedBy,
             'changed_at' => now(),
             'change_reason' => $reason,
-            'ip_address' => request()?->ip(),
+            'ip_address' => $ipAddress ?? request()?->ip(),
         ]);
 
-        // Si es configuración crítica, disparar evento
-        if ($config->is_system) {
+        // Si es configuración crítica, disparar evento si existe
+        if ($config->is_system && class_exists(\Modules\Configuration\Events\CriticalConfigChanged::class)) {
             event(new \Modules\Configuration\Events\CriticalConfigChanged($config, $changedBy));
         }
     }
