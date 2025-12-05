@@ -233,9 +233,9 @@ class ReviewService
 
         $errors = [];
 
-        if (empty($jobProfile->description)) {
-            $errors[] = 'La descripción del perfil es obligatoria';
-        }
+        // if (empty($jobProfile->description)) {
+        //     $errors[] = 'La descripción del perfil es obligatoria';
+        // }
 
         if (empty($jobProfile->justification)) {
             $errors[] = 'La justificación del requerimiento es obligatoria';

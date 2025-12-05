@@ -158,7 +158,7 @@
                 </div>
 
                 <div class="mt-6 space-y-4">
-                    <div>
+                    <!-- <div>
                         <label for="description" class="block text-sm font-medium text-gray-700 mb-1">
                             Descripción del Puesto
                         </label>
@@ -171,7 +171,7 @@
                         @error('description')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
-                    </div>
+                    </div> -->
 
                     <!-- <div>
                         <label for="mission" class="block text-sm font-medium text-gray-700 mb-1">
