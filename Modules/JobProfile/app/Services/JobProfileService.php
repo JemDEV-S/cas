@@ -68,43 +68,66 @@ class JobProfileService extends BaseService
      */
     public function create(array $data, array $requirements = [], array $responsibilities = []): JobProfile
     {
-        return DB::transaction(function () use ($data, $requirements, $responsibilities) {
-            // Generar código único si no se proporciona
-            if (!isset($data['code'])) {
-                $data['code'] = $this->generateCode($data['job_posting_id'] ?? null);
+        // Reintentar hasta 3 veces en caso de código duplicado
+        $maxAttempts = 3;
+        $attempt = 0;
+
+        while ($attempt < $maxAttempts) {
+            try {
+                return DB::transaction(function () use ($data, $requirements, $responsibilities) {
+                    // Generar código único si no se proporciona
+                    if (!isset($data['code'])) {
+                        $data['code'] = $this->generateCode($data['job_posting_id'] ?? null);
+                    }
+
+                    // Establecer estado inicial y usuario solicitante
+                    $data['status'] = 'draft';
+                    $data['requested_by'] = $data['requested_by'] ?? auth()->id();
+
+                    $profile = JobProfile::create($data);
+
+                    // El historial se registra automáticamente mediante el Observer
+
+                    // Crear requisitos
+                    foreach ($requirements as $index => $requirement) {
+                        $profile->requirements()->create([
+                            'category' => $requirement['category'],
+                            'description' => $requirement['description'],
+                            'is_mandatory' => $requirement['is_mandatory'] ?? true,
+                            'order' => $index + 1,
+                        ]);
+                    }
+
+                    // Crear responsabilidades
+                    foreach ($responsibilities as $index => $responsibility) {
+                        $profile->responsibilities()->create([
+                            'description' => $responsibility['description'],
+                            'order' => $index + 1,
+                        ]);
+                    }
+
+                    // Disparar evento
+                    event(new JobProfileCreated($profile));
+
+                    return $profile->fresh(['requirements', 'responsibilities']);
+                });
+            } catch (\Illuminate\Database\QueryException $e) {
+                // Si es error de clave duplicada, reintentar
+                if ($e->getCode() === '23505' || strpos($e->getMessage(), 'unique constraint') !== false) {
+                    $attempt++;
+                    if ($attempt >= $maxAttempts) {
+                        throw new BusinessRuleException(
+                            'No se pudo generar un código único después de varios intentos. Por favor, intente nuevamente.'
+                        );
+                    }
+                    // Quitar el código generado para forzar uno nuevo en el siguiente intento
+                    unset($data['code']);
+                    usleep(100000); // Esperar 100ms antes de reintentar
+                    continue;
+                }
+                throw $e;
             }
-
-            // Establecer estado inicial y usuario solicitante
-            $data['status'] = 'draft';
-            $data['requested_by'] = $data['requested_by'] ?? auth()->id();
-
-            $profile = JobProfile::create($data);
-
-            // El historial se registra automáticamente mediante el Observer
-
-            // Crear requisitos
-            foreach ($requirements as $index => $requirement) {
-                $profile->requirements()->create([
-                    'category' => $requirement['category'],
-                    'description' => $requirement['description'],
-                    'is_mandatory' => $requirement['is_mandatory'] ?? true,
-                    'order' => $index + 1,
-                ]);
-            }
-
-            // Crear responsabilidades
-            foreach ($responsibilities as $index => $responsibility) {
-                $profile->responsibilities()->create([
-                    'description' => $responsibility['description'],
-                    'order' => $index + 1,
-                ]);
-            }
-
-            // Disparar evento
-            event(new JobProfileCreated($profile));
-
-            return $profile->fresh(['requirements', 'responsibilities']);
-        });
+        }
     }
 
     /**
@@ -216,16 +239,19 @@ class JobProfileService extends BaseService
             if (class_exists('\Modules\JobPosting\Entities\JobPosting')) {
                 $jobPosting = \Modules\JobPosting\Entities\JobPosting::find($jobPostingId);
                 if ($jobPosting) {
-                    // Contar perfiles de esta convocatoria
-                    $count = JobProfile::where('job_posting_id', $jobPostingId)->count() + 1;
+                    // Contar perfiles de esta convocatoria con bloqueo pesimista
+                    $count = JobProfile::where('job_posting_id', $jobPostingId)
+                        ->lockForUpdate()
+                        ->count() + 1;
                     return $jobPosting->code . '-' . str_pad($count, 2, '0', STR_PAD_LEFT);
                 }
             }
         }
 
-        // Código independiente
+        // Código independiente con bloqueo pesimista
         $count = JobProfile::whereNull('job_posting_id')
             ->whereYear('created_at', $year)
+            ->lockForUpdate()
             ->count() + 1;
 
         return 'PROF-' . $year . '-' . str_pad($count, 3, '0', STR_PAD_LEFT);
