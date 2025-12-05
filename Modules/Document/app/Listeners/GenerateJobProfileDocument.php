@@ -21,7 +21,15 @@ class GenerateJobProfileDocument
     public function handle(JobProfileApproved $event): void
     {
         try {
-            $jobProfile = $event->jobProfile;
+            // Cargar relaciones necesarias
+            $jobProfile = $event->jobProfile->load([
+                'organizationalUnit',
+                'requestingUnit.parent',
+                'positionCode',
+                'requestedBy',
+                'reviewedBy',
+                'approvedBy'
+            ]);
 
             // Obtener template de perfil de puesto
             $template = DocumentTemplate::where('code', 'TPL_JOB_PROFILE')

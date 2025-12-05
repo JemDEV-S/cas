@@ -34,9 +34,6 @@
             <!-- Hidden fields -->
             <input type="hidden" name="contract_type" value="cas">
             <input type="hidden" name="work_regime" value="cas">
-            @if($isAreaUser ?? false)
-                <input type="hidden" name="requesting_unit_id" value="{{ $userOrganizationalUnit }}">
-            @endif
             @if(request('job_posting_id'))
                 <input type="hidden" name="job_posting_id" value="{{ request('job_posting_id') }}">
             @endif
@@ -96,46 +93,24 @@
                         @enderror
                     </div>
 
-                    @if($isAreaUser ?? false)
-                        <!-- Campo bloqueado para area-user -->
-                        <div class="md:col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Unidad Organizacional <span class="text-red-500">*</span>
-                            </label>
-                            <div class="relative">
-                                <select
-                                    class="border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm w-full bg-gray-100 cursor-not-allowed"
-                                    disabled>
-                                    @foreach($organizationalUnits ?? [] as $id => $name)
-                                        @if($id == $userOrganizationalUnit)
-                                            <option value="{{ $id }}" selected>{{ $name }}</option>
-                                        @endif
-                                    @endforeach
-                                </select>
-                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                    <i class="fas fa-lock text-gray-400"></i>
-                                </div>
-                            </div>
-                            <input type="hidden" name="organizational_unit_id" value="{{ $userOrganizationalUnit }}">
+                    <div class="md:col-span-2">
+                        <x-form.select
+                            name="organizational_unit_id"
+                            label="Unidad Organizacional"
+                            :options="$organizationalUnits ?? []"
+                            :selected="old('organizational_unit_id', $userOrganizationalUnit ?? null)"
+                            required
+                            placeholder="Seleccione una unidad"
+                        />
+                        @if($isAreaUser ?? false)
                             <p class="mt-1 text-xs text-blue-600">
-                                <i class="fas fa-info-circle"></i> Este campo está bloqueado con su unidad organizacional
+                                <i class="fas fa-info-circle"></i> Puede seleccionar su unidad organizacional o cualquier unidad dependiente de ella
                             </p>
-                            @error('organizational_unit_id')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-                    @else
-                        <div class="md:col-span-2">
-                            <x-form.select
-                                name="organizational_unit_id"
-                                label="Unidad Organizacional"
-                                :options="$organizationalUnits ?? []"
-                                :selected="old('organizational_unit_id')"
-                                required
-                                placeholder="Seleccione una unidad"
-                            />
-                        </div>
-                    @endif
+                        @endif
+                        @error('organizational_unit_id')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
 
                     @if(!request('job_posting_id'))
                     <!-- Campo para seleccionar convocatoria (solo si no viene pre-seleccionada) -->

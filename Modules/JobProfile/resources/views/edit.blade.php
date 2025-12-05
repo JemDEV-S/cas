@@ -56,14 +56,21 @@
                     </p>
                 </div>
 
-                <x-form.select
-                    name="organizational_unit_id"
-                    label="Unidad Organizacional"
-                    :options="$organizationalUnits ?? []"
-                    :selected="old('organizational_unit_id', $jobProfile->organizational_unit_id)"
-                    required
-                    placeholder="Seleccione una unidad"
-                />
+                <div>
+                    <x-form.select
+                        name="organizational_unit_id"
+                        label="Unidad Organizacional"
+                        :options="$organizationalUnits ?? []"
+                        :selected="old('organizational_unit_id', $jobProfile->organizational_unit_id)"
+                        required
+                        placeholder="Seleccione una unidad"
+                    />
+                    @if($isAreaUser ?? false)
+                        <p class="mt-1 text-xs text-blue-600">
+                            <i class="fas fa-info-circle"></i> Puede seleccionar su unidad organizacional o cualquier unidad dependiente de ella
+                        </p>
+                    @endif
+                </div>
 
                 <x-form.select
                     name="position_code_id"

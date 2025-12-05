@@ -10,6 +10,7 @@ use Modules\JobProfile\Services\JobProfileService;
 use Modules\Core\Exceptions\BusinessRuleException;
 use Modules\JobProfile\Http\Requests\StoreJobProfileRequest;
 use Modules\JobProfile\Enums\EducationLevelEnum;
+use Modules\Organization\Entities\OrganizationalUnit;
 
 
 class JobProfileController extends Controller
@@ -46,12 +47,43 @@ class JobProfileController extends Controller
 
         $user = auth()->user();
 
-        // Obtener unidades organizacionales para el dropdown
-        $organizationalUnits = \Modules\Organization\Entities\OrganizationalUnit::where('is_active', true)
-            ->orderBy('name')
-            ->get()
-            ->pluck('name', 'id')
-            ->toArray();
+        // Cargar roles del usuario para verificación
+        if (!$user->relationLoaded('roles')) {
+            $user->load('roles');
+        }
+
+        // Verificar si el usuario es area-user de forma más directa
+        $isAreaUser = $user->roles()->where('slug', 'area-user')->exists();
+
+        // Obtener la unidad organizacional del usuario (la primaria y activa)
+        $userOrganizationalUnit = null;
+        $organizationalUnits = [];
+
+        if ($isAreaUser) {
+            $primaryUnit = $user->primaryOrganizationUnit();
+            if ($primaryUnit) {
+                $userOrganizationalUnit = $primaryUnit->id;
+
+                // Obtener la unidad del usuario y todas sus descendientes
+                $allowedUnitIds = $this->getAllDescendantIds($primaryUnit);
+
+                // Filtrar solo las unidades permitidas para el area-user
+                $organizationalUnits = \Modules\Organization\Entities\OrganizationalUnit::whereIn('id', $allowedUnitIds)
+                    ->where('is_active', true)
+                    ->orderBy('name')
+                    ->get()
+                    ->pluck('name', 'id')
+                    ->toArray();
+            }
+        } else {
+            // Para usuarios no area-user, mostrar todas las unidades
+            $organizationalUnits = \Modules\Organization\Entities\OrganizationalUnit::where('is_active', true)
+                ->orderBy('name')
+                ->get()
+                ->pluck('name', 'id')
+                ->toArray();
+        }
+
         // Obtener códigos de posición
         $positionCodes = \Modules\JobProfile\Entities\PositionCode::where('is_active', true)
             ->orderBy('code')
@@ -77,22 +109,6 @@ class JobProfileController extends Controller
                 ];
             })
             ->toArray();
-
-        // Cargar roles del usuario para verificación
-        if (!$user->relationLoaded('roles')) {
-            $user->load('roles');
-        }
-
-        // Verificar si el usuario es area-user de forma más directa
-        $isAreaUser = $user->roles()->where('slug', 'area-user')->exists();
-        // Obtener la unidad organizacional del usuario (la primaria y activa)
-        $userOrganizationalUnit = null;
-        if ($isAreaUser) {
-            $primaryUnit = $user->primaryOrganizationUnit();
-            if ($primaryUnit) {
-                $userOrganizationalUnit = $primaryUnit->id;
-            }
-        }
         $educationOptions = EducationLevelEnum::selectOptions();
 
         // Si viene desde una convocatoria, cargar la información
@@ -133,7 +149,12 @@ class JobProfileController extends Controller
             $dataToCreate = collect($validatedData)
                 ->except(['requirements', 'responsibilities'])
                 ->toArray();
-            
+
+            // Si no viene requesting_unit_id, usar el mismo valor de organizational_unit_id
+            if (empty($dataToCreate['requesting_unit_id']) && !empty($dataToCreate['organizational_unit_id'])) {
+                $dataToCreate['requesting_unit_id'] = $dataToCreate['organizational_unit_id'];
+            }
+
             $jobProfile = $this->jobProfileService->create(
                 $dataToCreate,
                 $validatedData['requirements'] ?? [],
@@ -192,12 +213,40 @@ class JobProfileController extends Controller
 
         $user = auth()->user();
 
-        // Unidades Organizacionales
-        $organizationalUnits = \Modules\Organization\Entities\OrganizationalUnit::where('is_active', true)
-            ->orderBy('name')
-            ->get()
-            ->pluck('name', 'id')
-            ->toArray();
+        // Cargar roles del usuario para verificación
+        $user->load('roles');
+
+        // ¿Es usuário de área?
+        $isAreaUser = $user->hasRole('area-user');
+
+        // Unidad organizacional primaria del usuario
+        $userOrganizationalUnit = null;
+        $organizationalUnits = [];
+
+        if ($isAreaUser) {
+            $primaryUnit = $user->primaryOrganizationUnit();
+            if ($primaryUnit) {
+                $userOrganizationalUnit = $primaryUnit->id;
+
+                // Obtener la unidad del usuario y todas sus descendientes
+                $allowedUnitIds = $this->getAllDescendantIds($primaryUnit);
+
+                // Filtrar solo las unidades permitidas para el area-user
+                $organizationalUnits = \Modules\Organization\Entities\OrganizationalUnit::whereIn('id', $allowedUnitIds)
+                    ->where('is_active', true)
+                    ->orderBy('name')
+                    ->get()
+                    ->pluck('name', 'id')
+                    ->toArray();
+            }
+        } else {
+            // Para usuarios no area-user, mostrar todas las unidades
+            $organizationalUnits = \Modules\Organization\Entities\OrganizationalUnit::where('is_active', true)
+                ->orderBy('name')
+                ->get()
+                ->pluck('name', 'id')
+                ->toArray();
+        }
 
         // Position Codes
         $positionCodes = \Modules\JobProfile\Entities\PositionCode::where('is_active', true)
@@ -224,21 +273,6 @@ class JobProfileController extends Controller
                 ];
             })
             ->toArray();
-
-        // Cargar roles del usuario para verificación
-        $user->load('roles');
-
-        // ¿Es usuário de área?
-        $isAreaUser = $user->hasRole('area-user');
-
-        // Unidad organizacional primaria del usuario
-        $userOrganizationalUnit = null;
-        if ($isAreaUser) {
-            $primaryUnit = $user->primaryOrganizationUnit();
-            if ($primaryUnit) {
-                $userOrganizationalUnit = $primaryUnit->id;
-            }
-        }
 
         // Opciones de educación
         $educationOptions = EducationLevelEnum::selectOptions();
@@ -338,5 +372,22 @@ class JobProfileController extends Controller
         } catch (\Exception $e) {
             return back()->with('error', 'Error al enviar a revisión: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Obtiene recursivamente todos los IDs de descendientes de una unidad organizacional
+     * Incluye la unidad misma y todos sus hijos directos e indirectos
+     */
+    private function getAllDescendantIds($unit): array
+    {
+        $ids = [$unit->id];
+
+        $children = $unit->children;
+
+        foreach ($children as $child) {
+            $ids = array_merge($ids, $this->getAllDescendantIds($child));
+        }
+
+        return $ids;
     }
 }
