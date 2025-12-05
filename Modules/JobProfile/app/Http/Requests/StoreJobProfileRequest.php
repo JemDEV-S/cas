@@ -21,6 +21,8 @@ class StoreJobProfileRequest extends FormRequest
             'profile_name' => 'required|string|max:255',
             'organizational_unit_id' => 'required|uuid|exists:organizational_units,id',
             'position_code_id' => 'nullable|uuid|exists:position_codes,id',
+            'job_posting_id' => 'nullable|uuid|exists:job_postings,id', // Convocatoria asociada
+            'requesting_unit_id' => 'nullable|uuid|exists:organizational_units,id', // Unidad solicitante
             'work_regime' => ['required', 'string', Rule::in(['cas', '276', '728', '1057'])],
             'total_vacancies' => 'required|integer|min:1|max:100',
             'description' => 'nullable|string|max:2000',
@@ -144,6 +146,8 @@ class StoreJobProfileRequest extends FormRequest
             'profile_name' => 'nombre del perfil',
             'organizational_unit_id' => 'unidad organizacional',
             'position_code_id' => 'código de posición',
+            'job_posting_id' => 'convocatoria',
+            'requesting_unit_id' => 'unidad solicitante',
             'work_regime' => 'régimen laboral',
             'total_vacancies' => 'total de vacantes',
             'description' => 'descripción',
