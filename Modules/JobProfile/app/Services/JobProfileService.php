@@ -246,21 +246,41 @@ class JobProfileService extends BaseService
             if (class_exists('\Modules\JobPosting\Entities\JobPosting')) {
                 $jobPosting = \Modules\JobPosting\Entities\JobPosting::find($jobPostingId);
                 if ($jobPosting) {
-                    // Contar perfiles de esta convocatoria con bloqueo pesimista
-                    $count = JobProfile::where('job_posting_id', $jobPostingId)
+                    // Obtener el último perfil de esta convocatoria con bloqueo pesimista
+                    $lastProfile = JobProfile::where('job_posting_id', $jobPostingId)
+                        ->orderBy('code', 'desc')
                         ->lockForUpdate()
-                        ->count() + 1;
-                    return $jobPosting->code . '-' . str_pad($count, 2, '0', STR_PAD_LEFT);
+                        ->first();
+
+                    $nextNumber = 1;
+                    if ($lastProfile) {
+                        // Extraer el número del código (ej: "CONV-2025-001-05" -> 5)
+                        $parts = explode('-', $lastProfile->code);
+                        $lastNumber = (int) end($parts);
+                        $nextNumber = $lastNumber + 1;
+                    }
+
+                    return $jobPosting->code . '-' . str_pad($nextNumber, 2, '0', STR_PAD_LEFT);
                 }
             }
         }
 
-        // Código independiente con bloqueo pesimista
-        $count = JobProfile::whereNull('job_posting_id')
+        // Código independiente: obtener el último perfil del año con bloqueo pesimista
+        $lastProfile = JobProfile::whereNull('job_posting_id')
             ->whereYear('created_at', $year)
+            ->where('code', 'like', 'PROF-' . $year . '-%')
+            ->orderBy('code', 'desc')
             ->lockForUpdate()
-            ->count() + 1;
+            ->first();
 
-        return 'PROF-' . $year . '-' . str_pad($count, 3, '0', STR_PAD_LEFT);
+        $nextNumber = 1;
+        if ($lastProfile) {
+            // Extraer el número del código (ej: "PROF-2025-010" -> 10)
+            $parts = explode('-', $lastProfile->code);
+            $lastNumber = (int) end($parts);
+            $nextNumber = $lastNumber + 1;
+        }
+
+        return 'PROF-' . $year . '-' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
     }
 }
