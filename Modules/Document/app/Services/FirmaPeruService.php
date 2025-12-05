@@ -48,7 +48,6 @@ class FirmaPeruService
      */
     public function generateToken(): string
     {
-        // Intentar obtener token del cache
         $cacheKey = 'firmaperu_token';
         $cachedToken = Cache::get($cacheKey);
 
@@ -56,15 +55,16 @@ class FirmaPeruService
             return $cachedToken;
         }
 
-        // Generar nuevo token
         $credentials = $this->getCredentials();
 
-        $response = Http::asForm()
-            ->withOptions(['verify' => false]) // Deshabilitar verificación SSL (solo desarrollo)
-            ->post($credentials['token_url'], [
-                'client_id' => $credentials['client_id'],
-                'client_secret' => $credentials['client_secret'],
-            ]);
+        $response = Http::withOptions([
+            'verify' => false,  // <-- Cambia esta línea
+            'timeout' => 30,
+            'connect_timeout' => 10,
+        ])->asForm()->post($credentials['token_url'], [
+            'client_id' => $credentials['client_id'],
+            'client_secret' => $credentials['client_secret'],
+        ]);
 
         if (!$response->successful()) {
             throw new \Exception('Error al generar token FIRMA PERÚ: ' . $response->body());
@@ -72,14 +72,13 @@ class FirmaPeruService
 
         $token = $response->json('access_token') ?? $response->body();
 
-        // Decodificar el JWT para obtener la expiración
         $tokenParts = explode('.', $token);
         if (count($tokenParts) === 3) {
             $payload = json_decode(base64_decode($tokenParts[1]), true);
             $expiresIn = $payload['exp'] ?? null;
 
             if ($expiresIn) {
-                $ttl = $expiresIn - time() - 60; // 60 segundos de margen
+                $ttl = $expiresIn - time() - 60;
                 Cache::put($cacheKey, $token, $ttl);
             }
         }
