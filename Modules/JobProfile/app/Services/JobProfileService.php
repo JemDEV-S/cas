@@ -113,7 +113,14 @@ class JobProfileService extends BaseService
                 });
             } catch (\Illuminate\Database\QueryException $e) {
                 // Si es error de clave duplicada, reintentar
-                if ($e->getCode() === '23505' || strpos($e->getMessage(), 'unique constraint') !== false) {
+                // MySQL: código 23000, PostgreSQL: código 23505
+                $isDuplicateKey = $e->errorInfo[1] ?? null === 1062 || // MySQL duplicate entry
+                                  $e->getCode() === '23000' || // MySQL integrity constraint
+                                  $e->getCode() === '23505' || // PostgreSQL unique violation
+                                  strpos($e->getMessage(), 'Duplicate entry') !== false ||
+                                  strpos($e->getMessage(), 'unique constraint') !== false;
+
+                if ($isDuplicateKey) {
                     $attempt++;
                     if ($attempt >= $maxAttempts) {
                         throw new BusinessRuleException(
