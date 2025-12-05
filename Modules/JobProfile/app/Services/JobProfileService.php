@@ -210,12 +210,20 @@ class JobProfileService extends BaseService
         return DB::transaction(function () use ($id) {
             $profile = $this->repository->findOrFail($id);
 
-            // Solo se pueden eliminar perfiles en borrador o rechazados
-            if (!in_array($profile->status, ['draft', 'rejected'])) {
+            // Solo se pueden eliminar perfiles editables o rechazados
+            // Estados permitidos: draft, modification_requested, rejected
+            if (!$profile->canEdit() && !$profile->isRejected()) {
                 throw new BusinessRuleException(
-                    'Solo se pueden eliminar perfiles en borrador o rechazados.'
+                    'Solo se pueden eliminar perfiles en borrador, con modificaciones solicitadas o rechazados.'
                 );
             }
+
+            Log::info('JobProfile Delete - Perfil eliminado', [
+                'id' => $profile->id,
+                'code' => $profile->code,
+                'status' => $profile->status,
+                'deleted_by' => auth()->id(),
+            ]);
 
             return $profile->delete();
         });

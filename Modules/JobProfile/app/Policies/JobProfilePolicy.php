@@ -126,10 +126,15 @@ class JobProfilePolicy
      */
     public function delete(User $user, JobProfile $jobProfile): bool
     {
-        // Solo el solicitante puede eliminar y solo en draft o rejected
+        // Admin RRHH puede eliminar cualquier perfil editable
+        if ($user->hasPermission('jobprofile.delete.any')) {
+            return $jobProfile->canEdit() || $jobProfile->isRejected();
+        }
+
+        // El solicitante puede eliminar su propio perfil si está editable o rechazado
         return $user->hasPermission('jobprofile.delete.profile')
             && $jobProfile->requested_by === $user->id
-            && in_array($jobProfile->status, ['draft', 'rejected']);
+            && ($jobProfile->canEdit() || $jobProfile->isRejected());
     }
 
     /**
