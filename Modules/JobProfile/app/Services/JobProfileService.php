@@ -4,6 +4,7 @@ namespace Modules\JobProfile\Services;
 
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Modules\Core\Services\BaseService;
 use Modules\JobProfile\Entities\JobProfile;
 use Modules\JobProfile\Repositories\JobProfileRepository;
@@ -72,19 +73,41 @@ class JobProfileService extends BaseService
         $maxAttempts = 3;
         $attempt = 0;
 
+        Log::info('JobProfile Create - Iniciando creación de perfil', [
+            'job_posting_id' => $data['job_posting_id'] ?? null,
+            'title' => $data['title'] ?? null,
+        ]);
+
         while ($attempt < $maxAttempts) {
+            $attempt++;
+            Log::info('JobProfile Create - Intento #' . $attempt);
+
             try {
-                return DB::transaction(function () use ($data, $requirements, $responsibilities) {
+                return DB::transaction(function () use ($data, $requirements, $responsibilities, $attempt) {
                     // Generar código único si no se proporciona
                     if (!isset($data['code'])) {
                         $data['code'] = $this->generateCode($data['job_posting_id'] ?? null);
+                        Log::info('JobProfile Create - Código generado', [
+                            'attempt' => $attempt,
+                            'code' => $data['code'],
+                        ]);
                     }
 
                     // Establecer estado inicial y usuario solicitante
                     $data['status'] = 'draft';
                     $data['requested_by'] = $data['requested_by'] ?? auth()->id();
 
+                    Log::info('JobProfile Create - Intentando crear registro en BD', [
+                        'code' => $data['code'],
+                        'attempt' => $attempt,
+                    ]);
+
                     $profile = JobProfile::create($data);
+
+                    Log::info('JobProfile Create - Perfil creado exitosamente', [
+                        'id' => $profile->id,
+                        'code' => $profile->code,
+                    ]);
 
                     // El historial se registra automáticamente mediante el Observer
 
@@ -114,27 +137,49 @@ class JobProfileService extends BaseService
             } catch (\Illuminate\Database\QueryException $e) {
                 // Si es error de clave duplicada, reintentar
                 // MySQL: código 23000, PostgreSQL: código 23505
-                $isDuplicateKey = $e->errorInfo[1] ?? null === 1062 || // MySQL duplicate entry
+                $errorCode = $e->errorInfo[1] ?? null;
+                $isDuplicateKey = $errorCode === 1062 || // MySQL duplicate entry
                                   $e->getCode() === '23000' || // MySQL integrity constraint
                                   $e->getCode() === '23505' || // PostgreSQL unique violation
                                   strpos($e->getMessage(), 'Duplicate entry') !== false ||
                                   strpos($e->getMessage(), 'unique constraint') !== false;
 
+                Log::error('JobProfile Create - Error de base de datos', [
+                    'attempt' => $attempt,
+                    'code' => $data['code'] ?? 'N/A',
+                    'error_code' => $errorCode,
+                    'sqlstate' => $e->getCode(),
+                    'is_duplicate' => $isDuplicateKey,
+                    'message' => $e->getMessage(),
+                ]);
+
                 if ($isDuplicateKey) {
-                    $attempt++;
                     if ($attempt >= $maxAttempts) {
+                        Log::error('JobProfile Create - Máximo de intentos alcanzado', [
+                            'attempts' => $attempt,
+                            'last_code' => $data['code'] ?? 'N/A',
+                        ]);
                         throw new BusinessRuleException(
                             'No se pudo generar un código único después de varios intentos. Por favor, intente nuevamente.'
                         );
                     }
                     // Quitar el código generado para forzar uno nuevo en el siguiente intento
                     unset($data['code']);
+                    Log::warning('JobProfile Create - Reintentando con nuevo código', [
+                        'attempt' => $attempt,
+                        'next_attempt' => $attempt + 1,
+                    ]);
                     usleep(100000); // Esperar 100ms antes de reintentar
                     continue;
                 }
+
+                Log::error('JobProfile Create - Error no manejado, lanzando excepción');
                 throw $e;
             }
         }
+
+        Log::error('JobProfile Create - Salió del bucle sin retornar (esto no debería ocurrir)');
+        throw new BusinessRuleException('Error inesperado al crear el perfil.');
     }
 
     /**
@@ -241,11 +286,20 @@ class JobProfileService extends BaseService
     {
         $year = now()->year;
 
+        Log::info('JobProfile generateCode - Iniciando generación', [
+            'job_posting_id' => $jobPostingId,
+            'year' => $year,
+        ]);
+
         if ($jobPostingId) {
             // Obtener el código de la convocatoria si existe el módulo
             if (class_exists('\Modules\JobPosting\Entities\JobPosting')) {
                 $jobPosting = \Modules\JobPosting\Entities\JobPosting::find($jobPostingId);
                 if ($jobPosting) {
+                    Log::info('JobProfile generateCode - Convocatoria encontrada', [
+                        'job_posting_code' => $jobPosting->code,
+                    ]);
+
                     // Obtener el último perfil de esta convocatoria con bloqueo pesimista
                     $lastProfile = JobProfile::where('job_posting_id', $jobPostingId)
                         ->orderBy('code', 'desc')
@@ -258,14 +312,29 @@ class JobProfileService extends BaseService
                         $parts = explode('-', $lastProfile->code);
                         $lastNumber = (int) end($parts);
                         $nextNumber = $lastNumber + 1;
+
+                        Log::info('JobProfile generateCode - Último perfil de convocatoria', [
+                            'last_code' => $lastProfile->code,
+                            'last_number' => $lastNumber,
+                            'next_number' => $nextNumber,
+                        ]);
+                    } else {
+                        Log::info('JobProfile generateCode - Primer perfil de esta convocatoria');
                     }
 
-                    return $jobPosting->code . '-' . str_pad($nextNumber, 2, '0', STR_PAD_LEFT);
+                    $generatedCode = $jobPosting->code . '-' . str_pad($nextNumber, 2, '0', STR_PAD_LEFT);
+                    Log::info('JobProfile generateCode - Código generado para convocatoria', [
+                        'code' => $generatedCode,
+                    ]);
+
+                    return $generatedCode;
                 }
             }
         }
 
         // Código independiente: obtener el último perfil del año con bloqueo pesimista
+        Log::info('JobProfile generateCode - Generando código independiente');
+
         $lastProfile = JobProfile::whereNull('job_posting_id')
             ->whereYear('created_at', $year)
             ->where('code', 'like', 'PROF-' . $year . '-%')
@@ -279,8 +348,21 @@ class JobProfileService extends BaseService
             $parts = explode('-', $lastProfile->code);
             $lastNumber = (int) end($parts);
             $nextNumber = $lastNumber + 1;
+
+            Log::info('JobProfile generateCode - Último perfil independiente', [
+                'last_code' => $lastProfile->code,
+                'last_number' => $lastNumber,
+                'next_number' => $nextNumber,
+            ]);
+        } else {
+            Log::info('JobProfile generateCode - Primer perfil del año');
         }
 
-        return 'PROF-' . $year . '-' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+        $generatedCode = 'PROF-' . $year . '-' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+        Log::info('JobProfile generateCode - Código generado', [
+            'code' => $generatedCode,
+        ]);
+
+        return $generatedCode;
     }
 }
