@@ -245,10 +245,11 @@ class JobProfileService extends BaseService
 
                     // Obtener el último perfil de esta convocatoria con bloqueo pesimista
                     // Usar DB::table() para evitar global scopes
+                    // Ordenar por el número del código (la última parte) como entero
                     $lastProfile = DB::table('job_profiles')
                         ->where('job_posting_id', $jobPostingId)
                         ->whereNull('deleted_at') // Considerar soft deletes manualmente
-                        ->orderBy('created_at', 'desc')
+                        ->orderByRaw('CAST(SUBSTRING_INDEX(code, \'-\', -1) AS UNSIGNED) DESC')
                         ->lockForUpdate()
                         ->first();
 
