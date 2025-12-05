@@ -339,14 +339,19 @@ class JobProfileService extends BaseService
         Log::info('JobProfile generateCode - Generando código independiente');
 
         // Usar DB::table() para evitar global scopes y obtener todos los registros
+        // Usar whereRaw para compatibilidad total con MySQL en cPanel
         $lastProfile = DB::table('job_profiles')
             ->whereNull('job_posting_id')
             ->whereNull('deleted_at') // Considerar soft deletes manualmente
-            ->whereYear('created_at', $year)
             ->where('code', 'like', 'PROF-' . $year . '-%')
             ->orderBy('code', 'desc')
             ->lockForUpdate()
             ->first();
+
+        Log::info('JobProfile generateCode - Resultado de búsqueda', [
+            'found' => $lastProfile ? 'yes' : 'no',
+            'last_code' => $lastProfile->code ?? 'NULL',
+        ]);
 
         $nextNumber = 1;
         if ($lastProfile) {
