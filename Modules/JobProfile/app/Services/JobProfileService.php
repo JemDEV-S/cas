@@ -69,117 +69,60 @@ class JobProfileService extends BaseService
      */
     public function create(array $data, array $requirements = [], array $responsibilities = []): JobProfile
     {
-        // Reintentar hasta 3 veces en caso de código duplicado
-        $maxAttempts = 3;
-        $attempt = 0;
-
         Log::info('JobProfile Create - Iniciando creación de perfil', [
             'job_posting_id' => $data['job_posting_id'] ?? null,
             'title' => $data['title'] ?? null,
         ]);
 
-        while ($attempt < $maxAttempts) {
-            $attempt++;
-            Log::info('JobProfile Create - Intento #' . $attempt);
-
-            try {
-                return DB::transaction(function () use ($data, $requirements, $responsibilities, $attempt) {
-                    // Generar código único si no se proporciona
-                    if (!isset($data['code'])) {
-                        $data['code'] = $this->generateCode($data['job_posting_id'] ?? null);
-                        Log::info('JobProfile Create - Código generado', [
-                            'attempt' => $attempt,
-                            'code' => $data['code'],
-                        ]);
-                    }
-
-                    // Establecer estado inicial y usuario solicitante
-                    $data['status'] = 'draft';
-                    $data['requested_by'] = $data['requested_by'] ?? auth()->id();
-
-                    Log::info('JobProfile Create - Intentando crear registro en BD', [
-                        'code' => $data['code'],
-                        'attempt' => $attempt,
-                    ]);
-
-                    $profile = JobProfile::create($data);
-
-                    Log::info('JobProfile Create - Perfil creado exitosamente', [
-                        'id' => $profile->id,
-                        'code' => $profile->code,
-                    ]);
-
-                    // El historial se registra automáticamente mediante el Observer
-
-                    // Crear requisitos
-                    foreach ($requirements as $index => $requirement) {
-                        $profile->requirements()->create([
-                            'category' => $requirement['category'],
-                            'description' => $requirement['description'],
-                            'is_mandatory' => $requirement['is_mandatory'] ?? true,
-                            'order' => $index + 1,
-                        ]);
-                    }
-
-                    // Crear responsabilidades
-                    foreach ($responsibilities as $index => $responsibility) {
-                        $profile->responsibilities()->create([
-                            'description' => $responsibility['description'],
-                            'order' => $index + 1,
-                        ]);
-                    }
-
-                    // Disparar evento
-                    event(new JobProfileCreated($profile));
-
-                    return $profile->fresh(['requirements', 'responsibilities']);
-                });
-            } catch (\Illuminate\Database\QueryException $e) {
-                // Si es error de clave duplicada, reintentar
-                // MySQL: código 23000, PostgreSQL: código 23505
-                $errorCode = $e->errorInfo[1] ?? null;
-                $isDuplicateKey = $errorCode === 1062 || // MySQL duplicate entry
-                                  $e->getCode() === '23000' || // MySQL integrity constraint
-                                  $e->getCode() === '23505' || // PostgreSQL unique violation
-                                  strpos($e->getMessage(), 'Duplicate entry') !== false ||
-                                  strpos($e->getMessage(), 'unique constraint') !== false;
-
-                Log::error('JobProfile Create - Error de base de datos', [
-                    'attempt' => $attempt,
-                    'code' => $data['code'] ?? 'N/A',
-                    'error_code' => $errorCode,
-                    'sqlstate' => $e->getCode(),
-                    'is_duplicate' => $isDuplicateKey,
-                    'message' => $e->getMessage(),
+        return DB::transaction(function () use ($data, $requirements, $responsibilities) {
+            // Generar código único si no se proporciona
+            if (!isset($data['code'])) {
+                $data['code'] = $this->generateCode($data['job_posting_id'] ?? null);
+                Log::info('JobProfile Create - Código generado', [
+                    'code' => $data['code'],
                 ]);
-
-                if ($isDuplicateKey) {
-                    if ($attempt >= $maxAttempts) {
-                        Log::error('JobProfile Create - Máximo de intentos alcanzado', [
-                            'attempts' => $attempt,
-                            'last_code' => $data['code'] ?? 'N/A',
-                        ]);
-                        throw new BusinessRuleException(
-                            'No se pudo generar un código único después de varios intentos. Por favor, intente nuevamente.'
-                        );
-                    }
-                    // Quitar el código generado para forzar uno nuevo en el siguiente intento
-                    unset($data['code']);
-                    Log::warning('JobProfile Create - Reintentando con nuevo código', [
-                        'attempt' => $attempt,
-                        'next_attempt' => $attempt + 1,
-                    ]);
-                    usleep(100000); // Esperar 100ms antes de reintentar
-                    continue;
-                }
-
-                Log::error('JobProfile Create - Error no manejado, lanzando excepción');
-                throw $e;
             }
-        }
 
-        Log::error('JobProfile Create - Salió del bucle sin retornar (esto no debería ocurrir)');
-        throw new BusinessRuleException('Error inesperado al crear el perfil.');
+            // Establecer estado inicial y usuario solicitante
+            $data['status'] = 'draft';
+            $data['requested_by'] = $data['requested_by'] ?? auth()->id();
+
+            Log::info('JobProfile Create - Intentando crear registro en BD', [
+                'code' => $data['code'],
+            ]);
+
+            $profile = JobProfile::create($data);
+
+            Log::info('JobProfile Create - Perfil creado exitosamente', [
+                'id' => $profile->id,
+                'code' => $profile->code,
+            ]);
+
+            // El historial se registra automáticamente mediante el Observer
+
+            // Crear requisitos
+            foreach ($requirements as $index => $requirement) {
+                $profile->requirements()->create([
+                    'category' => $requirement['category'],
+                    'description' => $requirement['description'],
+                    'is_mandatory' => $requirement['is_mandatory'] ?? true,
+                    'order' => $index + 1,
+                ]);
+            }
+
+            // Crear responsabilidades
+            foreach ($responsibilities as $index => $responsibility) {
+                $profile->responsibilities()->create([
+                    'description' => $responsibility['description'],
+                    'order' => $index + 1,
+                ]);
+            }
+
+            // Disparar evento
+            event(new JobProfileCreated($profile));
+
+            return $profile->fresh(['requirements', 'responsibilities']);
+        });
     }
 
     /**

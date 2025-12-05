@@ -22,7 +22,7 @@ class ProfileController extends Controller
     public function show()
     {
         $user = Auth::user();
-        $user->load(['profile', 'roles', 'organizationUnits.organizationalUnit']);
+        $user->load(['profile', 'roles', 'organizationUnits']);
 
         return view('user::profile.show', compact('user'));
     }

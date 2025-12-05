@@ -113,21 +113,35 @@
     @if($user->organizationUnits->isNotEmpty())
     <x-card title="Unidades Organizacionales">
         <div class="space-y-3">
-            @foreach($user->organizationUnits as $assignment)
-                @if($assignment->organizationalUnit)
+            @foreach($user->organizationUnits as $unit)
                 <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div>
-                        <p class="font-medium text-gray-900">{{ $assignment->organizationalUnit->name }}</p>
-                        <p class="text-sm text-gray-500">{{ $assignment->organizationalUnit->code }}</p>
+                        <p class="font-medium text-gray-900">{{ $unit->name }}</p>
+                        <p class="text-sm text-gray-500">{{ $unit->code }}</p>
+                        @if($unit->pivot->is_primary)
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 mt-1">
+                                Principal
+                            </span>
+                        @endif
                     </div>
                     <div class="text-right text-sm text-gray-500">
-                        <p>Desde: {{ $assignment->start_date->format('d/m/Y') }}</p>
-                        @if($assignment->end_date)
-                            <p>Hasta: {{ $assignment->end_date->format('d/m/Y') }}</p>
+                        @if($unit->pivot->start_date)
+                            <p>Desde: {{ \Carbon\Carbon::parse($unit->pivot->start_date)->format('d/m/Y') }}</p>
+                        @endif
+                        @if($unit->pivot->end_date)
+                            <p>Hasta: {{ \Carbon\Carbon::parse($unit->pivot->end_date)->format('d/m/Y') }}</p>
+                        @endif
+                        @if($unit->pivot->is_active)
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 mt-1">
+                                Activa
+                            </span>
+                        @else
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 mt-1">
+                                Inactiva
+                            </span>
                         @endif
                     </div>
                 </div>
-                @endif
             @endforeach
         </div>
     </x-card>
