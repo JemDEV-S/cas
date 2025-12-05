@@ -305,7 +305,7 @@ class JobProfileService extends BaseService
                     $lastProfile = DB::table('job_profiles')
                         ->where('job_posting_id', $jobPostingId)
                         ->whereNull('deleted_at') // Considerar soft deletes manualmente
-                        ->orderBy('code', 'desc')
+                        ->orderBy('created_at', 'desc')
                         ->lockForUpdate()
                         ->first();
 
