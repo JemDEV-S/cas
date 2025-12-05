@@ -614,7 +614,7 @@ $(document).ready(function() {
         $('#code-text').text('Generando...');
 
         // Llamar a la API
-        $.get('{{ route('generate.job-posting-code') }}', { year: year })
+        $.get('{{ route('api.generate.job-posting-code') }}', { year: year })
             .done(function(response) {
                 if (response.success) {
                     $('#code-text').text(response.code);
@@ -704,7 +704,7 @@ $(document).ready(function() {
         `);
 
         // Llamar a la API
-        $.post('{{ route('preview.schedule') }}', {
+        $.post('{{ route('api.preview.schedule') }}', {
             start_date: startDate,
             _token: csrfToken
         })
