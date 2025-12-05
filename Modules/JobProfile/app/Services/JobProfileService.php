@@ -338,10 +338,9 @@ class JobProfileService extends BaseService
         // Código independiente: obtener el último perfil del año con bloqueo pesimista
         Log::info('JobProfile generateCode - Generando código independiente');
 
-        // Usar DB::table() para evitar global scopes y obtener todos los registros
-        // Usar whereRaw para compatibilidad total con MySQL en cPanel
+        // Buscar el último código PROF-2025-XXX sin importar si tiene job_posting_id o no
+        // Esto permite secuencialidad incluso cuando algunos perfiles están asociados a convocatorias
         $lastProfile = DB::table('job_profiles')
-            ->whereNull('job_posting_id')
             ->whereNull('deleted_at') // Considerar soft deletes manualmente
             ->where('code', 'like', 'PROF-' . $year . '-%')
             ->orderBy('code', 'desc')
