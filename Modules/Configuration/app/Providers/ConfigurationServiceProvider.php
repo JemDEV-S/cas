@@ -27,6 +27,18 @@ class ConfigurationServiceProvider extends ServiceProvider
         $this->registerConfig();
         $this->registerViews();
         $this->loadMigrationsFrom(module_path($this->name, 'database/migrations'));
+        $this->registerPolicies();
+    }
+
+    /**
+     * Register policies.
+     */
+    protected function registerPolicies(): void
+    {
+        \Illuminate\Support\Facades\Gate::policy(
+            \Modules\Configuration\Entities\SystemConfig::class,
+            \Modules\Configuration\Policies\ConfigurationPolicy::class
+        );
     }
 
     /**

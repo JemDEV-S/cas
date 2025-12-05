@@ -10,6 +10,7 @@ use Modules\User\Http\Requests\UpdateUserRequest;
 use Modules\Auth\Entities\Role;
 use Modules\Organization\Entities\OrganizationalUnit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
@@ -137,9 +138,6 @@ class UserController extends Controller
         return view('user::edit', compact('user', 'roles', 'organizationalUnits'));
     }
 
-    /**
-     * Update the specified user.
-     */
     public function update(UpdateUserRequest $request, User $user)
     {
         $this->authorize('update', $user);
@@ -148,36 +146,34 @@ class UserController extends Controller
             // Preparar los datos para actualizar
             $updateData = $request->validated();
 
-            // Solo actualizar la contraseña si se proporciona una nueva
+            // Lógica de contraseña
             if (empty($updateData['password'])) {
-                // Eliminar la contraseña de los datos a actualizar
+                // No se está cambiando la contraseña, eliminar campos de contraseña
                 unset($updateData['password']);
                 unset($updateData['current_password']);
                 unset($updateData['password_confirmation']);
             } else {
-                // Verificar que la contraseña actual es correcta
-                if (!Hash::check($request->current_password, $user->password)) {
-                    return redirect()
-                        ->back()
-                        ->withInput()
-                        ->with('error', 'La contraseña actual es incorrecta.');
-                }
-
-                // Hashear la nueva contraseña
-                $updateData['password'] = Hash::make($updateData['password']);
+                // Se está cambiando la contraseña
+                // NO hashear aquí, el UserService lo hará
+                // Solo limpiamos los campos auxiliares que no van a la BD
+                unset($updateData['current_password']);
+                unset($updateData['password_confirmation']);
             }
 
             $this->userService->update($user->id, $updateData);
 
             // Actualizar roles
-            if ($request->filled('roles')) {
-                $user->syncRoles($request->roles);
+            if ($request->has('roles')) {
+                $user->syncRoles($request->input('roles', []));
             }
 
             return redirect()
                 ->route('users.show', $user)
                 ->with('success', 'Usuario actualizado exitosamente.');
+
         } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error actualizando usuario: ' . $e->getMessage());
+
             return redirect()
                 ->back()
                 ->withInput()

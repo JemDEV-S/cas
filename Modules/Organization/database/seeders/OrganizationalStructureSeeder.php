@@ -28,7 +28,7 @@ class OrganizationalStructureSeeder extends Seeder
         $data = json_decode($json, true);
 
         // Validar y corregir códigos
-        $data = $this->validateAndFixCodes($data);
+        //$data = $this->validateAndFixCodes($data);
 
         // Crear unidades
         $this->createUnits($data);

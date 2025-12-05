@@ -203,6 +203,30 @@ class SystemConfigsTableSeeder extends Seeder
                 'is_editable' => true,
                 'display_order' => 6,
             ],
+            [
+                'key' => 'JOB_PROFILE_CREATION_START_DATE',
+                'value' => null,
+                'value_type' => ValueTypeEnum::DATE,
+                'default_value' => null,
+                'description' => 'Fecha de inicio para creación de perfiles de puesto',
+                'display_name' => 'Fecha Inicio Creación de Perfiles',
+                'input_type' => InputTypeEnum::DATE,
+                'is_editable' => true,
+                'display_order' => 7,
+                'help_text' => 'Los usuarios solo podrán crear perfiles a partir de esta fecha',
+            ],
+            [
+                'key' => 'JOB_PROFILE_CREATION_END_DATE',
+                'value' => null,
+                'value_type' => ValueTypeEnum::DATE,
+                'default_value' => null,
+                'description' => 'Fecha de fin para creación de perfiles de puesto',
+                'display_name' => 'Fecha Fin Creación de Perfiles',
+                'input_type' => InputTypeEnum::DATE,
+                'is_editable' => true,
+                'display_order' => 8,
+                'help_text' => 'Los usuarios solo podrán crear perfiles hasta esta fecha',
+            ],
         ];
 
         foreach ($configs as $config) {

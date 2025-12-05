@@ -139,24 +139,83 @@
                         <p class="mt-1 text-sm text-gray-500">Busque y seleccione el usuario que será asignado</p>
                     </div>
 
-                    <!-- Unidad Organizacional (Se mantiene select normal si son pocas, o aplica la misma lógica) -->
-                    <div class="mb-6">
-                        <label for="organization_unit_id" class="block text-sm font-medium text-gray-700 mb-2">
+                    <!-- COMPONENTE DE BÚSQUEDA DE UNIDAD ORGANIZACIONAL -->
+                    <div class="mb-6" x-data="organizationalUnitSearch()">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
                             Unidad Organizacional <span class="text-red-500">*</span>
                         </label>
-                        <select name="organization_unit_id" id="organization_unit_id"
-                                class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 @error('organization_unit_id') border-red-300 @enderror"
-                                required>
-                            <option value="">Seleccione una unidad</option>
-                            @foreach($organizationalUnits as $unit)
-                                <option value="{{ $unit->id }}" {{ old('organization_unit_id') == $unit->id ? 'selected' : '' }}>
-                                    {{ $unit->name }} ({{ $unit->code }})
-                                </option>
-                            @endforeach
-                        </select>
+
+                        <!-- Input oculto para enviar el ID real -->
+                        <input type="hidden" name="organization_unit_id" x-model="selectedUnitId" required>
+
+                        <div class="relative">
+                            <!-- Input visual de búsqueda -->
+                            <div class="relative">
+                                <input type="text"
+                                       x-model="searchQuery"
+                                       @input.debounce.300ms="searchUnits()"
+                                       @focus="open = true"
+                                       @click.away="open = false"
+                                       class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 pl-10"
+                                       placeholder="Buscar por nombre o código..."
+                                       :class="{'border-red-300': {{ $errors->has('organization_unit_id') ? 'true' : 'false' }}}">
+
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                </div>
+
+                                <!-- Botón para limpiar selección -->
+                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer"
+                                     x-show="selectedUnitId"
+                                     @click="clearSelection()">
+                                    <svg class="h-5 w-5 text-gray-400 hover:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </div>
+                            </div>
+
+                            <!-- Dropdown de resultados -->
+                            <div x-show="open && (units.length > 0 || isLoading)"
+                                 class="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm"
+                                 style="display: none;">
+
+                                <!-- Loading state -->
+                                <div x-show="isLoading" class="px-4 py-2 text-sm text-gray-500">
+                                    Buscando...
+                                </div>
+
+                                <!-- Lista de unidades organizacionales -->
+                                <template x-for="unit in units" :key="unit.id">
+                                    <div @click="selectUnit(unit)"
+                                         class="cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-blue-50 transition-colors">
+                                        <div class="flex items-center">
+                                            <span class="font-medium block truncate" x-text="unit.name"></span>
+                                            <span class="ml-2 text-gray-500 text-xs" x-text="'(' + unit.code + ')'"></span>
+                                        </div>
+                                    </div>
+                                </template>
+
+                                <!-- No results -->
+                                <div x-show="!isLoading && units.length === 0 && searchQuery.length > 2" class="px-4 py-2 text-sm text-gray-500">
+                                    No se encontraron unidades organizacionales.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Feedback visual de unidad seleccionada -->
+                        <div x-show="selectedUnitId" class="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-700 flex items-center">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            Unidad seleccionada: <span class="font-bold ml-1" x-text="selectedUnitName"></span>
+                        </div>
+
                         @error('organization_unit_id')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
+                        <p class="mt-1 text-sm text-gray-500">Busque y seleccione la unidad organizacional</p>
                     </div>
 
                     <!-- Fechas -->
@@ -260,7 +319,7 @@
                 if (this.selectedUserId) {
                     // Aquí podrías hacer un fetch para obtener el nombre del usuario si solo tienes el ID
                     // O pasarlo desde el controlador si es posible. Por ahora simulamos visualmente.
-                    this.selectedUserName = 'Usuario seleccionado previamente'; 
+                    this.selectedUserName = 'Usuario seleccionado previamente';
                 }
             },
 
@@ -297,6 +356,59 @@
                 this.selectedUserName = '';
                 this.searchQuery = '';
                 this.users = [];
+            }
+        }
+    }
+
+    // Lógica para la búsqueda de unidades organizacionales con Alpine.js
+    function organizationalUnitSearch() {
+        return {
+            searchQuery: '',
+            units: [],
+            selectedUnitId: '{{ old('organization_unit_id') }}',
+            selectedUnitName: '',
+            open: false,
+            isLoading: false,
+
+            init() {
+                if (this.selectedUnitId) {
+                    this.selectedUnitName = 'Unidad seleccionada previamente';
+                }
+            },
+
+            searchUnits() {
+                if (this.searchQuery.length < 2) {
+                    this.units = [];
+                    return;
+                }
+
+                this.isLoading = true;
+                this.open = true;
+
+                fetch(`{{ route('organizational-units.search') }}?query=${this.searchQuery}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        this.units = data;
+                        this.isLoading = false;
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        this.isLoading = false;
+                    });
+            },
+
+            selectUnit(unit) {
+                this.selectedUnitId = unit.id;
+                this.selectedUnitName = `${unit.name} (${unit.code})`;
+                this.searchQuery = this.selectedUnitName;
+                this.open = false;
+            },
+
+            clearSelection() {
+                this.selectedUnitId = '';
+                this.selectedUnitName = '';
+                this.searchQuery = '';
+                this.units = [];
             }
         }
     }

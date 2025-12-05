@@ -58,5 +58,14 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Manejar excepciones de autorización
+        $exceptions->render(function (\Illuminate\Auth\Access\AuthorizationException $e, \Illuminate\Http\Request $request) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => $e->getMessage() ?: 'No tienes permisos para realizar esta acción.',
+                ], 403);
+            }
+
+            return redirect()->back()->with('error', $e->getMessage() ?: 'No tienes permisos para realizar esta acción.');
+        });
     })->create();

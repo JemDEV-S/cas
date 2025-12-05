@@ -32,7 +32,74 @@ class JobProfilePolicy
      */
     public function create(User $user): bool
     {
-        return $user->hasPermission('jobprofile.create.profile');
+        // Verificar permisos básicos
+        if (!$user->hasPermission('jobprofile.create.profile')) {
+            return false;
+        }
+
+        // Verificar rango de fechas configurado
+        return $this->isWithinCreationDateRange();
+    }
+
+    /**
+     * Verificar si la fecha actual está dentro del rango permitido
+     */
+    protected function isWithinCreationDateRange(): bool
+    {
+        $configService = app(\Modules\Configuration\Services\ConfigService::class);
+
+        $startDate = $configService->get('JOB_PROFILE_CREATION_START_DATE');
+        $endDate = $configService->get('JOB_PROFILE_CREATION_END_DATE');
+        $now = now();
+
+        // Si no hay fechas configuradas, permitir la creación
+        if (!$startDate && !$endDate) {
+            return true;
+        }
+
+        // Convertir las fechas a Carbon si son strings
+        $startDate = $startDate ? \Carbon\Carbon::parse($startDate)->startOfDay() : null;
+        $endDate = $endDate ? \Carbon\Carbon::parse($endDate)->endOfDay() : null;
+
+        // Verificar fecha de inicio
+        if ($startDate && $now->lt($startDate)) {
+            return false;
+        }
+
+        // Verificar fecha de fin
+        if ($endDate && $now->gt($endDate)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Obtener mensaje de error cuando está fuera del rango
+     */
+    public function getCreationDateRangeMessage(): ?string
+    {
+        $configService = app(\Modules\Configuration\Services\ConfigService::class);
+
+        $startDate = $configService->get('JOB_PROFILE_CREATION_START_DATE');
+        $endDate = $configService->get('JOB_PROFILE_CREATION_END_DATE');
+
+        if (!$startDate && !$endDate) {
+            return null;
+        }
+
+        $startDate = $startDate ? \Carbon\Carbon::parse($startDate)->format('d/m/Y') : null;
+        $endDate = $endDate ? \Carbon\Carbon::parse($endDate)->format('d/m/Y') : null;
+
+        if ($startDate && $endDate) {
+            return "La creación de perfiles solo está permitida entre el {$startDate} y el {$endDate}.";
+        } elseif ($startDate) {
+            return "La creación de perfiles solo está permitida a partir del {$startDate}.";
+        } elseif ($endDate) {
+            return "La creación de perfiles solo está permitida hasta el {$endDate}.";
+        }
+
+        return null;
     }
 
     /**

@@ -91,6 +91,19 @@
         <!-- Cambiar Contraseña -->
         <x-card title="Cambiar Contraseña">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                @if(auth()->id() === $user->id)
+                    <!-- Si el usuario está editando su propio perfil, requiere contraseña actual -->
+                    <div class="md:col-span-2">
+                        <x-form.input
+                            label="Contraseña Actual"
+                            name="current_password"
+                            type="password"
+                            placeholder="Ingrese su contraseña actual"
+                        />
+                        <p class="mt-1 text-xs text-gray-500">Requerida solo si desea cambiar su contraseña</p>
+                    </div>
+                @endif
+
                 <x-form.input
                     label="Nueva Contraseña"
                     name="password"
@@ -113,7 +126,11 @@
                     </svg>
                     <div class="ml-3">
                         <p class="text-sm text-yellow-700">
-                            Solo complete estos campos si desea cambiar la contraseña del usuario.
+                            @if(auth()->id() === $user->id)
+                                Solo complete estos campos si desea cambiar su contraseña. Debe ingresar su contraseña actual para cambiarla.
+                            @else
+                                Solo complete estos campos si desea cambiar la contraseña del usuario.
+                            @endif
                         </p>
                     </div>
                 </div>

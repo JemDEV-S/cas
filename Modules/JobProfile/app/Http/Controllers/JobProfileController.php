@@ -41,6 +41,9 @@ class JobProfileController extends Controller
      */
     public function create(): View
     {
+        // Verificar autorización (incluye validación de fechas)
+        $this->authorize('create', \Modules\JobProfile\Entities\JobProfile::class);
+
         $user = auth()->user();
 
         // Obtener unidades organizacionales para el dropdown
@@ -120,8 +123,11 @@ class JobProfileController extends Controller
      */
     public function store(StoreJobProfileRequest $request): RedirectResponse
     {
+        // Verificar autorización (incluye validación de fechas)
+        $this->authorize('create', \Modules\JobProfile\Entities\JobProfile::class);
+
         $validatedData = $request->validated();
-        
+
         try {
             // Excluir campos específicos de los datos validados
             $dataToCreate = collect($validatedData)

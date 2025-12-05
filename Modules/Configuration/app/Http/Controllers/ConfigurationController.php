@@ -20,6 +20,9 @@ class ConfigurationController extends Controller
      */
     public function index()
     {
+        // Verificar que tenga permiso para ver configuraciones
+        $this->authorize('viewAny', SystemConfig::class);
+
         $groups = ConfigGroup::with(['configs' => function ($query) {  // ✅ Cambiar systemConfigs a configs
             $query->editable()->ordered();
         }])
@@ -35,6 +38,9 @@ class ConfigurationController extends Controller
      */
     public function edit($groupId = null)
     {
+        // Verificar que tenga permiso para ver configuraciones
+        $this->authorize('viewAny', SystemConfig::class);
+
         $groups = ConfigGroup::with(['configs' => function ($query) {  // ✅ Cambiar systemConfigs a configs
             $query->editable()->ordered();
         }])
@@ -54,6 +60,9 @@ class ConfigurationController extends Controller
      */
     public function update(Request $request, $groupId)
     {
+        // Verificar que tenga permiso para actualizar configuraciones
+        $this->authorize('update', SystemConfig::class);
+
         try {
             DB::beginTransaction();
 
@@ -99,6 +108,9 @@ class ConfigurationController extends Controller
      */
     public function reset($id)
     {
+        // Verificar que tenga permiso para resetear configuraciones
+        $this->authorize('reset', SystemConfig::class);
+
         try {
             $config = SystemConfig::findOrFail($id);
 
@@ -131,6 +143,9 @@ class ConfigurationController extends Controller
      */
     public function history($id)
     {
+        // Verificar que tenga permiso para ver el historial
+        $this->authorize('viewHistory', SystemConfig::class);
+
         $config = SystemConfig::with(['history.changedBy', 'group'])  // ✅ Cambiar configGroup a group
             ->findOrFail($id);
 

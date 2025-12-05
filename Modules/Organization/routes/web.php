@@ -4,6 +4,9 @@ use Illuminate\Support\Facades\Route;
 use Modules\Organization\Http\Controllers\OrganizationalUnitController;
 
 Route::middleware(['auth', 'verified'])->prefix('organizational-units')->name('organizational-units.')->group(function () {
+    // Search
+    Route::get('/search', [OrganizationalUnitController::class, 'search'])->name('search');
+
     // Tree view
     Route::get('/tree', [OrganizationalUnitController::class, 'tree'])->name('tree');
 

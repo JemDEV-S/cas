@@ -215,4 +215,27 @@ class OrganizationalUnitController extends Controller
 
         return view('organization::tree', compact('rootUnits'));
     }
+
+    /**
+     * Search organizational units by name or code.
+     */
+    public function search(Request $request)
+    {
+        $query = $request->get('query');
+
+        if (strlen($query) < 2) {
+            return response()->json([]);
+        }
+
+        $units = OrganizationalUnit::where('is_active', true)
+            ->where(function($q) use ($query) {
+                $q->where('name', 'like', "%{$query}%")
+                  ->orWhere('code', 'like', "%{$query}%");
+            })
+            ->orderBy('name')
+            ->limit(10)
+            ->get(['id', 'name', 'code']);
+
+        return response()->json($units);
+    }
 }
