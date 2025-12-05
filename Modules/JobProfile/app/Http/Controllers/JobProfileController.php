@@ -300,23 +300,30 @@ class JobProfileController extends Controller
      * Update the specified job profile.
      * El Route Model Binding ya aplica el scope de visibilidad automáticamente
      */
-    public function update(Request $request, \Modules\JobProfile\Entities\JobProfile $profile): RedirectResponse
+    public function update(\Modules\JobProfile\Http\Requests\UpdateJobProfileRequest $request, \Modules\JobProfile\Entities\JobProfile $profile): RedirectResponse
     {
         // Verificar que el usuario tenga permiso para actualizar este perfil
         $this->authorize('update', $profile);
 
+        $validatedData = $request->validated();
+
         try {
+            // Excluir campos específicos de los datos validados
+            $dataToUpdate = collect($validatedData)
+                ->except(['requirements', 'responsibilities'])
+                ->toArray();
+
             $updatedProfile = $this->jobProfileService->update(
                 $profile->id,
-                $request->except(['requirements', 'responsibilities'])
+                $dataToUpdate
             );
 
-            if ($request->has('requirements')) {
-                $this->jobProfileService->updateRequirements($profile->id, $request->get('requirements'));
+            if (isset($validatedData['requirements'])) {
+                $this->jobProfileService->updateRequirements($profile->id, $validatedData['requirements']);
             }
 
-            if ($request->has('responsibilities')) {
-                $this->jobProfileService->updateResponsibilities($profile->id, $request->get('responsibilities'));
+            if (isset($validatedData['responsibilities'])) {
+                $this->jobProfileService->updateResponsibilities($profile->id, $validatedData['responsibilities']);
             }
 
             return redirect()
