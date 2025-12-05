@@ -301,7 +301,10 @@ class JobProfileService extends BaseService
                     ]);
 
                     // Obtener el último perfil de esta convocatoria con bloqueo pesimista
-                    $lastProfile = JobProfile::where('job_posting_id', $jobPostingId)
+                    // Usar DB::table() para evitar global scopes
+                    $lastProfile = DB::table('job_profiles')
+                        ->where('job_posting_id', $jobPostingId)
+                        ->whereNull('deleted_at') // Considerar soft deletes manualmente
                         ->orderBy('code', 'desc')
                         ->lockForUpdate()
                         ->first();
@@ -335,7 +338,10 @@ class JobProfileService extends BaseService
         // Código independiente: obtener el último perfil del año con bloqueo pesimista
         Log::info('JobProfile generateCode - Generando código independiente');
 
-        $lastProfile = JobProfile::whereNull('job_posting_id')
+        // Usar DB::table() para evitar global scopes y obtener todos los registros
+        $lastProfile = DB::table('job_profiles')
+            ->whereNull('job_posting_id')
+            ->whereNull('deleted_at') // Considerar soft deletes manualmente
             ->whereYear('created_at', $year)
             ->where('code', 'like', 'PROF-' . $year . '-%')
             ->orderBy('code', 'desc')
