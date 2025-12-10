@@ -156,6 +156,9 @@ class EvaluationService
                 'Evaluación enviada y finalizada'
             );
 
+            // Disparar evento
+            event(new \Modules\Evaluation\Events\EvaluationSubmitted($evaluation));
+
             return $evaluation->fresh();
         });
     }
@@ -219,6 +222,13 @@ class EvaluationService
                 ],
                 $reason
             );
+
+            // Disparar evento
+            event(new \Modules\Evaluation\Events\EvaluationModified(
+                $evaluation,
+                $reason,
+                auth()->id()
+            ));
 
             return $evaluation->fresh();
         });

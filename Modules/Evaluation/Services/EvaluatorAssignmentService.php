@@ -53,6 +53,9 @@ class EvaluatorAssignmentService
                 'deadline_at' => $assignment->deadline_at,
             ]);
 
+            // Disparar evento
+            event(new \Modules\Evaluation\Events\EvaluationAssigned($assignment));
+
             return $assignment->fresh('evaluator', 'application', 'phase');
         });
     }
