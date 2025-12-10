@@ -7,5 +7,5 @@
     "Configuration": true,
     "JobPosting": true,
     "Document": true,
-    "Evaluation": true
-}
+    "Evaluation": true,
+    "Application": true
