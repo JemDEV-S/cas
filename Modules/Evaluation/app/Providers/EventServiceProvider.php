@@ -11,7 +11,20 @@ class EventServiceProvider extends ServiceProvider
      *
      * @var array<string, array<int, string>>
      */
-    protected $listen = [];
+    protected $listen = [
+        'Modules\Evaluation\Events\EvaluationAssigned' => [
+            'Modules\Evaluation\Listeners\NotifyEvaluatorAssigned',
+        ],
+        'Modules\Evaluation\Events\EvaluationSubmitted' => [
+            'Modules\Evaluation\Listeners\NotifyEvaluationSubmitted',
+        ],
+        'Modules\Evaluation\Events\EvaluationModified' => [
+            'Modules\Evaluation\Listeners\LogEvaluationModified',
+        ],
+        'Modules\Evaluation\Events\EvaluationDeadlineApproaching' => [
+            'Modules\Evaluation\Listeners\NotifyDeadlineApproaching',
+        ],
+    ];
 
     /**
      * Indicates if events should be discovered.
@@ -23,5 +36,8 @@ class EventServiceProvider extends ServiceProvider
     /**
      * Configure the proper event listeners for email verification.
      */
-    protected function configureEmailVerification(): void {}
+    protected function configureEmailVerification(): void
+    {
+        //
+    }
 }
