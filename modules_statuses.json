@@ -6,5 +6,6 @@
     "JobProfile": true,
     "Configuration": true,
     "JobPosting": true,
-    "Document": true
+    "Document": true,
+    "Evaluation": true
 }
