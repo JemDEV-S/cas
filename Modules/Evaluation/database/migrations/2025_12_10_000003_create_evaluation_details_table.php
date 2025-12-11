@@ -15,9 +15,9 @@ return new class extends Migration
             $table->id();
             $table->uuid('uuid')->unique();
             
-            // Relaciones
-            $table->foreignId('evaluation_id')->constrained('evaluations')->onDelete('cascade');
-            $table->foreignId('criterion_id')->constrained('evaluation_criteria')->onDelete('restrict');
+            // ✅ TODOS foreignUuid
+            $table->foreignId('evaluation_id')->constrained('evaluations');
+            $table->foreignId('criterion_id')->constrained('evaluation_criteria');
             
             // Calificación
             $table->decimal('score', 8, 2)->comment('Puntaje otorgado');

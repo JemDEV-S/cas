@@ -15,15 +15,15 @@ return new class extends Migration
             $table->id();
             $table->uuid('uuid')->unique();
             
-            // Relaciones
-            $table->foreignId('evaluator_id')->constrained('users')->onDelete('cascade');
-            $table->foreignId('application_id')->constrained('applications')->onDelete('cascade');
-            $table->foreignId('phase_id')->constrained('process_phases')->onDelete('restrict');
-            $table->foreignId('job_posting_id')->constrained('job_postings')->onDelete('cascade');
+            // Relaciones - TODAS LAS TABLAS EXTERNAS USAN UUID
+            $table->foreignUuid('evaluator_id')->constrained('users')->onDelete('cascade');
+            $table->foreignUuid('application_id')->constrained('applications')->onDelete('cascade');
+            $table->foreignUuid('phase_id')->constrained('process_phases')->onDelete('restrict');
+            $table->foreignUuid('job_posting_id')->constrained('job_postings')->onDelete('cascade');
             
-            // Asignación
+            // Asignación - ACTUALIZADO PARA UUID
             $table->enum('assignment_type', ['MANUAL', 'AUTOMATIC'])->default('MANUAL');
-            $table->foreignId('assigned_by')->nullable()->constrained('users')->onDelete('set null');
+            $table->foreignUuid('assigned_by')->nullable()->constrained('users')->onDelete('set null');
             $table->timestamp('assigned_at')->useCurrent();
             
             // Estado

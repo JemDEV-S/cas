@@ -15,9 +15,9 @@ return new class extends Migration
             $table->id();
             $table->uuid('uuid')->unique();
             
-            // Relaciones
+            // Relaciones - ACTUALIZADO PARA UUID
             $table->foreignId('evaluation_id')->constrained('evaluations')->onDelete('cascade');
-            $table->foreignId('user_id')->constrained('users')->onDelete('restrict')
+            $table->foreignUuid('user_id')->constrained('users')->onDelete('restrict')
                 ->comment('Usuario que realizó el cambio');
             
             // Tipo de cambio

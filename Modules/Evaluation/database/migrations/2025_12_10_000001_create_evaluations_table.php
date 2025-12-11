@@ -15,11 +15,11 @@ return new class extends Migration
             $table->id();
             $table->uuid('uuid')->unique();
             
-            // Relaciones
-            $table->foreignId('application_id')->constrained('applications')->onDelete('cascade');
-            $table->foreignId('evaluator_id')->constrained('users')->onDelete('restrict');
-            $table->foreignId('phase_id')->constrained('process_phases')->onDelete('restrict');
-            $table->foreignId('job_posting_id')->constrained('job_postings')->onDelete('cascade');
+            // ✅ TODOS foreignUuid
+            $table->foreignUuid('application_id')->constrained('applications');
+            $table->foreignUuid('evaluator_id')->constrained('users');
+            $table->foreignUuid('phase_id')->constrained('process_phases');
+            $table->foreignUuid('job_posting_id')->constrained('job_postings');
             
             // Datos de evaluación
             $table->enum('status', [
@@ -44,8 +44,8 @@ return new class extends Migration
             $table->text('general_comments')->nullable();
             $table->text('internal_notes')->nullable()->comment('Notas internas (no visibles para postulante)');
             
-            // Modificaciones
-            $table->foreignId('modified_by')->nullable()->constrained('users')->onDelete('set null');
+            // Modificaciones - ACTUALIZADO PARA UUID
+            $table->foreignUuid('modified_by')->nullable()->constrained('users')->onDelete('set null');
             $table->timestamp('modified_at')->nullable();
             $table->text('modification_reason')->nullable();
             
