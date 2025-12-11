@@ -72,7 +72,47 @@ class ReviewController extends Controller
             abort(403, 'Este perfil no está en revisión.');
         }
 
-        return view('jobprofile::review.show', compact('jobProfile'));
+        // Cargar datos necesarios para el formulario de edición
+        $organizationalUnits = \Modules\Organization\Entities\OrganizationalUnit::where('is_active', true)
+            ->orderBy('name')
+            ->get()
+            ->pluck('name', 'id')
+            ->toArray();
+
+        $positionCodes = \Modules\JobProfile\Entities\PositionCode::where('is_active', true)
+            ->orderBy('code')
+            ->get()
+            ->mapWithKeys(fn($pc) => [$pc->id => $pc->code . ' - ' . $pc->name])
+            ->toArray();
+
+        // Obtener datos completos de position codes para autocompletado
+        $positionCodesData = \Modules\JobProfile\Entities\PositionCode::where('is_active', true)
+            ->orderBy('code')
+            ->get()
+            ->keyBy('id')
+            ->map(function($pc) {
+                return [
+                    'education_level' => $pc->education_level_required,
+                    'education_levels' => $pc->education_levels_accepted ?? [$pc->education_level_required],
+                    'title_required' => $pc->requires_professional_title,
+                    'colegiatura_required' => $pc->requires_professional_license,
+                    'general_experience_years' => $pc->min_professional_experience,
+                    'specific_experience_years' => $pc->min_specific_experience,
+                    'base_salary' => $pc->base_salary,
+                    'formatted_salary' => 'S/ ' . number_format($pc->base_salary, 2),
+                ];
+            })
+            ->toArray();
+
+        $educationOptions = \Modules\JobProfile\Enums\EducationLevelEnum::selectOptions();
+
+        return view('jobprofile::review.show', compact(
+            'jobProfile',
+            'organizationalUnits',
+            'positionCodes',
+            'positionCodesData',
+            'educationOptions'
+        ));
     }
 
     /**
@@ -166,6 +206,45 @@ class ReviewController extends Controller
             return back()->with('error', $e->getMessage());
         } catch (\Exception $e) {
             return back()->with('error', 'Error al rechazar el perfil: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Actualiza un perfil durante la revisión
+     */
+    public function update(\Modules\JobProfile\Http\Requests\UpdateJobProfileRequest $request, string $id): RedirectResponse
+    {
+        $jobProfile = $this->jobProfileService->findById($id);
+
+        if (!$jobProfile) {
+            abort(404, 'Perfil de puesto no encontrado.');
+        }
+
+        // Verificar autorización usando la policy
+        $this->authorize('updateDuringReview', $jobProfile);
+
+        $validatedData = $request->validated();
+
+        try {
+            // Actualizar directamente sin pasar por la validación canEdit()
+            // ya que el revisor tiene permiso para editar durante la revisión
+            \DB::transaction(function () use ($jobProfile, $validatedData) {
+                // Excluir campos específicos de los datos validados
+                $dataToUpdate = collect($validatedData)
+                    ->except(['requirements', 'responsibilities'])
+                    ->toArray();
+
+                // Actualizar el perfil directamente
+                $jobProfile->update($dataToUpdate);
+            });
+
+            return redirect()
+                ->route('jobprofile.review.show', $id)
+                ->with('success', 'Perfil actualizado exitosamente. Puede continuar revisando o aprobar el perfil.');
+        } catch (BusinessRuleException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        } catch (\Exception $e) {
+            return back()->withInput()->with('error', 'Error al actualizar el perfil: ' . $e->getMessage());
         }
     }
 }

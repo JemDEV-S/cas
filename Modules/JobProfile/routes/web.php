@@ -33,6 +33,7 @@ Route::middleware(['auth', 'verified'])->prefix('jobprofile')->name('jobprofile.
     Route::prefix('review')->name('review.')->group(function () {
         Route::get('/', [ReviewController::class, 'index'])->name('index');
         Route::get('/{id}', [ReviewController::class, 'show'])->name('show');
+        Route::put('/{id}', [ReviewController::class, 'update'])->name('update');
         Route::post('/{id}/submit', [ReviewController::class, 'submit'])->name('submit');
         Route::post('/{id}/request-modification', [ReviewController::class, 'requestModification'])->name('request-modification');
         Route::post('/{id}/approve', [ReviewController::class, 'approve'])->name('approve');
