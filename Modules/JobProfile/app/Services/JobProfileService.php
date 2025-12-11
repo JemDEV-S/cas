@@ -46,6 +46,54 @@ class JobProfileService extends BaseService
     }
 
     /**
+     * Obtiene perfiles por estado con filtros aplicados
+     */
+    public function getByStatusWithFilters(string $status, array $filters = []): Collection
+    {
+        $user = auth()->user();
+
+        $query = JobProfile::byStatus($status)
+            ->visibleFor($user)
+            ->with(['positionCode', 'organizationalUnit', 'requestedBy']);
+
+        // Filtro de búsqueda por texto (código o título)
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(function ($q) use ($search) {
+                $q->where('code', 'like', "%{$search}%")
+                  ->orWhere('title', 'like', "%{$search}%")
+                  ->orWhere('profile_name', 'like', "%{$search}%");
+            });
+        }
+
+        // Filtro por unidad organizacional
+        if (!empty($filters['organizational_unit_id'])) {
+            $query->where('organizational_unit_id', $filters['organizational_unit_id']);
+        }
+
+        // Filtro por código de puesto
+        if (!empty($filters['position_code_id'])) {
+            $query->where('position_code_id', $filters['position_code_id']);
+        }
+
+        // Filtro por solicitante
+        if (!empty($filters['requested_by'])) {
+            $query->where('requested_by', $filters['requested_by']);
+        }
+
+        // Filtro por rango de fechas
+        if (!empty($filters['date_from'])) {
+            $query->whereDate('requested_at', '>=', $filters['date_from']);
+        }
+
+        if (!empty($filters['date_to'])) {
+            $query->whereDate('requested_at', '<=', $filters['date_to']);
+        }
+
+        return $query->orderBy('created_at', 'desc')->get();
+    }
+
+    /**
      * Obtiene un perfil por ID
      */
     public function findById(string $id): ?JobProfile
