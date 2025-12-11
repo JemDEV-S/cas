@@ -113,14 +113,10 @@ class DocumentService
      */
     public function regeneratePDF(GeneratedDocument $document): string
     {
-        // Validar que el documento no tenga ninguna firma (completa o parcial)
+        // Validar que el documento no tenga ninguna firma completada
+        // Solo se permite regenerar mientras NO haya ninguna firma realizada
         if ($document->hasAnySignature()) {
-            throw new \Exception('No se puede regenerar un documento que tiene firmas. Los documentos con firmas deben mantener su integridad.');
-        }
-
-        // Validar que no tenga firmas en proceso
-        if ($document->signature_status === 'in_progress') {
-            throw new \Exception('No se puede regenerar un documento con firmas en proceso. Cancele el flujo de firmas primero.');
+            throw new \Exception('No se puede regenerar un documento que ya tiene firmas realizadas. Los documentos con firmas deben mantener su integridad.');
         }
 
         $template = $document->template;

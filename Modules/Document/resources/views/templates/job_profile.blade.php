@@ -310,11 +310,6 @@
                 <td>{{ $reviewed_by ?? '___________________________' }}</td>
                 <td>{{ $reviewed_at ?? '_______________' }}</td>
             </tr>
-            <tr>
-                <td><strong>Gerencia General</strong></td>
-                <td>{{ $approved_by ?? '___________________________' }}</td>
-                <td>{{ $approved_at ?? '_______________' }}</td>
-            </tr>
         </table>
     </div>
 
