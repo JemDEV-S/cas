@@ -143,19 +143,17 @@
                 <th>Número de Vacantes</th>
                 <td>{{ $total_vacancies }}</td>
             </tr>
-            @if(isset($contract_duration) && $contract_duration !== 'No especificado')
             <tr>
                 <th>Vigencia del Contrato</th>
-                <td>{{ $contract_duration }}</td>
+                <td>{{ $contract_duration ?? '3 MESES' }}</td>
             </tr>
-            @endif
             @if(isset($work_location) && $work_location)
             <tr>
                 <th>Lugar de Prestación</th>
                 <td>{{ $work_location }}</td>
             </tr>
             @endif
-            @if(isset($formatted_salary) && $formatted_salary !== 'No especificado')
+            @if(isset($formatted_salary) && $formatted_salary !== 'NO ESPECIFICADO')
             <tr>
                 <th>Remuneración Mensual</th>
                 <td>{{ $formatted_salary }}</td>
