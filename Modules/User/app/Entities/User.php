@@ -110,6 +110,18 @@ class User extends Authenticatable
         )->withTimestamps();
     }
 
+    /**
+     * Perfiles de puesto solicitados por el usuario
+     */
+    public function requestedJobProfiles(): HasMany
+    {
+        if (!class_exists('\Modules\JobProfile\Entities\JobProfile')) {
+            return null;
+        }
+
+        return $this->hasMany(\Modules\JobProfile\Entities\JobProfile::class, 'requested_by');
+    }
+
     public function getFullNameAttribute(): string
     {
         return "{$this->first_name} {$this->last_name}";

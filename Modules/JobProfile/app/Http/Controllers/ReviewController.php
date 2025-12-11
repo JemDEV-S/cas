@@ -20,11 +20,41 @@ class ReviewController extends Controller
     /**
      * Muestra la lista de perfiles pendientes de revisión
      */
-    public function index(): View
+    public function index(Request $request): View
     {
-        $jobProfiles = $this->jobProfileService->getByStatus('in_review');
+        // Obtener filtros desde la request
+        $filters = [
+            'search' => $request->input('search'),
+            'organizational_unit_id' => $request->input('organizational_unit_id'),
+            'position_code_id' => $request->input('position_code_id'),
+            'requested_by' => $request->input('requested_by'),
+            'date_from' => $request->input('date_from'),
+            'date_to' => $request->input('date_to'),
+        ];
 
-        return view('jobprofile::review.index', compact('jobProfiles'));
+        // Obtener perfiles con filtros aplicados
+        $jobProfiles = $this->jobProfileService->getByStatusWithFilters('in_review', $filters);
+
+        // Obtener datos para los selectores de filtros
+        $organizationalUnits = \Modules\Organization\Entities\OrganizationalUnit::where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        $positionCodes = \Modules\JobProfile\Entities\PositionCode::where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'code', 'name']);
+
+        $requesters = \Modules\User\Entities\User::whereHas('requestedJobProfiles')
+            ->orderBy('first_name')
+            ->get(['id', 'first_name', 'last_name', 'email']);
+
+        return view('jobprofile::review.index', compact(
+            'jobProfiles',
+            'organizationalUnits',
+            'positionCodes',
+            'requesters',
+            'filters'
+        ));
     }
 
     /**
