@@ -255,7 +255,7 @@ class EvaluationService
     /**
      * Obtener evaluaciones de un evaluador
      */
-    public function getEvaluatorEvaluations(int $evaluatorId, array $filters = [])
+    public function getEvaluatorEvaluations(string $evaluatorId, array $filters = [])
     {
         $query = Evaluation::with(['application', 'phase', 'jobPosting'])
             ->byEvaluator($evaluatorId);

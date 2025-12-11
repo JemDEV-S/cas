@@ -175,7 +175,7 @@ class EvaluatorAssignmentService
     /**
      * Obtener asignaciones por evaluador
      */
-    public function getEvaluatorAssignments(int $evaluatorId, array $filters = [])
+    public function getEvaluatorAssignments(string $evaluatorId, array $filters = [])
     {
         $query = EvaluatorAssignment::with(['application', 'phase', 'jobPosting'])
             ->byEvaluator($evaluatorId);
@@ -200,7 +200,7 @@ class EvaluatorAssignmentService
     /**
      * Verificar conflicto de interés
      */
-    protected function hasConflictOfInterest(int $evaluatorId, int $applicationId): bool
+    protected function hasConflictOfInterest(string $evaluatorId, string $applicationId): bool
     {
         // Aquí implementarías la lógica de detección de conflictos
         // Por ejemplo:

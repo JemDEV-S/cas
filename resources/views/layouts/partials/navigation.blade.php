@@ -1,6 +1,5 @@
-
 <nav class="bg-white shadow-md sticky top-0 z-50 border-b border-gray-100" x-data="{ mobileOpen: false }">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
             <div class="flex">
                 <!-- Logo -->
@@ -29,7 +28,7 @@
                         Dashboard
                     </a>
 
-                    <!-- Convocatorias - Para quienes tienen permisos -->
+                    <!-- Convocatorias -->
                     @if(auth()->user()->hasAnyPermission(['jobposting.view.postings', 'jobposting.create.posting']))
                     <div class="relative" @mouseenter="open = 'convocatorias'" @mouseleave="open = null">
                         <button class="inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition-all
@@ -45,14 +44,10 @@
                             </svg>
                         </button>
 
-                        <!-- Dropdown -->
                         <div x-show="open === 'convocatorias'"
                              x-transition:enter="transition ease-out duration-200"
                              x-transition:enter-start="opacity-0 scale-95"
                              x-transition:enter-end="opacity-100 scale-100"
-                             x-transition:leave="transition ease-in duration-150"
-                             x-transition:leave-start="opacity-100 scale-100"
-                             x-transition:leave-end="opacity-0 scale-95"
                              class="absolute left-0 mt-2 w-56 rounded-xl shadow-lg bg-white ring-1 ring-gray-200 overflow-hidden"
                              style="display: none;">
                             <div class="py-1">
@@ -64,9 +59,6 @@
                                     </svg>
                                     <span class="font-medium group-hover:text-blue-500">Dashboard</span>
                                 </a>
-                                @endcan
-
-                                @can('jobposting.view.postings')
                                 <a href="{{ route('jobposting.list') }}"
                                    class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 transition-all group">
                                     <svg class="w-5 h-5 mr-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -75,7 +67,6 @@
                                     <span class="font-medium group-hover:text-green-500">Ver Todas</span>
                                 </a>
                                 @endcan
-
                                 @can('jobposting.create.posting')
                                 <div class="border-t border-gray-200 my-1"></div>
                                 <a href="{{ route('jobposting.create') }}"
@@ -90,6 +81,105 @@
                         </div>
                     </div>
                     @endif
+
+                    <!-- Postulaciones (Applications) -->
+                    <div class="relative" @mouseenter="open = 'postulaciones'" @mouseleave="open = null">
+                        <button class="inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition-all
+                                     {{ request()->routeIs('application.*')
+                                         ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-md'
+                                         : 'text-gray-700 hover:bg-gray-100' }}">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            Postulaciones
+                            <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+
+                        <div x-show="open === 'postulaciones'"
+                             x-transition:enter="transition ease-out duration-200"
+                             x-transition:enter-start="opacity-0 scale-95"
+                             x-transition:enter-end="opacity-100 scale-100"
+                             class="absolute left-0 mt-2 w-56 rounded-xl shadow-lg bg-white ring-1 ring-gray-200 overflow-hidden"
+                             style="display: none;">
+                            <div class="py-1">
+                                <a href="{{ route('application.index') }}"
+                                   class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 transition-all group">
+                                    <svg class="w-5 h-5 mr-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+                                    </svg>
+                                    <span class="font-medium group-hover:text-blue-500">Ver Todas</span>
+                                </a>
+                                <a href="{{ route('application.create') }}"
+                                   class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 transition-all group">
+                                    <svg class="w-5 h-5 mr-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                    </svg>
+                                    <span class="font-medium group-hover:text-green-500">Nueva Postulación</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Evaluaciones -->
+                    <div class="relative" @mouseenter="open = 'evaluaciones'" @mouseleave="open = null">
+                        <button class="inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition-all
+                                     {{ request()->routeIs('evaluation.*')
+                                         ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md'
+                                         : 'text-gray-700 hover:bg-gray-100' }}">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                            </svg>
+                            Evaluaciones
+                            <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+
+                        <div x-show="open === 'evaluaciones'"
+                             x-transition:enter="transition ease-out duration-200"
+                             x-transition:enter-start="opacity-0 scale-95"
+                             x-transition:enter-end="opacity-100 scale-100"
+                             class="absolute left-0 mt-2 w-56 rounded-xl shadow-lg bg-white ring-1 ring-gray-200 overflow-hidden"
+                             style="display: none;">
+                            <div class="py-1">
+                                <a href="{{ route('evaluation.index') }}"
+                                   class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-orange-50 hover:to-red-50 transition-all group">
+                                    <svg class="w-5 h-5 mr-3 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                    </svg>
+                                    <span class="font-medium group-hover:text-orange-500">Dashboard</span>
+                                </a>
+                                <a href="{{ route('evaluation.my-evaluations') }}"
+                                   class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all group">
+                                    <svg class="w-5 h-5 mr-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                    </svg>
+                                    <span class="font-medium group-hover:text-blue-500">Mis Evaluaciones</span>
+                                </a>
+                                @can('manage-criteria')
+                                <div class="border-t border-gray-200 my-1"></div>
+                                <a href="{{ route('evaluation-criteria.index') }}"
+                                   class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 transition-all group">
+                                    <svg class="w-5 h-5 mr-3 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
+                                    </svg>
+                                    <span class="font-medium group-hover:text-purple-500">Criterios</span>
+                                </a>
+                                @endcan
+                                @can('assign-evaluators')
+                                <a href="{{ route('evaluator-assignments.index') }}"
+                                   class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-teal-50 hover:to-cyan-50 transition-all group">
+                                    <svg class="w-5 h-5 mr-3 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                                    </svg>
+                                    <span class="font-medium group-hover:text-teal-500">Asignaciones</span>
+                                </a>
+                                @endcan
+                            </div>
+                        </div>
+                    </div>
 
                     <!-- Perfiles de Puesto -->
                     @if(auth()->user()->hasAnyPermission(['jobprofile.view.profiles', 'jobprofile.view.own', 'jobprofile.create.profile']))
@@ -114,7 +204,6 @@
                              class="absolute left-0 pt-4 w-56 rounded-xl shadow-lg bg-white ring-1 ring-gray-200 overflow-hidden"
                              style="display: none;">
                             <div class="py-1">
-                                {{-- Ver todos los perfiles (Permiso global) --}}
                                 @can('jobprofile.view.profiles')
                                 <a href="{{ route('jobprofile.index') }}"
                                    class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 transition-all group">
@@ -124,7 +213,6 @@
                                     <span class="font-medium group-hover:text-purple-500">Todos los Perfiles</span>
                                 </a>
                                 @else
-                                    {{-- Ver solo mis perfiles (Permiso limitado) --}}
                                     @can('jobprofile.view.own')
                                     <a href="{{ route('jobprofile.index') }}"
                                        class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 transition-all group">
@@ -201,14 +289,10 @@
                             </svg>
                         </button>
 
-                        <!-- Dropdown -->
                         <div x-show="open === 'documentos'"
                              x-transition:enter="transition ease-out duration-200"
                              x-transition:enter-start="opacity-0 scale-95"
                              x-transition:enter-end="opacity-100 scale-100"
-                             x-transition:leave="transition ease-in duration-150"
-                             x-transition:leave-start="opacity-100 scale-100"
-                             x-transition:leave-end="opacity-0 scale-95"
                              class="absolute left-0 mt-2 w-56 rounded-xl shadow-lg bg-white ring-1 ring-gray-200 overflow-hidden"
                              style="display: none;">
                             <div class="py-1">
@@ -326,11 +410,11 @@
                             class="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-all">
                         <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center shadow-md">
                             <span class="text-white font-bold text-sm">
-                                {{ strtoupper(substr(auth()->user()->first_name, 0, 1)) }}{{ strtoupper(substr(auth()->user()->last_name, 0, 1)) }}
+                                {{ strtoupper(substr(auth()->user()->first_name ?? 'U', 0, 1)) }}{{ strtoupper(substr(auth()->user()->last_name ?? 'S', 0, 1)) }}
                             </span>
                         </div>
                         <div class="text-left hidden md:block">
-                            <div class="text-sm font-bold text-gray-900">{{ auth()->user()->full_name }}</div>
+                            <div class="text-sm font-bold text-gray-900">{{ auth()->user()->full_name ?? auth()->user()->name }}</div>
                             <div class="text-xs text-gray-500">{{ auth()->user()->roles->first()?->name ?? 'Usuario' }}</div>
                         </div>
                         <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -347,7 +431,7 @@
                          class="absolute right-0 mt-2 w-56 rounded-xl shadow-lg bg-white ring-1 ring-gray-200 overflow-hidden"
                          style="display: none;">
                         <div class="px-4 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200">
-                            <p class="text-sm font-bold text-gray-900">{{ auth()->user()->full_name }}</p>
+                            <p class="text-sm font-bold text-gray-900">{{ auth()->user()->full_name ?? auth()->user()->name }}</p>
                             <p class="text-xs text-gray-600">{{ auth()->user()->email }}</p>
                         </div>
                         <div class="py-1">
@@ -373,7 +457,6 @@
                                 </svg>
                                 <span class="font-medium group-hover:text-purple-500">Preferencias</span>
                             </a>
-                            {{-- Configuración del Sistema --}}
                             @can('configuration.view')
                             <a href="{{ route('configuration.index') }}"
                             class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 transition-all group">
@@ -413,7 +496,7 @@
         </div>
     </div>
 
-    <!-- Mobile menu (Se muestra solo en móvil) -->
+    <!-- Mobile menu -->
     <div x-show="mobileOpen"
          x-transition:enter="transition ease-out duration-200"
          x-transition:enter-start="opacity-0 scale-95"
@@ -433,6 +516,16 @@
             </a>
             @endcan
 
+            <a href="{{ route('application.index') }}"
+               class="block px-4 py-3 text-base font-medium text-center {{ request()->routeIs('application.*') ? 'bg-cyan-50 text-cyan-500 border-l-4 border-cyan-500' : 'text-gray-700 hover:bg-gray-50' }}">
+                Postulaciones
+            </a>
+
+            <a href="{{ route('evaluation.index') }}"
+               class="block px-4 py-3 text-base font-medium text-center {{ request()->routeIs('evaluation.*') ? 'bg-orange-50 text-orange-500 border-l-4 border-orange-500' : 'text-gray-700 hover:bg-gray-50' }}">
+                Evaluaciones
+            </a>
+
             @can('organization.view.units')
             <a href="{{ route('organizational-units.index') }}"
                class="block px-4 py-3 text-base font-medium text-center {{ request()->routeIs('organizational-units.*') ? 'bg-amber-50 text-amber-500 border-l-4 border-amber-500' : 'text-gray-700 hover:bg-gray-50' }}">
@@ -442,15 +535,8 @@
 
             @can('user.view.users')
             <a href="{{ route('users.index') }}"
-               class="block px-4 py-3 text-base font-medium text-center {{ request()->routeIs('users.*') && !request()->routeIs('users.assignments') ? 'bg-indigo-50 text-indigo-500 border-l-4 border-indigo-500' : 'text-gray-700 hover:bg-gray-50' }}">
+               class="block px-4 py-3 text-base font-medium text-center {{ request()->routeIs('users.*') ? 'bg-indigo-50 text-indigo-500 border-l-4 border-indigo-500' : 'text-gray-700 hover:bg-gray-50' }}">
                 Usuarios
-            </a>
-            @endcan
-
-            @can('user.view.assignments')
-            <a href="{{ route('assignments.index') }}"
-               class="block px-4 py-3 text-base font-medium text-center {{ request()->routeIs('assignments.*') || request()->routeIs('users.assignments') ? 'bg-teal-50 text-teal-500 border-l-4 border-teal-500' : 'text-gray-700 hover:bg-gray-50' }}">
-                Asignaciones
             </a>
             @endcan
         </div>
@@ -460,11 +546,11 @@
             <div class="flex items-center px-4">
                 <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center shadow-md">
                     <span class="text-white font-bold">
-                        {{ strtoupper(substr(auth()->user()->first_name, 0, 1)) }}{{ strtoupper(substr(auth()->user()->last_name, 0, 1)) }}
+                        {{ strtoupper(substr(auth()->user()->first_name ?? 'U', 0, 1)) }}{{ strtoupper(substr(auth()->user()->last_name ?? 'S', 0, 1)) }}
                     </span>
                 </div>
                 <div class="ml-3">
-                    <div class="text-base font-bold text-gray-900">{{ auth()->user()->full_name }}</div>
+                    <div class="text-base font-bold text-gray-900">{{ auth()->user()->full_name ?? auth()->user()->name }}</div>
                     <div class="text-sm text-gray-500">{{ auth()->user()->email }}</div>
                 </div>
             </div>
