@@ -382,7 +382,7 @@ class JobProfile extends BaseSoftDelete
     public function getContractDurationAttribute(): string
     {
         if (!$this->contract_start_date || !$this->contract_end_date) {
-            return 'No especificado';
+            return '3 MESES';
         }
 
         return $this->contract_start_date->format('d \d\e F \d\e\l Y') .

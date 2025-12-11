@@ -190,4 +190,20 @@ class JobProfilePolicy
             && $jobProfile->requested_by !== $user->id
             && $jobProfile->canRequestModification();
     }
+
+    /**
+     * Determine if the user can update during review.
+     * Permite al revisor editar el perfil directamente durante la revisión.
+     */
+    public function updateDuringReview(User $user, JobProfile $jobProfile): bool
+    {
+        // No puede editar su propio perfil
+        if ($jobProfile->requested_by === $user->id) {
+            return false;
+        }
+
+        // Debe tener permiso de revisión y el perfil debe estar en revisión
+        return $user->hasPermission('jobprofile.review.profile')
+            && $jobProfile->isInReview();
+    }
 }
