@@ -26,10 +26,40 @@ class EvaluationController extends Controller
     }
 
     /**
-     * Display a listing of evaluations.
+     * Display a listing of evaluations (WEB).
+     * GET /evaluations
+     */
+    public function index(Request $request)
+    {
+        // Si es una petición AJAX/API, devolver JSON
+        if ($request->wantsJson() || $request->is('api/*')) {
+            return $this->indexApi($request);
+        }
+
+        // Si es petición web, devolver vista
+        $evaluatorId = auth()->id();
+        
+        $filters = [
+            'status' => $request->input('status'),
+            'phase_id' => $request->input('phase_id'),
+            'pending_only' => $request->boolean('pending_only'),
+            'completed_only' => $request->boolean('completed_only'),
+            'per_page' => $request->input('per_page', 15),
+        ];
+
+        $evaluations = $this->evaluationService->getEvaluatorEvaluations($evaluatorId, $filters);
+
+        return view('evaluation::index', [
+            'evaluations' => $evaluations,
+            'filters' => $filters,
+        ]);
+    }
+
+    /**
+     * Display a listing of evaluations (API).
      * GET /api/evaluations
      */
-    public function index(Request $request): JsonResponse
+    public function indexApi(Request $request): JsonResponse
     {
         $evaluatorId = $request->input('evaluator_id', auth()->id());
         

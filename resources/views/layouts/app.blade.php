@@ -14,24 +14,18 @@
 
     @stack('styles')
 </head>
-<body class="font-sans antialiased">
-    <div class="min-h-screen bg-gray-100">
+<body class="font-sans antialiased bg-gray-50">
+    <div class="min-h-screen">
         @include('layouts.partials.navigation')
 
-        <!-- Page Heading -->
-        @if (isset($header))
-            <header class="bg-white shadow">
-                <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-                    {{ $header }}
-                </div>
-            </header>
-        @endif
-
         <!-- Page Content -->
-        <main>
+        <main class="px-3 sm:px-4 lg:px-5"> <!-- Padding reducido -->
             @include('layouts.partials.alerts')
-
-            @yield('content')
+            
+            <!-- Contenido más compacto -->
+            <div class="space-y-4 sm:space-y-5"> <!-- Espaciado vertical reducido -->
+                @yield('content')
+            </div>
         </main>
 
         @include('layouts.partials.footer')
