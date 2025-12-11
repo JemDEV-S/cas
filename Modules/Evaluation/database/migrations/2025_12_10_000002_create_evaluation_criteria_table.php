@@ -15,9 +15,9 @@ return new class extends Migration
             $table->id();
             $table->uuid('uuid')->unique();
             
-            // Relaciones
-            $table->foreignId('phase_id')->constrained('process_phases')->onDelete('cascade');
-            $table->foreignId('job_posting_id')->nullable()->constrained('job_postings')->onDelete('cascade')
+            // Relaciones - TODAS LAS TABLAS EXTERNAS USAN UUID
+            $table->foreignUuid('phase_id')->constrained('process_phases')->onDelete('cascade');
+            $table->foreignUuid('job_posting_id')->nullable()->constrained('job_postings')->onDelete('cascade')
                 ->comment('Si es específico de una convocatoria');
             
             // Datos del criterio

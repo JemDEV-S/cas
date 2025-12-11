@@ -11,6 +11,10 @@ class EvaluationDatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // $this->call([]);
+        $this->call([
+            EvaluationCriteriaSeeder::class,
+        ]);
+        
+        $this->command->info('✅ Evaluation Module seeded successfully!');
     }
 }
