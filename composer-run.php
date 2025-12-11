@@ -1,18 +1,27 @@
 <?php
-// composer-run.php
+// clear-cache.php
 echo "<pre>";
-echo "Ejecutando composer dump-autoload...\n\n";
-
-// Cambiar al directorio del proyecto
 chdir(__DIR__);
 
-// Ejecutar composer dump-autoload
-$output = shell_exec('composer dump-autoload 2>&1');
-echo $output;
+$cachePaths = [
+    'bootstrap/cache/config.php',
+    'bootstrap/cache/services.php',
+    'bootstrap/cache/packages.php',
+    'bootstrap/cache/routes-v7.php',
+];
 
-echo "\n\nProceso completado.";
+echo "Limpiando archivos de cache...\n\n";
+
+foreach ($cachePaths as $path) {
+    if (file_exists($path)) {
+        unlink($path);
+        echo "✓ Eliminado: $path\n";
+    } else {
+        echo "- No existe: $path\n";
+    }
+}
+
+echo "\n✓ Cache limpiado exitosamente!\n";
+echo "Intenta recargar tu aplicación ahora.\n";
 echo "</pre>";
-
-// Opcional: Auto-eliminar este archivo después de ejecutarlo
-// unlink(__FILE__);
 ?>
