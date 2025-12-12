@@ -6,13 +6,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Modules\Core\Traits\{HasUuid, HasMetadata};
 use Modules\Evaluation\Enums\AssignmentStatusEnum;
 use Modules\JobPosting\Entities\{JobPosting, ProcessPhase};
+use Illuminate\Support\Str;
 
 class EvaluatorAssignment extends Model
 {
-    use HasUuid, HasMetadata, SoftDeletes, HasFactory;
+    use SoftDeletes, HasFactory;
 
     protected $table = 'evaluator_assignments';
 
@@ -51,6 +51,20 @@ class EvaluatorAssignment extends Model
         'notified_at' => 'datetime',
         'metadata' => 'array',
     ];
+
+    /**
+     * Boot del modelo
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            if (empty($model->uuid)) {
+                $model->uuid = (string) Str::uuid();
+            }
+        });
+    }
 
     /**
      * Relaciones

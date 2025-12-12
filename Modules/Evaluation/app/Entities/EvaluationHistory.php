@@ -5,11 +5,11 @@ namespace Modules\Evaluation\Entities;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Modules\Core\Traits\{HasUuid, HasMetadata};
+use Illuminate\Support\Str;
 
 class EvaluationHistory extends Model
 {
-    use HasUuid, HasMetadata, HasFactory;
+    use HasFactory;
 
     protected $table = 'evaluation_history';
 
@@ -32,6 +32,20 @@ class EvaluationHistory extends Model
         'new_values' => 'array',
         'metadata' => 'array',
     ];
+
+    /**
+     * Boot del modelo
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            if (empty($model->uuid)) {
+                $model->uuid = (string) Str::uuid();
+            }
+        });
+    }
 
     /**
      * Relaciones

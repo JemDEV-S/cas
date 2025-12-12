@@ -6,19 +6,70 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Modules\Evaluation\Entities\EvaluationCriterion;
+use Modules\JobPosting\Entities\ProcessPhase;
 
 class EvaluationCriterionController extends Controller
 {
     /**
      * Display a listing of evaluation criteria.
-     * GET /api/evaluation-criteria
+     * GET /evaluation-criteria
      */
-    public function index(Request $request): JsonResponse
+    public function index(Request $request)
+    {
+        // Si es petición AJAX/API, devolver JSON
+        if ($request->wantsJson() || $request->is('api/*')) {
+            return $this->indexApi($request);
+        }
+
+        // Si es web, devolver vista
+        $query = EvaluationCriterion::with('phase');
+
+        // Aplicar filtros
+        if ($request->has('phase_id')) {
+            $query->byPhase($request->input('phase_id'));
+        }
+
+        if ($request->has('job_posting_id')) {
+            $query->byJobPosting($request->input('job_posting_id'));
+        }
+
+        if ($request->has('active_only')) {
+            if ($request->boolean('active_only')) {
+                $query->active();
+            }
+        }
+
+        if ($request->has('system_only')) {
+            if ($request->boolean('system_only')) {
+                $query->system();
+            }
+        }
+
+        $query->ordered();
+        $criteria = $query->get();
+
+        // Agrupar por fase
+        $criteriaByPhase = $criteria->groupBy(function ($criterion) {
+            return $criterion->phase->name ?? 'Sin Fase';
+        });
+
+        // Obtener fases para filtros
+        $phases = ProcessPhase::orderBy('order')->get();
+
+        return view('evaluation::criteria.index', [
+            'criteriaByPhase' => $criteriaByPhase,
+            'phases' => $phases,
+        ]);
+    }
+
+    /**
+     * API version of index
+     */
+    protected function indexApi(Request $request): JsonResponse
     {
         try {
             $query = EvaluationCriterion::with('phase');
 
-            // Filtros
             if ($request->has('phase_id')) {
                 $query->byPhase($request->input('phase_id'));
             }
@@ -35,9 +86,7 @@ class EvaluationCriterionController extends Controller
                 $query->system();
             }
 
-            // Ordenamiento
             $query->ordered();
-
             $criteria = $query->get();
 
             return response()->json([
@@ -55,13 +104,12 @@ class EvaluationCriterionController extends Controller
 
     /**
      * Store a newly created criterion.
-     * POST /api/evaluation-criteria
      */
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'phase_id' => ['required', 'integer', 'exists:process_phases,id'],
-            'job_posting_id' => ['nullable', 'integer', 'exists:job_postings,id'],
+            'phase_id' => ['required', 'string', 'exists:process_phases,id'],
+            'job_posting_id' => ['nullable', 'string', 'exists:job_postings,id'],
             'code' => ['required', 'string', 'max:50', 'unique:evaluation_criteria,code'],
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
@@ -95,29 +143,37 @@ class EvaluationCriterionController extends Controller
 
     /**
      * Display the specified criterion.
-     * GET /api/evaluation-criteria/{id}
      */
-    public function show(int $id): JsonResponse
+    public function show(int $id)
     {
         try {
             $criterion = EvaluationCriterion::with('phase', 'jobPosting')->findOrFail($id);
 
-            return response()->json([
-                'success' => true,
-                'data' => $criterion,
-            ]);
+            // Si es API, devolver JSON
+            if (request()->wantsJson() || request()->is('api/*')) {
+                return response()->json([
+                    'success' => true,
+                    'data' => $criterion,
+                ]);
+            }
+
+            // Si es web, devolver vista
+            return view('evaluation::criteria.show', compact('criterion'));
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Criterio no encontrado',
-                'error' => $e->getMessage(),
-            ], 404);
+            if (request()->wantsJson() || request()->is('api/*')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Criterio no encontrado',
+                    'error' => $e->getMessage(),
+                ], 404);
+            }
+
+            abort(404);
         }
     }
 
     /**
      * Update the specified criterion.
-     * PUT /api/evaluation-criteria/{id}
      */
     public function update(Request $request, int $id): JsonResponse
     {
@@ -139,7 +195,6 @@ class EvaluationCriterionController extends Controller
         try {
             $criterion = EvaluationCriterion::findOrFail($id);
 
-            // Verificar si es un criterio del sistema
             if ($criterion->is_system) {
                 return response()->json([
                     'success' => false,
@@ -165,14 +220,12 @@ class EvaluationCriterionController extends Controller
 
     /**
      * Remove the specified criterion.
-     * DELETE /api/evaluation-criteria/{id}
      */
     public function destroy(int $id): JsonResponse
     {
         try {
             $criterion = EvaluationCriterion::findOrFail($id);
 
-            // Verificar si es un criterio del sistema
             if ($criterion->is_system) {
                 return response()->json([
                     'success' => false,
@@ -180,7 +233,6 @@ class EvaluationCriterionController extends Controller
                 ], 403);
             }
 
-            // Verificar si tiene evaluaciones asociadas
             if ($criterion->details()->exists()) {
                 return response()->json([
                     'success' => false,
@@ -205,9 +257,8 @@ class EvaluationCriterionController extends Controller
 
     /**
      * Get criteria by phase.
-     * GET /api/evaluation-criteria/by-phase/{phaseId}
      */
-    public function byPhase(int $phaseId): JsonResponse
+    public function byPhase(string $phaseId): JsonResponse
     {
         try {
             $criteria = EvaluationCriterion::active()
@@ -230,13 +281,12 @@ class EvaluationCriterionController extends Controller
 
     /**
      * Get criteria for a specific job posting and phase.
-     * GET /api/evaluation-criteria/for-evaluation
      */
     public function forEvaluation(Request $request): JsonResponse
     {
         $request->validate([
-            'phase_id' => ['required', 'integer', 'exists:process_phases,id'],
-            'job_posting_id' => ['required', 'integer', 'exists:job_postings,id'],
+            'phase_id' => ['required', 'string', 'exists:process_phases,id'],
+            'job_posting_id' => ['required', 'string', 'exists:job_postings,id'],
         ]);
 
         try {
@@ -246,7 +296,6 @@ class EvaluationCriterionController extends Controller
                 ->ordered()
                 ->get();
 
-            // Calcular el puntaje máximo total
             $maxTotalScore = $criteria->sum(function ($criterion) {
                 return $criterion->max_score * $criterion->weight;
             });
@@ -270,7 +319,6 @@ class EvaluationCriterionController extends Controller
 
     /**
      * Toggle criterion active status.
-     * POST /api/evaluation-criteria/{id}/toggle-active
      */
     public function toggleActive(int $id): JsonResponse
     {
@@ -302,7 +350,6 @@ class EvaluationCriterionController extends Controller
 
     /**
      * Reorder criteria.
-     * POST /api/evaluation-criteria/reorder
      */
     public function reorder(Request $request): JsonResponse
     {

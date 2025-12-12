@@ -6,13 +6,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\{BelongsTo, HasMany};
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Modules\Core\Traits\{HasUuid, HasMetadata};
 use Modules\Evaluation\Enums\ScoreTypeEnum;
 use Modules\JobPosting\Entities\{JobPosting, ProcessPhase};
+use Illuminate\Support\Str;
 
 class EvaluationCriterion extends Model
 {
-    use HasUuid, HasMetadata, SoftDeletes, HasFactory;
+    use SoftDeletes, HasFactory;
 
     protected $table = 'evaluation_criteria';
 
@@ -52,6 +52,20 @@ class EvaluationCriterion extends Model
     ];
 
     /**
+     * Boot del modelo - Generar UUID automáticamente
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            if (empty($model->uuid)) {
+                $model->uuid = (string) Str::uuid();
+            }
+        });
+    }
+
+    /**
      * Relaciones
      */
     public function phase(): BelongsTo
@@ -61,7 +75,7 @@ class EvaluationCriterion extends Model
 
     public function jobPosting(): BelongsTo
     {
-        return $this->belongsTo(JobPosting::class);
+        return $this->belongsTo(JobPosting::class, 'job_posting_id');
     }
 
     public function details(): HasMany

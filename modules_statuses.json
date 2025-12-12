@@ -8,5 +8,6 @@
     "JobPosting": true,
     "Document": true,
     "Evaluation": true,
-    "Application": true
+    "Application": true,
+    "Jury": true
 }

@@ -6,11 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Modules\Core\Traits\{HasUuid, HasMetadata};
+use Illuminate\Support\Str;
 
 class EvaluationDetail extends Model
 {
-    use HasUuid, HasMetadata, SoftDeletes, HasFactory;
+    use SoftDeletes, HasFactory;
 
     protected $table = 'evaluation_details';
 
@@ -33,6 +33,42 @@ class EvaluationDetail extends Model
         'version' => 'integer',
         'metadata' => 'array',
     ];
+
+    /**
+     * Boot del modelo
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Generar UUID al crear
+        static::creating(function ($model) {
+            if (empty($model->uuid)) {
+                $model->uuid = (string) Str::uuid();
+            }
+        });
+
+        // Calcular weighted_score automáticamente al guardar
+        static::saving(function ($detail) {
+            if ($detail->criterion) {
+                $detail->weighted_score = $detail->calculateWeightedScore();
+            }
+        });
+
+        // Actualizar el total de la evaluación después de guardar
+        static::saved(function ($detail) {
+            if ($detail->evaluation) {
+                $detail->evaluation->updateScores();
+            }
+        });
+
+        // Actualizar el total de la evaluación después de eliminar
+        static::deleted(function ($detail) {
+            if ($detail->evaluation) {
+                $detail->evaluation->updateScores();
+            }
+        });
+    }
 
     /**
      * Relaciones
@@ -88,32 +124,4 @@ class EvaluationDetail extends Model
         $this->save();
     }
 
-    /**
-     * Boot method
-     */
-    protected static function boot()
-    {
-        parent::boot();
-
-        // Calcular weighted_score automáticamente al guardar
-        static::saving(function ($detail) {
-            if ($detail->criterion) {
-                $detail->weighted_score = $detail->calculateWeightedScore();
-            }
-        });
-
-        // Actualizar el total de la evaluación después de guardar
-        static::saved(function ($detail) {
-            if ($detail->evaluation) {
-                $detail->evaluation->updateScores();
-            }
-        });
-
-        // Actualizar el total de la evaluación después de eliminar
-        static::deleted(function ($detail) {
-            if ($detail->evaluation) {
-                $detail->evaluation->updateScores();
-            }
-        });
-    }
 }
