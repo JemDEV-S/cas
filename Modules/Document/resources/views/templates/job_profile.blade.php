@@ -307,7 +307,7 @@
             </tr>
             <tr>
                 <td><strong>Recursos Humanos</strong></td>
-                <td>{{ $reviewed_by ?? '___________________________' }}</td>
+                <td>ISIS CUSI QOYLLOR QUISPE QUISPE </td>
                 <td>{{ $reviewed_at ?? '_______________' }}</td>
             </tr>
         </table>

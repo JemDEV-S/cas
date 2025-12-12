@@ -123,7 +123,7 @@
                     </div>
 
                     <!-- Evaluaciones -->
-                    <div class="relative" @mouseenter="open = 'evaluaciones'" @mouseleave="open = null">
+                    <!-- <div class="relative" @mouseenter="open = 'evaluaciones'" @mouseleave="open = null">
                         <button class="inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition-all
                                      {{ request()->routeIs('evaluation.*')
                                          ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md'
@@ -179,7 +179,7 @@
                                 @endcan
                             </div>
                         </div>
-                    </div>
+                    </div> -->
 
                     <!-- Perfiles de Puesto -->
                     @if(auth()->user()->hasAnyPermission(['jobprofile.view.profiles', 'jobprofile.view.own', 'jobprofile.create.profile']))
