@@ -1,5 +1,5 @@
 <nav class="bg-white shadow-md sticky top-0 z-50 border-b border-gray-100" x-data="{ mobileOpen: false }">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="w-full px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
             <div class="flex">
                 <!-- Logo -->
@@ -15,14 +15,14 @@
                 </div>
 
                 <!-- Navigation Links -->
-                <div class="hidden sm:ml-6 sm:flex sm:space-x-2 sm:items-center" x-data="{ open: null }">
+                <div class="hidden sm:ml-6 sm:flex sm:space-x-1 sm:items-center" x-data="{ openDropdown: null }" @click.away="openDropdown = null">
                     <!-- Dashboard - Todos -->
                     <a href="{{ route('dashboard') }}"
-                       class="inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition-all
+                       class="inline-flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium transition-all
                               {{ request()->routeIs('dashboard')
                                   ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-md'
                                   : 'text-gray-700 hover:bg-gray-100' }}">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
                         </svg>
                         Dashboard
@@ -30,25 +30,29 @@
 
                     <!-- Convocatorias -->
                     @if(auth()->user()->hasAnyPermission(['jobposting.view.postings', 'jobposting.create.posting']))
-                    <div class="relative" @mouseenter="open = 'convocatorias'" @mouseleave="open = null">
-                        <button class="inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition-all
+                    <div class="relative">
+                        <button @click="openDropdown = openDropdown === 'convocatorias' ? null : 'convocatorias'"
+                                class="inline-flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium transition-all
                                      {{ request()->routeIs('jobposting.*')
                                          ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-md'
                                          : 'text-gray-700 hover:bg-gray-100' }}">
-                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                             </svg>
                             Convocatorias
-                            <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-4 h-4 ml-1 transition-transform" :class="openDropdown === 'convocatorias' ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                             </svg>
                         </button>
 
-                        <div x-show="open === 'convocatorias'"
+                        <div x-show="openDropdown === 'convocatorias'"
                              x-transition:enter="transition ease-out duration-200"
                              x-transition:enter-start="opacity-0 scale-95"
                              x-transition:enter-end="opacity-100 scale-100"
-                             class="absolute left-0 mt-2 w-56 rounded-xl shadow-lg bg-white ring-1 ring-gray-200 overflow-hidden"
+                             x-transition:leave="transition ease-in duration-150"
+                             x-transition:leave-start="opacity-100 scale-100"
+                             x-transition:leave-end="opacity-0 scale-95"
+                             class="absolute left-0 mt-2 w-56 rounded-xl shadow-lg bg-white ring-1 ring-gray-200 overflow-hidden z-10"
                              style="display: none;">
                             <div class="py-1">
                                 @can('jobposting.view.postings')
@@ -83,25 +87,29 @@
                     @endif
 
                     <!-- Postulaciones (Applications) -->
-                    <div class="relative" @mouseenter="open = 'postulaciones'" @mouseleave="open = null">
-                        <button class="inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition-all
+                    <div class="relative">
+                        <button @click="openDropdown = openDropdown === 'postulaciones' ? null : 'postulaciones'"
+                                class="inline-flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium transition-all
                                      {{ request()->routeIs('application.*')
                                          ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-md'
                                          : 'text-gray-700 hover:bg-gray-100' }}">
-                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                             </svg>
                             Postulaciones
-                            <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-4 h-4 ml-1 transition-transform" :class="openDropdown === 'postulaciones' ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                             </svg>
                         </button>
 
-                        <div x-show="open === 'postulaciones'"
+                        <div x-show="openDropdown === 'postulaciones'"
                              x-transition:enter="transition ease-out duration-200"
                              x-transition:enter-start="opacity-0 scale-95"
                              x-transition:enter-end="opacity-100 scale-100"
-                             class="absolute left-0 mt-2 w-56 rounded-xl shadow-lg bg-white ring-1 ring-gray-200 overflow-hidden"
+                             x-transition:leave="transition ease-in duration-150"
+                             x-transition:leave-start="opacity-100 scale-100"
+                             x-transition:leave-end="opacity-0 scale-95"
+                             class="absolute left-0 mt-2 w-56 rounded-xl shadow-lg bg-white ring-1 ring-gray-200 overflow-hidden z-10"
                              style="display: none;">
                             <div class="py-1">
                                 <a href="{{ route('application.index') }}"
@@ -123,25 +131,29 @@
                     </div>
 
                     <!-- Evaluaciones -->
-                    <!-- <div class="relative" @mouseenter="open = 'evaluaciones'" @mouseleave="open = null">
-                        <button class="inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition-all
+                    <div class="relative">
+                        <button @click="openDropdown = openDropdown === 'evaluaciones' ? null : 'evaluaciones'"
+                                class="inline-flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium transition-all
                                      {{ request()->routeIs('evaluation.*')
                                          ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md'
                                          : 'text-gray-700 hover:bg-gray-100' }}">
-                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
                             </svg>
                             Evaluaciones
-                            <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-4 h-4 ml-1 transition-transform" :class="openDropdown === 'evaluaciones' ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                             </svg>
                         </button>
 
-                        <div x-show="open === 'evaluaciones'"
+                        <div x-show="openDropdown === 'evaluaciones'"
                              x-transition:enter="transition ease-out duration-200"
                              x-transition:enter-start="opacity-0 scale-95"
                              x-transition:enter-end="opacity-100 scale-100"
-                             class="absolute left-0 mt-2 w-56 rounded-xl shadow-lg bg-white ring-1 ring-gray-200 overflow-hidden"
+                             x-transition:leave="transition ease-in duration-150"
+                             x-transition:leave-start="opacity-100 scale-100"
+                             x-transition:leave-end="opacity-0 scale-95"
+                             class="absolute left-0 mt-2 w-56 rounded-xl shadow-lg bg-white ring-1 ring-gray-200 overflow-hidden z-10"
                              style="display: none;">
                             <div class="py-1">
                                 <a href="{{ route('evaluation.index') }}"
@@ -179,29 +191,33 @@
                                 @endcan
                             </div>
                         </div>
-                    </div> -->
+                    </div>
 
                     <!-- Perfiles de Puesto -->
                     @if(auth()->user()->hasAnyPermission(['jobprofile.view.profiles', 'jobprofile.view.own', 'jobprofile.create.profile']))
-                    <div class="relative" @mouseenter="open = 'perfiles'" @mouseleave="open = null">
-                        <button class="inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition-all
+                    <div class="relative">
+                        <button @click="openDropdown = openDropdown === 'perfiles' ? null : 'perfiles'"
+                                class="inline-flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium transition-all
                                      {{ request()->routeIs('jobprofile.*')
                                          ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-md'
                                          : 'text-gray-700 hover:bg-gray-100' }}">
-                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                             </svg>
                             Perfiles
-                            <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-4 h-4 ml-1 transition-transform" :class="openDropdown === 'perfiles' ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                             </svg>
                         </button>
 
-                        <div x-show="open === 'perfiles'"
+                        <div x-show="openDropdown === 'perfiles'"
                              x-transition:enter="transition ease-out duration-200"
                              x-transition:enter-start="opacity-0 scale-95"
                              x-transition:enter-end="opacity-100 scale-100"
-                             class="absolute left-0 pt-4 w-56 rounded-xl shadow-lg bg-white ring-1 ring-gray-200 overflow-hidden"
+                             x-transition:leave="transition ease-in duration-150"
+                             x-transition:leave-start="opacity-100 scale-100"
+                             x-transition:leave-end="opacity-0 scale-95"
+                             class="absolute left-0 mt-2 w-56 rounded-xl shadow-lg bg-white ring-1 ring-gray-200 overflow-hidden z-10"
                              style="display: none;">
                             <div class="py-1">
                                 @can('jobprofile.view.profiles')
@@ -263,7 +279,7 @@
                     <!-- Organización -->
                     @can('organization.view.units')
                     <a href="{{ route('organizational-units.index') }}"
-                       class="inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition-all
+                       class="inline-flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium transition-all
                               {{ request()->routeIs('organizational-units.*')
                                   ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md'
                                   : 'text-gray-700 hover:bg-gray-100' }}">
@@ -275,25 +291,29 @@
                     @endcan
 
                     <!-- Documentos -->
-                    <div class="relative" @mouseenter="open = 'documentos'" @mouseleave="open = null">
-                        <button class="inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition-all
+                    <div class="relative">
+                        <button @click="openDropdown = openDropdown === 'documentos' ? null : 'documentos'"
+                                class="inline-flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium transition-all
                                      {{ request()->routeIs('documents.*')
                                          ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-md'
                                          : 'text-gray-700 hover:bg-gray-100' }}">
-                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                             </svg>
                             Documentos
-                            <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-4 h-4 ml-1 transition-transform" :class="openDropdown === 'documentos' ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                             </svg>
                         </button>
 
-                        <div x-show="open === 'documentos'"
+                        <div x-show="openDropdown === 'documentos'"
                              x-transition:enter="transition ease-out duration-200"
                              x-transition:enter-start="opacity-0 scale-95"
                              x-transition:enter-end="opacity-100 scale-100"
-                             class="absolute left-0 mt-2 w-56 rounded-xl shadow-lg bg-white ring-1 ring-gray-200 overflow-hidden"
+                             x-transition:leave="transition ease-in duration-150"
+                             x-transition:leave-start="opacity-100 scale-100"
+                             x-transition:leave-end="opacity-0 scale-95"
+                             class="absolute left-0 mt-2 w-56 rounded-xl shadow-lg bg-white ring-1 ring-gray-200 overflow-hidden z-10"
                              style="display: none;">
                             <div class="py-1">
                                 <a href="{{ route('documents.index') }}"
@@ -317,25 +337,29 @@
 
                     <!-- Usuarios -->
                     @can('user.view.users')
-                    <div class="relative" @mouseenter="open = 'usuarios'" @mouseleave="open = null">
-                        <button class="inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition-all
+                    <div class="relative">
+                        <button @click="openDropdown = openDropdown === 'usuarios' ? null : 'usuarios'"
+                                class="inline-flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium transition-all
                                      {{ request()->routeIs('users.*') || request()->routeIs('roles.*')
                                          ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-md'
                                          : 'text-gray-700 hover:bg-gray-100' }}">
-                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
                             </svg>
                             Usuarios
-                            <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-4 h-4 ml-1 transition-transform" :class="openDropdown === 'usuarios' ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                             </svg>
                         </button>
 
-                        <div x-show="open === 'usuarios'"
+                        <div x-show="openDropdown === 'usuarios'"
                              x-transition:enter="transition ease-out duration-200"
                              x-transition:enter-start="opacity-0 scale-95"
                              x-transition:enter-end="opacity-100 scale-100"
-                             class="absolute left-0 pt-4 w-56 rounded-xl shadow-lg bg-white ring-1 ring-gray-200 overflow-hidden"
+                             x-transition:leave="transition ease-in duration-150"
+                             x-transition:leave-start="opacity-100 scale-100"
+                             x-transition:leave-end="opacity-0 scale-95"
+                             class="absolute left-0 mt-2 w-56 rounded-xl shadow-lg bg-white ring-1 ring-gray-200 overflow-hidden z-10"
                              style="display: none;">
                             <div class="py-1">
                                 <a href="{{ route('users.index') }}"
