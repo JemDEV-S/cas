@@ -69,9 +69,14 @@ class EvaluatorAssignment extends Model
     /**
      * Relaciones
      */
+    public function juryMember(): BelongsTo
+{
+    return $this->belongsTo(\Modules\Jury\Entities\JuryMember::class, 'evaluator_id');
+}
+
     public function evaluator(): BelongsTo
     {
-        return $this->belongsTo('App\Models\User', 'evaluator_id');
+        return $this->juryMember();
     }
 
     public function application(): BelongsTo
@@ -92,6 +97,26 @@ class EvaluatorAssignment extends Model
     public function assignedBy(): BelongsTo
     {
         return $this->belongsTo('App\Models\User', 'assigned_by');
+    }
+
+    public function juryAssignment(): BelongsTo
+    {
+        return $this->belongsTo(\Modules\Jury\Entities\JuryAssignment::class, 'evaluator_id', 'jury_member_id')
+            ->where('is_active', true);
+    }
+
+    public function isEvaluatorAvailable(): bool
+    {
+        if (!$this->juryMember) {
+            return false;
+        }
+
+        $juryAssignment = \Modules\Jury\Entities\JuryAssignment::where('jury_member_id', $this->evaluator_id)
+            ->where('job_posting_id', $this->application->job_profile_vacancy_id)
+            ->where('status', 'ACTIVE')
+            ->first();
+
+        return $juryAssignment && $juryAssignment->canEvaluate();
     }
 
     /**

@@ -17,28 +17,28 @@ use Modules\Evaluation\Http\Controllers\{
 */
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    
+
     // ========================================
     // EVALUATIONS - Gestión de Evaluaciones
     // ========================================
     Route::prefix('evaluations')->name('evaluation.')->group(function () {
-        
+
         // Dashboard del evaluador
         Route::get('/', [EvaluationController::class, 'index'])->name('index');
-        
+
         Route::get('my-evaluations', [EvaluationController::class, 'myEvaluations'])
             ->name('my-evaluations');
-        
+
         // Ver evaluación específica
         Route::get('{id}', [EvaluationController::class, 'show'])->name('show');
-        
+
         // Formulario de evaluación
         Route::get('{id}/evaluate', [EvaluationController::class, 'evaluate'])->name('evaluate');
-        
+
         // Ver historial
         Route::get('{id}/history', [EvaluationController::class, 'history'])->name('history');
     });
-    
+
     // ========================================
     // EVALUATOR ASSIGNMENTS - Asignación (Solo Admin)
     // ========================================
@@ -46,11 +46,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('evaluator-assignments.')
         ->middleware('can:assign-evaluators')
         ->group(function () {
-            
+
+            // Vistas
             Route::get('/', [EvaluatorAssignmentController::class, 'index'])->name('index');
             Route::get('{id}', [EvaluatorAssignmentController::class, 'show'])->name('show');
+
+            // Acciones
+            Route::post('/', [EvaluatorAssignmentController::class, 'store'])->name('store');
+            Route::post('auto-assign', [EvaluatorAssignmentController::class, 'autoAssign'])->name('auto-assign');
+            Route::delete('{id}', [EvaluatorAssignmentController::class, 'destroy'])->name('destroy');
+
+            // AJAX Endpoints (retornan JSON)
+            Route::get('available-evaluators', [EvaluatorAssignmentController::class, 'availableEvaluators'])
+                ->name('available-evaluators')
+                ->withoutMiddleware('can:assign-evaluators'); // Permitir a todos ver evaluadores
         });
-    
+
     // ========================================
     // EVALUATION CRITERIA - Criterios (Solo Admin)
     // ========================================
@@ -58,7 +69,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('evaluation-criteria.')
         ->middleware('can:manage-criteria')
         ->group(function () {
-            
+
             Route::get('/', [EvaluationCriterionController::class, 'index'])->name('index');
             Route::get('create', [EvaluationCriterionController::class, 'create'])->name('create');
             Route::post('/', [EvaluationCriterionController::class, 'store'])->name('store');

@@ -4,182 +4,313 @@ namespace Modules\Jury\Http\Controllers;
 
 use Illuminate\Http\{JsonResponse, Request};
 use Illuminate\Routing\Controller;
-use Modules\Jury\Services\ConflictDetectionService;
-use Modules\Jury\Http\Requests\ReportConflictRequest;
+use Modules\Jury\Services\JuryMemberService;
+use Modules\Jury\Http\Requests\{StoreJuryMemberRequest, UpdateJuryMemberRequest};
 
-class JuryConflictController extends Controller
+class JuryMemberController extends Controller
 {
     public function __construct(
-        protected ConflictDetectionService $service
+        protected JuryMemberService $service
     ) {}
 
+    /**
+     * Display a listing
+     */
     public function index(Request $request)
     {
-        $query = \Modules\Jury\Entities\JuryConflict::with([
-            'juryMember.user',
-            'application',
-            'reportedBy',
-        ]);
-
-        if ($request->has('job_posting_id')) {
-            $query->byJobPosting($request->input('job_posting_id'));
-        }
-
-        if ($request->has('jury_member_id')) {
-            $query->byJuryMember($request->input('jury_member_id'));
-        }
-
-        if ($request->has('status')) {
-            $query->byStatus(\Modules\Jury\Enums\ConflictStatus::from($request->input('status')));
-        }
-
-        if ($request->boolean('pending_only')) {
-            $query->pending();
-        }
-
-        if ($request->boolean('high_priority')) {
-            $query->highPriority();
-        }
-
-        $conflicts = $query->ordered()->paginate($request->input('per_page', 15));
+        $filters = $request->only(['search', 'is_active', 'is_available', 'training_completed', 'specialty', 'per_page']);
+        $members = $this->service->getAll($filters);
 
         if ($request->wantsJson() || $request->is('api/*')) {
-            return response()->json(['success' => true, 'data' => $conflicts]);
-        }
-
-        return view('jury::conflicts.index', compact('conflicts'));
-    }
-
-    public function store(ReportConflictRequest $request): JsonResponse
-    {
-        try {
-            $conflict = $this->service->report($request->validated());
             return response()->json([
                 'success' => true,
-                'message' => 'Conflicto reportado exitosamente',
-                'data' => $conflict,
+                'data' => $members,
+            ]);
+        }
+
+        return view('jury::members.index', compact('members', 'filters'));
+    }
+
+    /**
+     * Show the form for creating
+     */
+    public function create()
+    {
+        return view('jury::members.create');
+    }
+
+    /**
+     * Store a newly created resource
+     */
+    public function store(StoreJuryMemberRequest $request): JsonResponse
+    {
+        try {
+            $member = $this->service->create($request->validated());
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Jurado creado exitosamente',
+                'data' => $member,
             ], 201);
         } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al crear el jurado',
+                'error' => $e->getMessage(),
+            ], 422);
         }
     }
 
+    /**
+     * Display the specified resource
+     */
     public function show(Request $request, string $id)
     {
         try {
-            $conflict = \Modules\Jury\Entities\JuryConflict::with([
-                'juryMember.user',
-                'application',
-                'jobPosting',
-                'reportedBy',
-                'resolvedBy',
-            ])->findOrFail($id);
+            $member = \Modules\Jury\Entities\JuryMember::with(['user', 'assignments.jobPosting'])
+                ->withWorkload()
+                ->findOrFail($id);
+
+            $statistics = $this->service->getStatistics($id);
 
             if ($request->wantsJson() || $request->is('api/*')) {
-                return response()->json(['success' => true, 'data' => $conflict]);
+                return response()->json([
+                    'success' => true,
+                    'data' => $member,
+                    'statistics' => $statistics,
+                ]);
             }
 
-            return view('jury::conflicts.show', compact('conflict'));
+            return view('jury::members.show', compact('member', 'statistics'));
         } catch (\Exception $e) {
             if ($request->wantsJson() || $request->is('api/*')) {
-                return response()->json(['success' => false, 'message' => 'No encontrado'], 404);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Jurado no encontrado',
+                ], 404);
             }
+
             abort(404);
         }
     }
 
-    public function moveToReview(Request $request, string $id): JsonResponse
+    /**
+     * Show the form for editing
+     */
+    public function edit(string $id)
     {
-        $validated = $request->validate(['notes' => ['nullable', 'string']]);
+        $member = \Modules\Jury\Entities\JuryMember::with('user')->findOrFail($id);
+        return view('jury::members.edit', compact('member'));
+    }
 
+    /**
+     * Update the specified resource
+     */
+    public function update(UpdateJuryMemberRequest $request, string $id): JsonResponse
+    {
         try {
-            $conflict = $this->service->moveToReview($id, $validated['notes'] ?? null);
-            return response()->json(['success' => true, 'message' => 'Conflicto en revisión', 'data' => $conflict]);
+            $member = $this->service->update($id, $request->validated());
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Jurado actualizado exitosamente',
+                'data' => $member,
+            ]);
         } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar el jurado',
+                'error' => $e->getMessage(),
+            ], 422);
         }
     }
 
-    public function confirm(Request $request, string $id): JsonResponse
+    /**
+     * Remove the specified resource
+     */
+    public function destroy(string $id): JsonResponse
     {
-        $validated = $request->validate(['notes' => ['nullable', 'string']]);
-
         try {
-            $conflict = $this->service->confirm($id, $validated['notes'] ?? null);
-            return response()->json(['success' => true, 'message' => 'Conflicto confirmado', 'data' => $conflict]);
+            $this->service->delete($id);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Jurado eliminado exitosamente',
+            ]);
         } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al eliminar el jurado',
+                'error' => $e->getMessage(),
+            ], 422);
         }
     }
 
-    public function dismiss(Request $request, string $id): JsonResponse
+    /**
+     * Toggle active status
+     */
+    public function toggleActive(string $id): JsonResponse
     {
-        $validated = $request->validate(['resolution' => ['required', 'string']]);
-
         try {
-            $conflict = $this->service->dismiss($id, $validated['resolution']);
-            return response()->json(['success' => true, 'message' => 'Conflicto desestimado', 'data' => $conflict]);
+            $member = $this->service->toggleActive($id);
+
+            return response()->json([
+                'success' => true,
+                'message' => $member->is_active ? 'Jurado activado' : 'Jurado desactivado',
+                'data' => $member,
+            ]);
         } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al cambiar el estado',
+                'error' => $e->getMessage(),
+            ], 422);
         }
     }
 
-    public function resolve(Request $request, string $id): JsonResponse
+    /**
+     * Mark as unavailable
+     */
+    public function markUnavailable(Request $request, string $id): JsonResponse
     {
         $validated = $request->validate([
-            'resolution' => ['required', 'string'],
-            'action_taken' => ['required', 'string', 'in:EXCUSED,REASSIGNED,APPLICANT_REMOVED,NO_ACTION,OTHER'],
-            'action_notes' => ['nullable', 'string'],
+            'reason' => ['required', 'string'],
+            'from' => ['nullable', 'date'],
+            'until' => ['nullable', 'date', 'after:from'],
         ]);
 
         try {
-            $conflict = $this->service->resolve(
+            $member = $this->service->markAsUnavailable(
                 $id,
-                $validated['resolution'],
-                $validated['action_taken'],
-                $validated['action_notes'] ?? null
+                $validated['reason'],
+                isset($validated['from']) ? new \DateTime($validated['from']) : null,
+                isset($validated['until']) ? new \DateTime($validated['until']) : null
             );
-            return response()->json(['success' => true, 'message' => 'Conflicto resuelto', 'data' => $conflict]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Jurado marcado como no disponible',
+                'data' => $member,
+            ]);
         } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al marcar como no disponible',
+                'error' => $e->getMessage(),
+            ], 422);
         }
     }
 
-    public function excuse(Request $request, string $id): JsonResponse
+    /**
+     * Mark as available
+     */
+    public function markAvailable(string $id): JsonResponse
     {
-        $validated = $request->validate(['notes' => ['nullable', 'string']]);
-
         try {
-            $conflict = $this->service->excuseJuryMember($id, $validated['notes'] ?? null);
-            return response()->json(['success' => true, 'message' => 'Jurado excusado', 'data' => $conflict]);
+            $member = $this->service->markAsAvailable($id);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Jurado marcado como disponible',
+                'data' => $member,
+            ]);
         } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al marcar como disponible',
+                'error' => $e->getMessage(),
+            ], 422);
         }
     }
 
-    public function autoDetect(Request $request): JsonResponse
+    /**
+     * Complete training
+     */
+    public function completeTraining(Request $request, string $id): JsonResponse
     {
         $validated = $request->validate([
-            'jury_member_id' => ['required', 'string', 'exists:jury_members,id'],
-            'application_id' => ['required', 'string', 'exists:applications,id'],
+            'certificate_path' => ['nullable', 'string'],
         ]);
 
         try {
-            $detected = $this->service->autoDetect($validated['jury_member_id'], $validated['application_id']);
-            return response()->json(['success' => true, 'data' => $detected]);
+            $member = $this->service->completeTraining($id, $validated['certificate_path'] ?? null);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Capacitación completada exitosamente',
+                'data' => $member,
+            ]);
         } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al completar la capacitación',
+                'error' => $e->getMessage(),
+            ], 422);
         }
     }
 
-    public function statistics(Request $request): JsonResponse
+    /**
+     * Get statistics
+     */
+    public function statistics(string $id): JsonResponse
     {
         try {
-            $filters = $request->only(['job_posting_id', 'from_date']);
-            $stats = $this->service->getStatistics($filters);
-            return response()->json(['success' => true, 'data' => $stats]);
+            $statistics = $this->service->getStatistics($id);
+
+            return response()->json([
+                'success' => true,
+                'data' => $statistics,
+            ]);
         } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener estadísticas',
+                'error' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    /**
+     * Get workload summary
+     */
+    public function workloadSummary(): JsonResponse
+    {
+        try {
+            $summary = $this->service->getWorkloadSummary();
+
+            return response()->json([
+                'success' => true,
+                'data' => $summary,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener resumen de carga',
+                'error' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    /**
+     * Get available members for assignment
+     */
+    public function availableForAssignment(Request $request): JsonResponse
+    {
+        $filters = $request->only(['specialty', 'exclude_ids']);
+
+        try {
+            $members = $this->service->getAvailableForAssignment($filters);
+
+            return response()->json([
+                'success' => true,
+                'data' => $members,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener jurados disponibles',
+                'error' => $e->getMessage(),
+            ], 422);
         }
     }
 }

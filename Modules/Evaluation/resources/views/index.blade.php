@@ -1,4 +1,4 @@
-@extends('evaluation::layouts.master')
+@extends('layouts.app')
 
 @section('content')
 <div class="container mx-auto px-4 py-8">
@@ -175,14 +175,14 @@
                             @endif
                         </td>
                         <td class="px-6 py-4 text-right space-x-2">
-                            <a href="{{ route('evaluation.show', $evaluation->id) }}" 
+                            <a href="{{ route('evaluation.show', $evaluation->id) }}"
                                class="inline-flex items-center px-3 py-1.5 bg-blue-100 text-blue-700 text-sm font-medium rounded-lg hover:bg-blue-200 transition-colors"
                                title="Ver detalles">
                                 <i class="fas fa-eye"></i>
                             </a>
 
                             @if(in_array($evaluation->status, ['ASSIGNED', 'IN_PROGRESS']))
-                            <a href="{{ route('evaluation.evaluate', $evaluation->id) }}" 
+                            <a href="{{ route('evaluation.evaluate', $evaluation->id) }}"
                                class="inline-flex items-center px-3 py-1.5 bg-orange-500 text-white text-sm font-medium rounded-lg hover:bg-orange-600 transition-colors"
                                title="Evaluar">
                                 <i class="fas fa-edit mr-1"></i> Evaluar

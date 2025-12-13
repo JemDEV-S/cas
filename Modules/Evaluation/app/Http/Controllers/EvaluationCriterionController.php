@@ -173,6 +173,44 @@ class EvaluationCriterionController extends Controller
     }
 
     /**
+     * Show the form for creating a new criterion.
+     * GET /evaluation-criteria/create
+     */
+    public function create()
+    {
+        $phases = \Modules\JobPosting\Entities\ProcessPhase::where('is_active', true)
+            ->orderBy('order')
+            ->get();
+
+        $jobPostings = \Modules\JobPosting\Entities\JobPosting::where('status', 'PUBLISHED')
+            ->orderBy('created_at', 'desc')
+            ->limit(50)
+            ->get();
+
+        return view('evaluation::criteria.create', compact('phases', 'jobPostings'));
+    }
+
+    /**
+     * Show the form for editing the specified criterion.
+     * GET /evaluation-criteria/{id}/edit
+     */
+    public function edit(string $id)
+    {
+        $criterion = \Modules\Evaluation\Entities\EvaluationCriterion::findOrFail($id);
+
+        $phases = \Modules\JobPosting\Entities\ProcessPhase::where('is_active', true)
+            ->orderBy('order')
+            ->get();
+
+        $jobPostings = \Modules\JobPosting\Entities\JobPosting::where('status', 'PUBLISHED')
+            ->orderBy('created_at', 'desc')
+            ->limit(50)
+            ->get();
+
+        return view('evaluation::criteria.edit', compact('criterion', 'phases', 'jobPostings'));
+    }
+
+    /**
      * Update the specified criterion.
      */
     public function update(Request $request, int $id): JsonResponse

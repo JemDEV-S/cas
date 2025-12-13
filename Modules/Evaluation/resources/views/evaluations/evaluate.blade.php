@@ -1,4 +1,4 @@
-@extends('evaluation::layouts.master')
+@extends('layouts.app')
 
 @section('title', 'Evaluar Postulante')
 
@@ -58,12 +58,12 @@
                     <!-- Rango de puntaje -->
                     <div class="mb-3">
                         <label class="form-label">
-                            Puntaje 
+                            Puntaje
                             <span class="text-danger">*</span>
                             <small class="text-muted">(Rango: {{ $criterion->min_score }} - {{ $criterion->max_score }})</small>
                         </label>
-                        <input type="number" 
-                               class="form-control score-input" 
+                        <input type="number"
+                               class="form-control score-input"
                                name="criteria[{{ $criterion->id }}][score]"
                                data-min="{{ $criterion->min_score }}"
                                data-max="{{ $criterion->max_score }}"
@@ -93,7 +93,7 @@
                                 <span class="text-danger">*</span>
                             @endif
                         </label>
-                        <textarea class="form-control" 
+                        <textarea class="form-control"
                                   name="criteria[{{ $criterion->id }}][comments]"
                                   rows="3"
                                   {{ $criterion->requires_comment ? 'required' : '' }}>{{ $details[$criterion->id]->comments ?? '' }}</textarea>
@@ -105,7 +105,7 @@
                         <label class="form-label">
                             Evidencia <span class="text-danger">*</span>
                         </label>
-                        <textarea class="form-control" 
+                        <textarea class="form-control"
                                   name="criteria[{{ $criterion->id }}][evidence]"
                                   rows="2"
                                   required>{{ $details[$criterion->id]->evidence ?? '' }}</textarea>
@@ -128,7 +128,7 @@
                     <h6 class="mb-0">Comentarios Generales</h6>
                 </div>
                 <div class="card-body">
-                    <textarea class="form-control" name="general_comments" rows="4" 
+                    <textarea class="form-control" name="general_comments" rows="4"
                               placeholder="Observaciones generales sobre la evaluación...">{{ $evaluation->general_comments }}</textarea>
                 </div>
             </div>
@@ -146,7 +146,7 @@
                             <a href="{{ route('evaluation.my-evaluations') }}" class="btn btn-outline-secondary me-2">
                                 <i class="fas fa-times me-2"></i>Cancelar
                             </a>
-                            <button type="button" class="btn btn-success" id="submitBtn" 
+                            <button type="button" class="btn btn-success" id="submitBtn"
                                     {{ !$evaluation->canEdit() ? 'disabled' : '' }}>
                                 <i class="fas fa-paper-plane me-2"></i>Enviar Evaluación
                             </button>
@@ -217,13 +217,13 @@ let saveTimeout;
 function calculateWeightedScores() {
     let total = 0;
     let count = 0;
-    
+
     document.querySelectorAll('.criterion-card').forEach(card => {
         const criterionId = card.dataset.criterionId;
         const criterion = criteria.find(c => c.id == criterionId);
         const scoreInput = card.querySelector('.score-input');
         const score = parseFloat(scoreInput.value) || 0;
-        
+
         if (score > 0) {
             count++;
             const weighted = score * criterion.weight;
@@ -231,11 +231,11 @@ function calculateWeightedScores() {
             total += weighted;
         }
     });
-    
+
     // Actualizar resumen
     document.getElementById('totalScore').textContent = total.toFixed(2);
     document.getElementById('criteriaCount').textContent = `${count} / ${criteria.length}`;
-    
+
     const progress = (count / criteria.length) * 100;
     document.getElementById('progressBar').style.width = progress + '%';
 }
@@ -249,7 +249,7 @@ async function saveCriterionDetail(criterionId, score, comments, evidence) {
             comments: comments,
             evidence: evidence
         });
-        
+
         return response.data;
     } catch (error) {
         console.error('Error guardando criterio:', error);
@@ -262,25 +262,25 @@ document.querySelectorAll('.score-input').forEach(input => {
     input.addEventListener('change', function() {
         clearTimeout(saveTimeout);
         calculateWeightedScores();
-        
+
         const card = this.closest('.criterion-card');
         const criterionId = card.dataset.criterionId;
         const score = parseFloat(this.value);
         const comments = card.querySelector('textarea[name*="comments"]').value;
         const evidenceInput = card.querySelector('textarea[name*="evidence"]');
         const evidence = evidenceInput ? evidenceInput.value : null;
-        
+
         // Validar rango
         const min = parseFloat(this.dataset.min);
         const max = parseFloat(this.dataset.max);
-        
+
         if (score < min || score > max) {
             this.classList.add('is-invalid');
             return;
         } else {
             this.classList.remove('is-invalid');
         }
-        
+
         // Guardar después de 1 segundo
         saveTimeout = setTimeout(() => {
             saveCriterionDetail(criterionId, score, comments, evidence)
@@ -303,7 +303,7 @@ document.querySelectorAll('.score-input').forEach(input => {
 document.getElementById('saveBtn').addEventListener('click', async function() {
     this.disabled = true;
     this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Guardando...';
-    
+
     try {
         // Guardar todos los criterios
         const promises = [];
@@ -311,18 +311,18 @@ document.getElementById('saveBtn').addEventListener('click', async function() {
             const criterionId = card.dataset.criterionId;
             const scoreInput = card.querySelector('.score-input');
             const score = parseFloat(scoreInput.value);
-            
+
             if (score && score > 0) {
                 const comments = card.querySelector('textarea[name*="comments"]').value;
                 const evidenceInput = card.querySelector('textarea[name*="evidence"]');
                 const evidence = evidenceInput ? evidenceInput.value : null;
-                
+
                 promises.push(saveCriterionDetail(criterionId, score, comments, evidence));
             }
         });
-        
+
         await Promise.all(promises);
-        
+
         alert('Evaluación guardada como borrador');
         this.innerHTML = '<i class="fas fa-check me-2"></i>Guardado';
     } catch (error) {
@@ -338,18 +338,18 @@ document.getElementById('submitBtn').addEventListener('click', async function() 
     if (!confirm('¿Está seguro de enviar la evaluación? No podrá modificarla después.')) {
         return;
     }
-    
+
     this.disabled = true;
     this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Enviando...';
-    
+
     try {
         const generalComments = document.querySelector('textarea[name="general_comments"]').value;
-        
+
         const response = await axios.post(`/api/evaluation/evaluations/${evaluationId}/submit`, {
             confirm: true,
             general_comments: generalComments
         });
-        
+
         alert('Evaluación enviada exitosamente');
         window.location.href = '{{ route("evaluation.my-evaluations") }}';
     } catch (error) {

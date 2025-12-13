@@ -38,7 +38,7 @@ class EvaluationController extends Controller
 
         // Si es petición web, devolver vista
         $evaluatorId = auth()->id();
-        
+
         $filters = [
             'status' => $request->input('status'),
             'phase_id' => $request->input('phase_id'),
@@ -62,7 +62,7 @@ class EvaluationController extends Controller
     public function indexApi(Request $request): JsonResponse
     {
         $evaluatorId = $request->input('evaluator_id', auth()->id());
-        
+
         $filters = [
             'status' => $request->input('status'),
             'phase_id' => $request->input('phase_id'),
@@ -146,7 +146,7 @@ class EvaluationController extends Controller
     {
         try {
             $evaluation = Evaluation::findOrFail($id);
-            
+
             // Verificar autorización
             $this->authorize('update', $evaluation);
 
@@ -177,7 +177,7 @@ class EvaluationController extends Controller
     {
         try {
             $evaluation = Evaluation::findOrFail($id);
-            
+
             // Verificar autorización
             $this->authorize('update', $evaluation);
 
@@ -214,7 +214,7 @@ class EvaluationController extends Controller
     {
         try {
             $evaluation = Evaluation::findOrFail($id);
-            
+
             // Verificar autorización
             $this->authorize('submit', $evaluation);
 
@@ -249,7 +249,7 @@ class EvaluationController extends Controller
     {
         try {
             $evaluation = Evaluation::findOrFail($id);
-            
+
             // Verificar autorización (solo admin)
             $this->authorize('modifySubmitted', $evaluation);
 
@@ -281,7 +281,7 @@ class EvaluationController extends Controller
     {
         try {
             $evaluation = Evaluation::findOrFail($id);
-            
+
             // Verificar autorización
             $this->authorize('delete', $evaluation);
 
@@ -308,7 +308,7 @@ class EvaluationController extends Controller
     {
         try {
             $evaluation = Evaluation::findOrFail($id);
-            
+
             // Verificar autorización
             $this->authorize('view', $evaluation);
 
@@ -358,33 +358,95 @@ class EvaluationController extends Controller
         }
     }
 
+
     /**
      * Get my evaluations (authenticated evaluator).
-     * GET /api/evaluations/my-evaluations
+     * GET /evaluations/my-evaluations (WEB)
+     * GET /api/evaluations/my-evaluations (API)
      */
-    public function myEvaluations(Request $request): JsonResponse
+    public function myEvaluations(Request $request)
     {
-        $filters = [
-            'status' => $request->input('status'),
-            'phase_id' => $request->input('phase_id'),
-            'pending_only' => $request->boolean('pending_only'),
-            'completed_only' => $request->boolean('completed_only'),
-            'per_page' => $request->input('per_page', 15),
-        ];
+        try {
+            // Obtener el jury_member_id del usuario autenticado
+            $juryMember = \Modules\Jury\Entities\JuryMember::where('user_id', auth()->id())->first();
 
-        $evaluations = $this->evaluationService->getEvaluatorEvaluations(
-            auth()->id(),
-            $filters
-        );
+            if (!$juryMember) {
+                // Si es API
+                if ($request->wantsJson() || $request->is('api/*')) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'No estás registrado como jurado evaluador',
+                    ], 403);
+                }
 
-        return response()->json([
-            'success' => true,
-            'data' => EvaluationResource::collection($evaluations),
-            'meta' => [
-                'current_page' => $evaluations->currentPage(),
-                'total' => $evaluations->total(),
-                'per_page' => $evaluations->perPage(),
-            ],
-        ]);
+                // Si es WEB
+                return view('evaluation::my-evaluations', [
+                    'assignments' => new \Illuminate\Pagination\LengthAwarePaginator([], 0, 15),
+                    'stats' => ['total' => 0, 'pending' => 0, 'completed' => 0, 'overdue' => 0],
+                ])->with('warning', 'No estás registrado como jurado evaluador');
+            }
+
+            // Obtener asignaciones del evaluador
+            $query = \Modules\Evaluation\Entities\EvaluatorAssignment::with([
+                'application.jobPosting',
+                'application.applicant',
+                'phase',
+                'juryAssignment'
+            ])->where('evaluator_id', $juryMember->id);
+
+            // Filtros
+            if ($request->has('status')) {
+                $query->where('status', $request->input('status'));
+            }
+
+            if ($request->boolean('pending_only')) {
+                $query->pending();
+            }
+
+            $assignments = $query->orderBy('deadline_at', 'asc')
+                ->orderBy('created_at', 'desc')
+                ->paginate($request->input('per_page', 15));
+
+            // Stats
+            $stats = [
+                'total' => \Modules\Evaluation\Entities\EvaluatorAssignment::where('evaluator_id', $juryMember->id)->count(),
+                'pending' => \Modules\Evaluation\Entities\EvaluatorAssignment::where('evaluator_id', $juryMember->id)->pending()->count(),
+                'completed' => \Modules\Evaluation\Entities\EvaluatorAssignment::where('evaluator_id', $juryMember->id)->where('status', 'COMPLETED')->count(),
+                'overdue' => \Modules\Evaluation\Entities\EvaluatorAssignment::where('evaluator_id', $juryMember->id)->overdue()->count(),
+            ];
+
+            // Si es petición API
+            if ($request->wantsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'success' => true,
+                    'data' => $assignments->items(),
+                    'stats' => $stats,
+                    'meta' => [
+                        'current_page' => $assignments->currentPage(),
+                        'total' => $assignments->total(),
+                        'per_page' => $assignments->perPage(),
+                    ],
+                ]);
+            }
+
+            // Retornar vista WEB
+            return view('evaluation::my-evaluations', compact('assignments', 'stats', 'juryMember'));
+
+        } catch (\Exception $e) {
+            \Log::error('Error in myEvaluations: ' . $e->getMessage());
+
+            if ($request->wantsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error al obtener tus evaluaciones',
+                    'error' => $e->getMessage(),
+                ], 500);
+            }
+
+            return view('evaluation::my-evaluations', [
+                'assignments' => new \Illuminate\Pagination\LengthAwarePaginator([], 0, 15),
+                'stats' => ['total' => 0, 'pending' => 0, 'completed' => 0, 'overdue' => 0],
+            ])->with('error', 'Error al cargar tus evaluaciones');
+        }
     }
 }
