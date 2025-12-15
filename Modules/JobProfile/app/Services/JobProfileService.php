@@ -10,6 +10,7 @@ use Modules\JobProfile\Entities\JobProfile;
 use Modules\JobProfile\Repositories\JobProfileRepository;
 use Modules\Core\Exceptions\BusinessRuleException;
 use Modules\JobProfile\Events\JobProfileCreated;
+use Modules\JobProfile\Events\JobProfileUpdated;
 
 class JobProfileService extends BaseService
 {
@@ -29,6 +30,45 @@ class JobProfileService extends BaseService
             ->with(['positionCode', 'organizationalUnit', 'requestedBy'])
             ->orderBy('created_at', 'desc')
             ->get();
+    }
+
+    /**
+     * Obtiene estadísticas de perfiles visibles para el usuario actual
+     */
+    public function getStatistics(): array
+    {
+        $user = auth()->user();
+
+        $query = JobProfile::visibleFor($user);
+
+        // Total de perfiles
+        $total = $query->count();
+
+        // Perfiles por estado
+        $byStatus = [
+            'draft' => (clone $query)->where('status', 'draft')->count(),
+            'in_review' => (clone $query)->where('status', 'in_review')->count(),
+            'modification_requested' => (clone $query)->where('status', 'modification_requested')->count(),
+            'approved' => (clone $query)->where('status', 'approved')->count(),
+            'rejected' => (clone $query)->where('status', 'rejected')->count(),
+            'active' => (clone $query)->where('status', 'active')->count(),
+        ];
+
+        // Total de vacantes
+        $totalVacancies = (clone $query)->sum('total_vacancies');
+
+        // Perfiles creados este mes
+        $thisMonth = (clone $query)
+            ->whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->count();
+
+        return [
+            'total' => $total,
+            'by_status' => $byStatus,
+            'total_vacancies' => $totalVacancies,
+            'this_month' => $thisMonth,
+        ];
     }
 
     /**
@@ -182,13 +222,20 @@ class JobProfileService extends BaseService
             $profile = $this->repository->findOrFail($id);
 
             // Validar que se pueda editar
-            if (!$profile->canEdit()) {
+            $user = auth()->user();
+            $canEditApproved = $user && $user->hasAnyRole(['super-admin', 'admin-rrhh']) && $profile->status === 'approved';
+
+            if (!$profile->canEdit() && !$canEditApproved) {
                 throw new BusinessRuleException(
                     'No se puede modificar un perfil en estado: ' . $profile->status_label
                 );
             }
 
             $profile->update($data);
+
+            // Disparar evento de actualización
+            $userId = auth()->id();
+            event(new JobProfileUpdated($profile, $userId));
 
             return $profile->fresh();
         });
@@ -202,7 +249,11 @@ class JobProfileService extends BaseService
         return DB::transaction(function () use ($id, $requirements) {
             $profile = $this->repository->findOrFail($id);
 
-            if (!$profile->canEdit()) {
+            // Validar que se pueda editar
+            $user = auth()->user();
+            $canEditApproved = $user && $user->hasAnyRole(['super-admin', 'admin-rrhh']) && $profile->status === 'approved';
+
+            if (!$profile->canEdit() && !$canEditApproved) {
                 throw new BusinessRuleException('No se pueden modificar los requisitos de este perfil.');
             }
 
@@ -231,7 +282,11 @@ class JobProfileService extends BaseService
         return DB::transaction(function () use ($id, $responsibilities) {
             $profile = $this->repository->findOrFail($id);
 
-            if (!$profile->canEdit()) {
+            // Validar que se pueda editar
+            $user = auth()->user();
+            $canEditApproved = $user && $user->hasAnyRole(['super-admin', 'admin-rrhh']) && $profile->status === 'approved';
+
+            if (!$profile->canEdit() && !$canEditApproved) {
                 throw new BusinessRuleException('No se pueden modificar las responsabilidades de este perfil.');
             }
 

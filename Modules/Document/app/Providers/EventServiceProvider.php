@@ -16,6 +16,9 @@ class EventServiceProvider extends ServiceProvider
         \Modules\JobProfile\Events\JobProfileApproved::class => [
             \Modules\Document\Listeners\GenerateJobProfileDocument::class,
         ],
+        \Modules\JobProfile\Events\JobProfileUpdated::class => [
+            \Modules\Document\Listeners\RegenerateJobProfileDocument::class,
+        ],
 
         // Eventos propios del módulo Document
         \Modules\Document\Events\DocumentGenerated::class => [

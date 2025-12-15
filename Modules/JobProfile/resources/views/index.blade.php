@@ -42,10 +42,93 @@
         </div>
     </div>
 
+    <!-- Tarjetas de Estadísticas -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+        <!-- Total de Perfiles -->
+        <x-card class="bg-gradient-to-br from-blue-50 to-blue-100">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-blue-600">Total de Perfiles</p>
+                    <p class="text-3xl font-bold text-blue-900 mt-2">{{ $statistics['total'] }}</p>
+                </div>
+                <div class="p-3 bg-blue-500 rounded-full">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                </div>
+            </div>
+        </x-card>
+
+        <!-- Total de Vacantes -->
+        <x-card class="bg-gradient-to-br from-green-50 to-green-100">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-green-600">Total de Vacantes</p>
+                    <p class="text-3xl font-bold text-green-900 mt-2">{{ $statistics['total_vacancies'] }}</p>
+                </div>
+                <div class="p-3 bg-green-500 rounded-full">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                </div>
+            </div>
+        </x-card>
+
+        <!-- Perfiles en Revisión -->
+        <x-card class="bg-gradient-to-br from-yellow-50 to-yellow-100">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-yellow-600">En Revisión</p>
+                    <p class="text-3xl font-bold text-yellow-900 mt-2">{{ $statistics['by_status']['in_review'] }}</p>
+                </div>
+                <div class="p-3 bg-yellow-500 rounded-full">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+            </div>
+        </x-card>
+
+        <!-- Perfiles Aprobados -->
+        <x-card class="bg-gradient-to-br from-purple-50 to-purple-100">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-purple-600">Aprobados</p>
+                    <p class="text-3xl font-bold text-purple-900 mt-2">{{ $statistics['by_status']['approved'] }}</p>
+                </div>
+                <div class="p-3 bg-purple-500 rounded-full">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+            </div>
+        </x-card>
+    </div>
+
     <!-- Filtros -->
     <x-card class="mb-6">
+        <div class="mb-4">
+            <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+                </svg>
+                Filtros de Búsqueda
+            </h3>
+        </div>
         <form method="GET" action="{{ route('jobprofile.index') }}" class="space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Búsqueda por texto -->
+                <div>
+                    <x-form.input
+                        type="text"
+                        name="search"
+                        label="Buscar"
+                        placeholder="Código o título del perfil"
+                        :value="request('search')"
+                    />
+                </div>
+
+                <!-- Filtro por estado -->
                 <x-form.select
                     name="status"
                     label="Estado"
@@ -61,32 +144,96 @@
                     placeholder="Todos los estados"
                 />
 
-                <div class="flex items-end">
-                    <x-button type="submit" variant="primary" class="w-full">
-                        <!-- Icono Filtro -->
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
-                        </svg>
-                        Filtrar
-                    </x-button>
-                </div>
+                <!-- Filtro por unidad organizacional -->
+                <x-form.select
+                    name="organizational_unit_id"
+                    label="Unidad Organizacional"
+                    :options="$organizationalUnits"
+                    :selected="request('organizational_unit_id')"
+                    placeholder="Todas las unidades"
+                />
 
-                @if(request()->hasAny(['status']))
-                    <div class="flex items-end">
-                        <a href="{{ route('jobprofile.index') }}" class="w-full">
-                            <x-button type="button" variant="secondary" class="w-full">
-                                <!-- Icono X (Limpiar) -->
-                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                </svg>
-                                Limpiar
-                            </x-button>
-                        </a>
-                    </div>
+                <!-- Filtro por código de posición -->
+                <x-form.select
+                    name="position_code_id"
+                    label="Código de Posición"
+                    :options="$positionCodes"
+                    :selected="request('position_code_id')"
+                    placeholder="Todos los códigos"
+                />
+            </div>
+
+            <div class="flex gap-3">
+                <x-button type="submit" variant="primary">
+                    <!-- Icono Filtro -->
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+                    </svg>
+                    Aplicar Filtros
+                </x-button>
+
+                @if(request()->hasAny(['status', 'search', 'organizational_unit_id', 'position_code_id']))
+                    <a href="{{ route('jobprofile.index') }}">
+                        <x-button type="button" variant="secondary">
+                            <!-- Icono X (Limpiar) -->
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                            Limpiar Filtros
+                        </x-button>
+                    </a>
                 @endif
             </div>
+
+            @if(request()->hasAny(['status', 'search', 'organizational_unit_id', 'position_code_id']))
+                <div class="pt-3 border-t border-gray-200">
+                    <p class="text-sm text-gray-600">
+                        <span class="font-medium">Filtros activos:</span>
+                        @if(request('search'))
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 ml-2">
+                                Búsqueda: "{{ request('search') }}"
+                            </span>
+                        @endif
+                        @if(request('status'))
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 ml-2">
+                                Estado: {{ [
+                                    'draft' => 'Borrador',
+                                    'in_review' => 'En Revisión',
+                                    'modification_requested' => 'Modificación Requerida',
+                                    'approved' => 'Aprobado',
+                                    'rejected' => 'Rechazado',
+                                    'active' => 'Activo'
+                                ][request('status')] ?? request('status') }}
+                            </span>
+                        @endif
+                        @if(request('organizational_unit_id'))
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 ml-2">
+                                Unidad: {{ $organizationalUnits[request('organizational_unit_id')] ?? 'N/A' }}
+                            </span>
+                        @endif
+                        @if(request('position_code_id'))
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 ml-2">
+                                Código: {{ $positionCodes[request('position_code_id')] ?? 'N/A' }}
+                            </span>
+                        @endif
+                    </p>
+                </div>
+            @endif
         </form>
     </x-card>
+
+    <!-- Resumen de Resultados -->
+    @if(request()->hasAny(['status', 'search', 'organizational_unit_id', 'position_code_id']) || $jobProfiles->isNotEmpty())
+        <div class="mb-4 flex justify-between items-center">
+            <div class="text-sm text-gray-600">
+                Mostrando <span class="font-semibold text-gray-900">{{ $jobProfiles->count() }}</span>
+                {{ $jobProfiles->count() === 1 ? 'perfil' : 'perfiles' }}
+                @if(request()->hasAny(['status', 'search', 'organizational_unit_id', 'position_code_id']))
+                    de <span class="font-semibold text-gray-900">{{ $statistics['total'] }}</span> en total
+                @endif
+            </div>
+        </div>
+    @endif
 
     <!-- Tabla de perfiles -->
     <x-card>

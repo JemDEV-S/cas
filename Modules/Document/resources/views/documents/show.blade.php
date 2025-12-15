@@ -292,8 +292,10 @@
                     </h3>
 
                     <div class="space-y-2">
-                        @if($document->status !== 'signed' && !$document->hasAnySignature())
-                            <form action="{{ route('documents.regenerate', $document) }}" method="POST">
+                        @if($document->documentable_type === 'Modules\JobProfile\Entities\JobProfile' && 
+                            $document->documentable->status === 'approved' &&
+                            !$document->hasAnySignature())
+                            <form action="{{ route('documents.regenerate-job-profile', $document) }}" method="POST">
                                 @csrf
                                 <x-button variant="outline" class="w-full" type="submit">
                                     <i class="fas fa-sync mr-2"></i> Regenerar PDF
