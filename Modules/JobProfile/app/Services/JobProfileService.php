@@ -32,6 +32,45 @@ class JobProfileService extends BaseService
     }
 
     /**
+     * Obtiene estadísticas de perfiles visibles para el usuario actual
+     */
+    public function getStatistics(): array
+    {
+        $user = auth()->user();
+
+        $query = JobProfile::visibleFor($user);
+
+        // Total de perfiles
+        $total = $query->count();
+
+        // Perfiles por estado
+        $byStatus = [
+            'draft' => (clone $query)->where('status', 'draft')->count(),
+            'in_review' => (clone $query)->where('status', 'in_review')->count(),
+            'modification_requested' => (clone $query)->where('status', 'modification_requested')->count(),
+            'approved' => (clone $query)->where('status', 'approved')->count(),
+            'rejected' => (clone $query)->where('status', 'rejected')->count(),
+            'active' => (clone $query)->where('status', 'active')->count(),
+        ];
+
+        // Total de vacantes
+        $totalVacancies = (clone $query)->sum('total_vacancies');
+
+        // Perfiles creados este mes
+        $thisMonth = (clone $query)
+            ->whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->count();
+
+        return [
+            'total' => $total,
+            'by_status' => $byStatus,
+            'total_vacancies' => $totalVacancies,
+            'this_month' => $thisMonth,
+        ];
+    }
+
+    /**
      * Obtiene perfiles por estado visibles para el usuario actual
      */
     public function getByStatus(string $status): Collection

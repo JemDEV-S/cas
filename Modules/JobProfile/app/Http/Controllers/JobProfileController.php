@@ -29,12 +29,47 @@ class JobProfileController extends Controller
         $this->authorize('viewAny', \Modules\JobProfile\Entities\JobProfile::class);
 
         $status = $request->get('status');
+        $search = $request->get('search');
+        $organizationalUnitId = $request->get('organizational_unit_id');
+        $positionCodeId = $request->get('position_code_id');
 
-        $jobProfiles = $status
-            ? $this->jobProfileService->getByStatus($status)
-            : $this->jobProfileService->getAll();
+        // Obtener estadísticas
+        $statistics = $this->jobProfileService->getStatistics();
 
-        return view('jobprofile::index', compact('jobProfiles', 'status'));
+        // Obtener perfiles con filtros
+        if ($status || $search || $organizationalUnitId || $positionCodeId) {
+            $jobProfiles = $this->jobProfileService->getByStatusWithFilters($status ?? '', [
+                'search' => $search,
+                'organizational_unit_id' => $organizationalUnitId,
+                'position_code_id' => $positionCodeId,
+            ]);
+        } else {
+            $jobProfiles = $this->jobProfileService->getAll();
+        }
+
+        // Obtener listas para filtros
+        $user = auth()->user();
+        $organizationalUnits = \Modules\Organization\Entities\OrganizationalUnit::where('is_active', true)
+            ->orderBy('name')
+            ->pluck('name', 'id')
+            ->toArray();
+
+        $positionCodes = \Modules\JobProfile\Entities\PositionCode::where('is_active', true)
+            ->orderBy('code')
+            ->get()
+            ->mapWithKeys(fn($pc) => [$pc->id => $pc->code . ' - ' . $pc->name])
+            ->toArray();
+
+        return view('jobprofile::index', compact(
+            'jobProfiles',
+            'statistics',
+            'status',
+            'search',
+            'organizationalUnitId',
+            'positionCodeId',
+            'organizationalUnits',
+            'positionCodes'
+        ));
     }
 
     /**
