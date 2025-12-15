@@ -242,10 +242,6 @@ class JobProfileController extends Controller
         // Verificar que el usuario tenga permiso para editar este perfil
         $this->authorize('update', $profile);
 
-        if (!$profile->canEdit()) {
-            abort(403, 'No se puede editar este perfil en su estado actual.');
-        }
-
         $user = auth()->user();
 
         // Cargar roles del usuario para verificación

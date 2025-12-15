@@ -107,7 +107,16 @@ class JobProfilePolicy
      */
     public function update(User $user, JobProfile $jobProfile): bool
     {
-        // Admin RRHH puede editar cualquier perfil
+        // Super Admin y Admin RRHH pueden editar perfiles aprobados
+        if ($user->hasAnyRole(['super-admin', 'admin-rrhh'])) {
+            // Pueden editar perfiles aprobados o en estados editables normales
+            if ($jobProfile->status === 'approved') {
+                return true;
+            }
+            return $jobProfile->canEdit();
+        }
+
+        // Admin RRHH puede editar cualquier perfil (por permisos)
         if ($user->hasPermission('jobprofile.update.any')) {
             return $jobProfile->canEdit();
         }

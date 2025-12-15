@@ -139,6 +139,46 @@ class DocumentService
     }
 
     /**
+     * Regenera un documento con nuevos datos
+     */
+    public function regenerateDocument(GeneratedDocument $document, array $data): GeneratedDocument
+    {
+        return DB::transaction(function () use ($document, $data) {
+            // Validar que el documento no tenga ninguna firma completada
+            if ($document->hasAnySignature()) {
+                throw new \Exception('No se puede regenerar un documento que ya tiene firmas realizadas. Los documentos con firmas deben mantener su integridad.');
+            }
+
+            $userId = auth()->id();
+            $template = $document->template;
+
+            // Renderizar el nuevo contenido
+            $renderedHtml = $this->templateRenderer->render($template->content, $data);
+
+            // Actualizar el documento
+            $document->update([
+                'title' => $data['title'] ?? $document->title,
+                'content' => json_encode($data),
+                'rendered_html' => $renderedHtml,
+            ]);
+
+            // Generar nuevo PDF
+            $pdfPath = $this->generatePDF($document, $renderedHtml, $template);
+            $document->update(['pdf_path' => $pdfPath]);
+
+            // Registrar auditoría
+            DocumentAudit::log(
+                $document->id,
+                'updated',
+                $userId,
+                'Documento regenerado con nuevos datos'
+            );
+
+            return $document->fresh();
+        });
+    }
+
+    /**
      * Descarga un documento
      */
     public function download(GeneratedDocument $document, bool $signed = false)

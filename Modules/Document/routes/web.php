@@ -12,6 +12,7 @@ Route::middleware(['auth', 'verified'])->prefix('documents')->name('documents.')
     Route::get('/{document}/download', [DocumentController::class, 'download'])->name('download');
     Route::get('/{document}/view', [DocumentController::class, 'view'])->name('view');
     Route::post('/{document}/regenerate', [DocumentController::class, 'regenerate'])->name('regenerate');
+    Route::post('/{document}/regenerate-job-profile', [DocumentController::class, 'regenerateJobProfile'])->name('regenerate-job-profile');
     Route::delete('/{document}', [DocumentController::class, 'destroy'])->name('destroy');
 
     // Firma digital

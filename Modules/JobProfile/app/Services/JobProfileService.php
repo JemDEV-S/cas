@@ -10,6 +10,7 @@ use Modules\JobProfile\Entities\JobProfile;
 use Modules\JobProfile\Repositories\JobProfileRepository;
 use Modules\Core\Exceptions\BusinessRuleException;
 use Modules\JobProfile\Events\JobProfileCreated;
+use Modules\JobProfile\Events\JobProfileUpdated;
 
 class JobProfileService extends BaseService
 {
@@ -221,13 +222,20 @@ class JobProfileService extends BaseService
             $profile = $this->repository->findOrFail($id);
 
             // Validar que se pueda editar
-            if (!$profile->canEdit()) {
+            $user = auth()->user();
+            $canEditApproved = $user && $user->hasAnyRole(['super-admin', 'admin-rrhh']) && $profile->status === 'approved';
+
+            if (!$profile->canEdit() && !$canEditApproved) {
                 throw new BusinessRuleException(
                     'No se puede modificar un perfil en estado: ' . $profile->status_label
                 );
             }
 
             $profile->update($data);
+
+            // Disparar evento de actualización
+            $userId = auth()->id();
+            event(new JobProfileUpdated($profile, $userId));
 
             return $profile->fresh();
         });
@@ -241,7 +249,11 @@ class JobProfileService extends BaseService
         return DB::transaction(function () use ($id, $requirements) {
             $profile = $this->repository->findOrFail($id);
 
-            if (!$profile->canEdit()) {
+            // Validar que se pueda editar
+            $user = auth()->user();
+            $canEditApproved = $user && $user->hasAnyRole(['super-admin', 'admin-rrhh']) && $profile->status === 'approved';
+
+            if (!$profile->canEdit() && !$canEditApproved) {
                 throw new BusinessRuleException('No se pueden modificar los requisitos de este perfil.');
             }
 
@@ -270,7 +282,11 @@ class JobProfileService extends BaseService
         return DB::transaction(function () use ($id, $responsibilities) {
             $profile = $this->repository->findOrFail($id);
 
-            if (!$profile->canEdit()) {
+            // Validar que se pueda editar
+            $user = auth()->user();
+            $canEditApproved = $user && $user->hasAnyRole(['super-admin', 'admin-rrhh']) && $profile->status === 'approved';
+
+            if (!$profile->canEdit() && !$canEditApproved) {
                 throw new BusinessRuleException('No se pueden modificar las responsabilidades de este perfil.');
             }
 
