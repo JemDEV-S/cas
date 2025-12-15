@@ -83,11 +83,95 @@
             </div>
 
             <div class="p-8">
-                <form method="POST" action="{{ route('register') }}" class="space-y-6">
+                <form method="POST" action="{{ route('register') }}" class="space-y-6" id="registerForm">
                     @csrf
 
+                    <!-- Sección de Validación DNI (solo si RENIEC está habilitado) -->
+                    @if(isset($reniecEnabled) && $reniecEnabled)
+                    <div class="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-6 border-2 border-blue-200">
+                        <div class="flex items-start mb-4">
+                            <svg class="h-6 w-6 text-blue-500 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                            </svg>
+                            <div>
+                                <h4 class="text-sm font-bold text-blue-800">Validación de Identidad</h4>
+                                <p class="text-xs text-blue-600 mt-1">Ingresa tu DNI y código verificador para autocompletar tus datos</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <!-- Campo DNI -->
+                            <div class="md:col-span-2 space-y-2">
+                                <label class="block text-sm font-bold text-gray-700">
+                                    DNI <span class="text-red-500">*</span>
+                                </label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"/>
+                                        </svg>
+                                    </div>
+                                    <input
+                                        type="text"
+                                        name="dni"
+                                        id="dni"
+                                        maxlength="8"
+                                        value="{{ old('dni') }}"
+                                        required
+                                        autofocus
+                                        placeholder="12345678"
+                                        class="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 @error('dni') border-red-500 @enderror"
+                                    >
+                                </div>
+                            </div>
+
+                            <!-- Campo Código Verificador -->
+                            <div class="space-y-2">
+                                <label class="block text-sm font-bold text-gray-700">
+                                    Código <span class="text-red-500">*</span>
+                                </label>
+                                <div class="relative">
+                                    <input
+                                        type="text"
+                                        name="codigo_verificador"
+                                        id="codigo_verificador"
+                                        maxlength="1"
+                                        value="{{ old('codigo_verificador') }}"
+                                        required
+                                        placeholder="0"
+                                        class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl text-center text-2xl font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 @error('codigo_verificador') border-red-500 @enderror"
+                                    >
+                                </div>
+                                <p class="text-xs text-gray-500 text-center">Parte posterior del DNI</p>
+                            </div>
+                        </div>
+
+                        <!-- Botón de Validar -->
+                        <button
+                            type="button"
+                            id="validateDniBtn"
+                            class="mt-4 w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-600 text-white rounded-xl font-bold hover:from-blue-600 hover:to-cyan-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                        >
+                            <span class="flex items-center justify-center space-x-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                <span id="validateBtnText">Validar DNI</span>
+                                <svg class="w-5 h-5 animate-spin hidden" id="validateSpinner" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </span>
+                        </button>
+
+                        <!-- Mensaje de validación -->
+                        <div id="validationMessage" class="mt-3 hidden"></div>
+                    </div>
+                    @endif
+
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <!-- Campo DNI -->
+                        @if(!isset($reniecEnabled) || !$reniecEnabled)
+                        <!-- Campo DNI (cuando RENIEC no está habilitado) -->
                         <div class="space-y-2">
                             <label class="block text-sm font-bold text-gray-700">
                                 DNI <span class="text-red-500">*</span>
@@ -101,6 +185,7 @@
                                 <input
                                     type="text"
                                     name="dni"
+                                    id="dni"
                                     maxlength="8"
                                     value="{{ old('dni') }}"
                                     required
@@ -125,6 +210,7 @@
                                 <input
                                     type="email"
                                     name="email"
+                                    id="email"
                                     value="{{ old('email') }}"
                                     required
                                     placeholder="correo@example.com"
@@ -132,6 +218,30 @@
                                 >
                             </div>
                         </div>
+                        @else
+                        <!-- Campo Email (con RENIEC habilitado) -->
+                        <div class="md:col-span-2 space-y-2">
+                            <label class="block text-sm font-bold text-gray-700">
+                                Correo Electrónico <span class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                    </svg>
+                                </div>
+                                <input
+                                    type="email"
+                                    name="email"
+                                    id="email"
+                                    value="{{ old('email') }}"
+                                    required
+                                    placeholder="correo@example.com"
+                                    class="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-300 @error('email') border-red-500 @enderror"
+                                >
+                            </div>
+                        </div>
+                        @endif
 
                         <!-- Campo Nombres -->
                         <div class="space-y-2">
@@ -147,6 +257,7 @@
                                 <input
                                     type="text"
                                     name="first_name"
+                                    id="first_name"
                                     value="{{ old('first_name') }}"
                                     required
                                     placeholder="Juan Carlos"
@@ -169,6 +280,7 @@
                                 <input
                                     type="text"
                                     name="last_name"
+                                    id="last_name"
                                     value="{{ old('last_name') }}"
                                     required
                                     placeholder="Pérez García"
@@ -191,6 +303,7 @@
                                 <input
                                     type="text"
                                     name="phone"
+                                    id="phone"
                                     value="{{ old('phone') }}"
                                     placeholder="987654321"
                                     class="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-300 @error('phone') border-red-500 @enderror"
@@ -215,6 +328,7 @@
                                 <input
                                     type="password"
                                     name="password"
+                                    id="password"
                                     required
                                     placeholder="••••••••"
                                     class="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-300 @error('password') border-red-500 @enderror"
@@ -236,6 +350,7 @@
                                 <input
                                     type="password"
                                     name="password_confirmation"
+                                    id="password_confirmation"
                                     required
                                     placeholder="••••••••"
                                     class="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-300"
@@ -281,6 +396,7 @@
                     <!-- Botón de Registro -->
                     <button
                         type="submit"
+                        id="submitBtn"
                         class="w-full px-6 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-bold hover:from-green-600 hover:to-emerald-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
                     >
                         <span class="flex items-center justify-center space-x-2">
@@ -354,15 +470,44 @@
     input:invalid:not(:placeholder-shown) {
         border-color: #ef4444;
     }
+
+    /* Animación de pulsación */
+    @keyframes pulse-border {
+        0%, 100% {
+            border-color: #10b981;
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+        }
+        50% {
+            border-color: #059669;
+            box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+        }
+    }
+
+    .validated-input {
+        animation: pulse-border 0.6s ease-out;
+    }
 </style>
 
+<!-- Meta tag para CSRF token -->
+<meta name="csrf-token" content="{{ csrf_token() }}">
+
 <script>
-    // Validación en tiempo real para DNI (solo números)
     document.addEventListener('DOMContentLoaded', function() {
+        const reniecEnabled = {{ isset($reniecEnabled) && $reniecEnabled ? 'true' : 'false' }};
+
+        // Validación en tiempo real para DNI (solo números)
         const dniInput = document.querySelector('input[name="dni"]');
         if (dniInput) {
             dniInput.addEventListener('input', function(e) {
                 this.value = this.value.replace(/[^0-9]/g, '');
+            });
+        }
+
+        // Validación para código verificador (solo números y letras)
+        const codigoInput = document.querySelector('input[name="codigo_verificador"]');
+        if (codigoInput) {
+            codigoInput.addEventListener('input', function(e) {
+                this.value = this.value.replace(/[^0-9A-Za-z]/g, '').toUpperCase();
             });
         }
 
@@ -389,24 +534,21 @@
         const passwordInput = document.querySelector('input[name="password"]');
         if (passwordInput) {
             passwordInput.addEventListener('input', function(e) {
-                const password = this.value;
-                const strengthIndicator = document.getElementById('password-strength');
-
-                if (!strengthIndicator) {
-                    // Crear indicador de fortaleza si no existe
-                    const indicator = document.createElement('div');
-                    indicator.id = 'password-strength';
-                    indicator.className = 'mt-2 text-xs font-medium';
-                    this.parentElement.appendChild(indicator);
-                }
-
-                updatePasswordStrength(password);
+                updatePasswordStrength(this.value);
             });
         }
 
         function updatePasswordStrength(password) {
-            const indicator = document.getElementById('password-strength');
-            if (!indicator) return;
+            let indicator = document.getElementById('password-strength');
+
+            if (!indicator && password.length > 0) {
+                indicator = document.createElement('div');
+                indicator.id = 'password-strength';
+                indicator.className = 'mt-2 text-xs font-medium';
+                passwordInput.parentElement.appendChild(indicator);
+            }
+
+            if (!indicator || password.length === 0) return;
 
             let strength = 0;
             let feedback = '';
@@ -420,24 +562,160 @@
                 case 0:
                 case 1:
                     indicator.className = 'mt-2 text-xs font-medium text-red-600';
-                    feedback = 'Contraseña débil';
+                    feedback = '❌ Contraseña débil';
                     break;
                 case 2:
                     indicator.className = 'mt-2 text-xs font-medium text-yellow-600';
-                    feedback = 'Contraseña media';
+                    feedback = '⚠️ Contraseña media';
                     break;
                 case 3:
                     indicator.className = 'mt-2 text-xs font-medium text-blue-600';
-                    feedback = 'Contraseña buena';
+                    feedback = '👍 Contraseña buena';
                     break;
                 case 4:
                     indicator.className = 'mt-2 text-xs font-medium text-green-600';
-                    feedback = 'Contraseña fuerte';
+                    feedback = '✅ Contraseña fuerte';
                     break;
             }
 
             indicator.textContent = feedback;
         }
+
+        // ========================================
+        // VALIDACIÓN RENIEC con AJAX
+        // ========================================
+        if (reniecEnabled) {
+            const validateBtn = document.getElementById('validateDniBtn');
+            const validateBtnText = document.getElementById('validateBtnText');
+            const validateSpinner = document.getElementById('validateSpinner');
+            const validationMessage = document.getElementById('validationMessage');
+            const firstNameInput = document.getElementById('first_name');
+            const lastNameInput = document.getElementById('last_name');
+            const form = document.getElementById('registerForm');
+
+            let dniValidated = false;
+
+            // Validar DNI con AJAX
+            if (validateBtn) {
+                validateBtn.addEventListener('click', async function(e) {
+                    e.preventDefault();
+
+                    const dni = dniInput.value;
+                    const codigoVerificador = codigoInput ? codigoInput.value : '';
+
+                    // Validar campos
+                    if (!dni || dni.length !== 8) {
+                        showValidationMessage('error', 'Por favor, ingrese un DNI válido de 8 dígitos');
+                        return;
+                    }
+
+                    if (codigoInput && !codigoVerificador) {
+                        showValidationMessage('error', 'Por favor, ingrese el código verificador');
+                        return;
+                    }
+
+                    // Mostrar loading
+                    validateBtn.disabled = true;
+                    validateBtnText.textContent = 'Validando...';
+                    validateSpinner.classList.remove('hidden');
+                    validationMessage.classList.add('hidden');
+
+                    try {
+                        // Llamar a la API
+                        const response = await fetch('/api/auth/validate-dni', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                dni: dni,
+                                codigo_verificador: codigoVerificador
+                            })
+                        });
+
+                        const data = await response.json();
+
+                        if (data.success && data.data) {
+                            // Autocompletar campos
+                            firstNameInput.value = data.data.first_name;
+                            lastNameInput.value = data.data.last_name;
+
+                            // Marcar como validado
+                            dniValidated = true;
+
+                            // Agregar efecto visual
+                            firstNameInput.classList.add('validated-input');
+                            lastNameInput.classList.add('validated-input');
+
+                            // Mostrar mensaje de éxito
+                            showValidationMessage('success', '✅ DNI validado correctamente. Datos autocompletados.');
+
+                            // Deshabilitar campos de DNI
+                            dniInput.readOnly = true;
+                            if (codigoInput) codigoInput.readOnly = true;
+
+                            // Cambiar botón
+                            validateBtnText.textContent = 'DNI Validado';
+                            validateBtn.classList.remove('from-blue-500', 'to-cyan-600');
+                            validateBtn.classList.add('from-green-500', 'to-emerald-600');
+
+                            // Focus en email
+                            document.getElementById('email').focus();
+                        } else {
+                            showValidationMessage('error', data.message || 'No se pudo validar el DNI');
+                            dniValidated = false;
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        showValidationMessage('error', 'Error al conectar con el servicio de validación. Intente nuevamente.');
+                        dniValidated = false;
+                    } finally {
+                        validateBtn.disabled = false;
+                        if (!dniValidated) {
+                            validateBtnText.textContent = 'Validar DNI';
+                        }
+                        validateSpinner.classList.add('hidden');
+                    }
+                });
+            }
+
+            // Prevenir envío si DNI no está validado
+            form.addEventListener('submit', function(e) {
+                if (reniecEnabled && !dniValidated) {
+                    e.preventDefault();
+                    showValidationMessage('error', 'Por favor, valide su DNI antes de continuar con el registro');
+                    if (validateBtn) {
+                        validateBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                    return false;
+                }
+            });
+
+            function showValidationMessage(type, message) {
+                validationMessage.classList.remove('hidden');
+
+                if (type === 'success') {
+                    validationMessage.className = 'mt-3 p-4 bg-green-100 border-2 border-green-300 rounded-xl text-green-800 text-sm font-medium flex items-center';
+                    validationMessage.innerHTML = `
+                        <svg class="w-5 h-5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <span>${message}</span>
+                    `;
+                } else {
+                    validationMessage.className = 'mt-3 p-4 bg-red-100 border-2 border-red-300 rounded-xl text-red-800 text-sm font-medium flex items-center';
+                    validationMessage.innerHTML = `
+                        <svg class="w-5 h-5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <span>${message}</span>
+                    `;
+                }
+            }
+        }
     });
 </script>
+
 @endsection
