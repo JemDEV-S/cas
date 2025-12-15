@@ -107,6 +107,11 @@ class JobProfilePolicy
      */
     public function update(User $user, JobProfile $jobProfile): bool
     {
+        // Cargar roles si no están cargados
+        if (!$user->relationLoaded('roles')) {
+            $user->load('roles');
+        }
+
         // Super Admin y Admin RRHH pueden editar perfiles aprobados
         if ($user->hasAnyRole(['super-admin', 'admin-rrhh'])) {
             // Pueden editar perfiles aprobados o en estados editables normales
