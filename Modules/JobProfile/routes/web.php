@@ -16,6 +16,9 @@ Route::middleware(['auth', 'verified'])->prefix('jobprofile')->name('jobprofile.
     ]);
     Route::post('/profiles/{profile}/submit', [JobProfileController::class, 'submitForReview'])->name('profiles.submit');
 
+    // Exportar reporte de presupuesto (provisional)
+    Route::get('/budget-report/export', [JobProfileController::class, 'exportBudgetReport'])->name('budget-report.export');
+
     // Position Codes
     Route::prefix('positions')->name('positions.')->group(function () {
         Route::get('/', [PositionCodeController::class, 'index'])->name('index');

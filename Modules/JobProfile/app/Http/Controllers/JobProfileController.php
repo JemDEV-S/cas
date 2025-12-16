@@ -11,6 +11,8 @@ use Modules\Core\Exceptions\BusinessRuleException;
 use Modules\JobProfile\Http\Requests\StoreJobProfileRequest;
 use Modules\JobProfile\Enums\EducationLevelEnum;
 use Modules\Organization\Entities\OrganizationalUnit;
+use Maatwebsite\Excel\Facades\Excel;
+use Modules\JobProfile\Exports\BudgetReportExport;
 
 
 class JobProfileController extends Controller
@@ -427,5 +429,25 @@ class JobProfileController extends Controller
         }
 
         return $ids;
+    }
+
+    /**
+     * Exportar reporte de presupuesto en Excel
+     * Método provisional para generar cálculo de presupuesto por convocatoria
+     */
+    public function exportBudgetReport(Request $request)
+    {
+        // Obtener el job_posting_id si se envía
+        $jobPostingId = $request->get('job_posting_id');
+
+        // Generar el nombre del archivo
+        $year = now()->year;
+        $fileName = "presupuesto_convocatoria_{$year}.xlsx";
+
+        // Crear la exportación
+        return Excel::download(
+            new BudgetReportExport($jobPostingId),
+            $fileName
+        );
     }
 }

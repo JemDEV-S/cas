@@ -8,7 +8,8 @@
       "Bash(mkdir:*)",
       "Bash(npm run build:*)",
       "Bash(dir:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(composer require:*)"
     ],
     "deny": [],
     "ask": []
