@@ -289,10 +289,151 @@
                             </div>
                         </div>
 
+                        <!-- Campo Género -->
+                        <div class="space-y-2">
+                            <label class="block text-sm font-bold text-gray-700">
+                                Género <span class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                    </svg>
+                                </div>
+                                <select
+                                    name="gender"
+                                    id="gender"
+                                    required
+                                    class="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-300 @error('gender') border-red-500 @enderror"
+                                >
+                                    <option value="">Seleccione...</option>
+                                    <option value="MASCULINO" {{ old('gender') == 'MASCULINO' ? 'selected' : '' }}>MASCULINO</option>
+                                    <option value="FEMENINO" {{ old('gender') == 'FEMENINO' ? 'selected' : '' }}>FEMENINO</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Campo Fecha de Nacimiento -->
+                        <div class="space-y-2">
+                            <label class="block text-sm font-bold text-gray-700">
+                                Fecha de Nacimiento <span class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                    </svg>
+                                </div>
+                                <input
+                                    type="date"
+                                    name="birth_date"
+                                    id="birth_date"
+                                    value="{{ old('birth_date') }}"
+                                    required
+                                    max="{{ date('Y-m-d') }}"
+                                    min="1900-01-01"
+                                    class="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-300 @error('birth_date') border-red-500 @enderror"
+                                >
+                            </div>
+                        </div>
+
+                        <!-- Campo Dirección -->
+                        <div class="md:col-span-2 space-y-2">
+                            <label class="block text-sm font-bold text-gray-700">
+                                Dirección <span class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    </svg>
+                                </div>
+                                <input
+                                    type="text"
+                                    name="address"
+                                    id="address"
+                                    value="{{ old('address') }}"
+                                    required
+                                    placeholder="Av. Principal 123"
+                                    class="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-300 @error('address') border-red-500 @enderror"
+                                >
+                            </div>
+                        </div>
+
+                        <!-- Campo Distrito -->
+                        <div class="space-y-2">
+                            <label class="block text-sm font-bold text-gray-700">
+                                Distrito <span class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                    </svg>
+                                </div>
+                                <input
+                                    type="text"
+                                    name="district"
+                                    id="district"
+                                    value="{{ old('district') }}"
+                                    required
+                                    placeholder="San Jerónimo"
+                                    class="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-300 @error('district') border-red-500 @enderror"
+                                >
+                            </div>
+                        </div>
+
+                        <!-- Campo Provincia -->
+                        <div class="space-y-2">
+                            <label class="block text-sm font-bold text-gray-700">
+                                Provincia <span class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                    </svg>
+                                </div>
+                                <input
+                                    type="text"
+                                    name="province"
+                                    id="province"
+                                    value="{{ old('province') }}"
+                                    required
+                                    placeholder="Cusco"
+                                    class="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-300 @error('province') border-red-500 @enderror"
+                                >
+                            </div>
+                        </div>
+
+                        <!-- Campo Departamento -->
+                        <div class="space-y-2">
+                            <label class="block text-sm font-bold text-gray-700">
+                                Departamento <span class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"/>
+                                    </svg>
+                                </div>
+                                <input
+                                    type="text"
+                                    name="department"
+                                    id="department"
+                                    value="{{ old('department') }}"
+                                    required
+                                    placeholder="Cusco"
+                                    class="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-300 @error('department') border-red-500 @enderror"
+                                >
+                            </div>
+                        </div>
+
                         <!-- Campo Teléfono -->
                         <div class="space-y-2">
                             <label class="block text-sm font-bold text-gray-700">
-                                Teléfono <span class="text-gray-500 text-xs">(Opcional)</span>
+                                Teléfono <span class="text-red-500">*</span>
                             </label>
                             <div class="relative">
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -304,16 +445,14 @@
                                     type="text"
                                     name="phone"
                                     id="phone"
+                                    maxlength="9"
                                     value="{{ old('phone') }}"
+                                    required
                                     placeholder="987654321"
                                     class="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-300 @error('phone') border-red-500 @enderror"
                                 >
                             </div>
                         </div>
-
-                        <!-- Espacio vacío para alineación -->
-                        <div></div>
-
                         <!-- Campo Contraseña -->
                         <div class="space-y-2">
                             <label class="block text-sm font-bold text-gray-700">
@@ -519,6 +658,20 @@
             });
         }
 
+        // Convertir a mayúsculas automáticamente
+        const uppercaseFields = ['first_name', 'last_name', 'address', 'district', 'province', 'department'];
+        uppercaseFields.forEach(fieldName => {
+            const field = document.querySelector(`input[name="${fieldName}"]`);
+            if (field) {
+                field.addEventListener('input', function(e) {
+                    const start = this.selectionStart;
+                    const end = this.selectionEnd;
+                    this.value = this.value.toUpperCase();
+                    this.setSelectionRange(start, end);
+                });
+            }
+        });
+
         // Efectos de focus para todos los inputs
         const inputs = document.querySelectorAll('input');
         inputs.forEach(input => {
@@ -591,6 +744,8 @@
             const validationMessage = document.getElementById('validationMessage');
             const firstNameInput = document.getElementById('first_name');
             const lastNameInput = document.getElementById('last_name');
+            const genderInput = document.getElementById('gender');
+            const birthDateInput = document.getElementById('birth_date');
             const form = document.getElementById('registerForm');
 
             let dniValidated = false;
@@ -642,12 +797,28 @@
                             firstNameInput.value = data.data.first_name;
                             lastNameInput.value = data.data.last_name;
 
+                            // Autocompletar género si está disponible
+                            if (data.data.gender) {
+                                genderInput.value = data.data.gender.toUpperCase();
+                            }
+
+                            // Autocompletar fecha de nacimiento si está disponible
+                            if (data.data.birth_date) {
+                                birthDateInput.value = data.data.birth_date;
+                            }
+
                             // Marcar como validado
                             dniValidated = true;
 
                             // Agregar efecto visual
                             firstNameInput.classList.add('validated-input');
                             lastNameInput.classList.add('validated-input');
+                            if (data.data.gender) {
+                                genderInput.classList.add('validated-input');
+                            }
+                            if (data.data.birth_date) {
+                                birthDateInput.classList.add('validated-input');
+                            }
 
                             // Mostrar mensaje de éxito
                             showValidationMessage('success', '✅ DNI validado correctamente. Datos autocompletados.');
