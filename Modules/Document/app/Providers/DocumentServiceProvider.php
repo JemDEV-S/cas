@@ -90,7 +90,9 @@ class DocumentServiceProvider extends ServiceProvider
      */
     protected function registerCommands(): void
     {
-        // $this->commands([]);
+        $this->commands([
+            \Modules\Document\Console\Commands\RegenerateApprovedJobProfileDocuments::class,
+        ]);
     }
 
     /**

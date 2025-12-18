@@ -401,7 +401,7 @@ class JobProfile extends BaseSoftDelete
 
         $salary = $this->positionCode->base_salary;
         return 'S/ ' . number_format($salary, 2) .
-               ' (Monto que incluye todos los incentivos y otros conceptos establecidos por ley, conforme a la normativa vigente)';
+               ' (Incluye los montos y afiliaciones de Ley, así como toda deducción aplicable al trabajador.)';
     }
 
     /**
