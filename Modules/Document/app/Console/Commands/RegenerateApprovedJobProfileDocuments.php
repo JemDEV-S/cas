@@ -26,6 +26,8 @@ class RegenerateApprovedJobProfileDocuments extends Command
     protected int $successCount = 0;
     protected int $errorCount = 0;
     protected int $skippedCount = 0;
+    protected int $workflowsResetCount = 0;
+    protected int $workflowsCreatedCount = 0;
     protected array $errors = [];
 
     public function __construct(
@@ -166,69 +168,123 @@ class RegenerateApprovedJobProfileDocuments extends Command
                 ->where('status', 'active')
                 ->firstOrFail();
 
-            // Preparar datos (usando la misma lógica del listener)
-            $data = $this->prepareDocumentData($jobProfile);
+            // Verificar si tiene firmas ANTES de resetear
+            $hadSignatures = $existingDocument->hasAnySignature();
 
-            // Si el documento tiene firmas y NO queremos mantenerlas, resetear flujo
-            if ($existingDocument->hasAnySignature() && !$keepSignatures) {
+            // PASO 1: Si el documento tiene firmas y NO queremos mantenerlas, resetear flujo COMPLETO
+            if ($hadSignatures && !$keepSignatures) {
                 $this->resetSignatureWorkflow($existingDocument);
+                $this->workflowsResetCount++;
             }
 
-            // Regenerar el contenido HTML
+            // PASO 2: Preparar datos con la información actualizada del perfil
+            $data = $this->prepareDocumentData($jobProfile);
+
+            // PASO 3: Regenerar el contenido HTML con los datos corregidos
             $renderedHtml = $this->templateRenderer->render($template->content, $data);
 
-            // Actualizar el documento
+            // PASO 4: Actualizar el documento con el nuevo contenido
             $existingDocument->update([
                 'title' => $data['title'] ?? $existingDocument->title,
                 'content' => json_encode($data),
                 'rendered_html' => $renderedHtml,
             ]);
 
-            // Generar nuevo PDF (sin la validación de firmas)
+            // PASO 5: Generar nuevo PDF con el contenido corregido
             $pdfPath = $this->documentService->generatePDF($existingDocument, $renderedHtml, $template);
             $existingDocument->update(['pdf_path' => $pdfPath]);
 
-            // Registrar auditoría
+            // PASO 6: Registrar auditoría de la regeneración
             DocumentAudit::log(
                 $existingDocument->id,
                 'updated',
-                'system', // Usuario del sistema para operaciones masivas
+                'system',
                 'Documento regenerado masivamente por comando artisan (corrigiendo error en contenido PDF)'
             );
 
-            // Si reseteamos firmas, crear nuevo flujo
-            if ($existingDocument->hasAnySignature() && !$keepSignatures) {
+            // PASO 7: Si el documento requiere firma Y reseteamos el flujo, crear nuevo workflow
+            if ($template->requiresSignature() && $hadSignatures && !$keepSignatures) {
                 $this->createSignatureWorkflow($existingDocument, $jobProfile, $template);
+                $this->workflowsCreatedCount++;
             }
 
             Log::info('Documento regenerado exitosamente', [
                 'job_profile_id' => $jobProfile->id,
                 'document_id' => $existingDocument->id,
                 'document_code' => $existingDocument->code,
-                'signatures_reset' => !$keepSignatures,
+                'had_signatures' => $hadSignatures,
+                'signatures_reset' => $hadSignatures && !$keepSignatures,
+                'workflow_recreated' => $template->requiresSignature() && $hadSignatures && !$keepSignatures,
             ]);
         });
     }
 
+    /**
+     * Resetea completamente el flujo de firmas de un documento
+     * Elimina: SignatureWorkflow, DigitalSignatures y resetea campos del documento
+     */
     protected function resetSignatureWorkflow(GeneratedDocument $document): void
     {
-        // Eliminar todas las firmas existentes
-        $document->signatures()->delete();
+        $deletedSignatures = 0;
+        $deletedWorkflows = 0;
 
-        // Resetear campos relacionados con firmas
+        // 1. Eliminar workflow de firmas existente
+        $workflow = $document->signatureWorkflow()->first();
+        if ($workflow) {
+            $workflow->delete();
+            $deletedWorkflows++;
+            Log::info('SignatureWorkflow eliminado', [
+                'document_id' => $document->id,
+                'workflow_id' => $workflow->id,
+                'workflow_status' => $workflow->status,
+            ]);
+        }
+
+        // 2. Eliminar todas las firmas digitales existentes
+        $signatures = $document->signatures()->get();
+        foreach ($signatures as $signature) {
+            Log::info('DigitalSignature eliminada', [
+                'document_id' => $document->id,
+                'signature_id' => $signature->id,
+                'user_id' => $signature->user_id,
+                'status' => $signature->status,
+                'signed_at' => $signature->signed_at,
+            ]);
+            $signature->delete();
+            $deletedSignatures++;
+        }
+
+        // 3. Resetear campos relacionados con firmas en el documento
+        // NOTA: NO cambiamos el status a 'draft', lo dejamos en su estado actual
+        // El SignatureService.createWorkflow() lo actualizará a 'pending_signature' correctamente
         $document->update([
             'signed_pdf_path' => null,
-            'signature_status' => $document->signature_required ? 'pending' : null,
+            'signature_status' => null, // Resetear a null, el workflow lo actualizará
             'current_signer_id' => null,
             'signatures_completed' => 0,
+            'total_signatures_required' => 0,
         ]);
 
-        Log::info('Flujo de firmas reseteado', [
+        // 4. Registrar auditoría
+        DocumentAudit::log(
+            $document->id,
+            'workflow_reset',
+            'system',
+            "Flujo de firmas reseteado masivamente: {$deletedWorkflows} workflow(s), {$deletedSignatures} firma(s) eliminadas"
+        );
+
+        Log::info('Flujo de firmas reseteado completamente', [
             'document_id' => $document->id,
             'document_code' => $document->code,
+            'workflows_deleted' => $deletedWorkflows,
+            'signatures_deleted' => $deletedSignatures,
         ]);
     }
 
+    /**
+     * Crea un nuevo workflow de firmas para el documento
+     * Utiliza SignatureService para mantener consistencia con el flujo normal
+     */
     protected function createSignatureWorkflow(GeneratedDocument $document, JobProfile $jobProfile, DocumentTemplate $template): void
     {
         $signers = [];
@@ -236,7 +292,12 @@ class RegenerateApprovedJobProfileDocuments extends Command
         // Obtener firmantes desde la configuración del template
         $templateSigners = $template->signers_config ?? [];
 
-        foreach ($templateSigners as $signer) {
+        Log::info('Preparando firmantes para nuevo workflow', [
+            'document_id' => $document->id,
+            'template_signers_count' => count($templateSigners),
+        ]);
+
+        foreach ($templateSigners as $index => $signer) {
             // Resolver el user_id dinámicamente según el rol
             $userId = $this->resolveSignerUserId($signer, $jobProfile);
 
@@ -246,29 +307,70 @@ class RegenerateApprovedJobProfileDocuments extends Command
                     'type' => $signer['type'] ?? 'firma',
                     'role' => $signer['role'] ?? 'Firmante',
                 ];
+
+                Log::info('Firmante agregado al nuevo workflow', [
+                    'document_id' => $document->id,
+                    'order' => $index + 1,
+                    'user_id' => $userId,
+                    'role' => $signer['role'] ?? 'Firmante',
+                    'type' => $signer['type'] ?? 'firma',
+                ]);
+            } else {
+                Log::warning('No se pudo resolver firmante', [
+                    'document_id' => $document->id,
+                    'role_key' => $signer['role_key'] ?? 'unknown',
+                    'signer_config' => $signer,
+                ]);
             }
         }
 
         if (empty($signers)) {
-            Log::warning('No se encontraron firmantes para el documento', [
+            Log::error('No se encontraron firmantes válidos para el documento', [
                 'document_id' => $document->id,
+                'document_code' => $document->code,
                 'job_profile_id' => $jobProfile->id,
+                'job_profile_code' => $jobProfile->code,
+                'template_code' => $template->code,
             ]);
-            return;
+            throw new \Exception("No se pudieron resolver los firmantes para el documento {$document->code}");
         }
 
-        // Crear el flujo de firmas
+        // Crear el flujo de firmas usando el servicio oficial
+        $workflowType = $template->signature_workflow_type ?? 'sequential';
+
+        Log::info('Creando nuevo SignatureWorkflow', [
+            'document_id' => $document->id,
+            'workflow_type' => $workflowType,
+            'signers_count' => count($signers),
+        ]);
+
         $workflow = $this->signatureService->createWorkflow(
             $document,
             $signers,
-            $template->signature_workflow_type ?? 'sequential'
+            $workflowType
         );
+
+        // Verificar que se crearon las firmas digitales
+        $createdSignatures = $document->signatures()->count();
 
         Log::info('Flujo de firmas recreado exitosamente', [
             'document_id' => $document->id,
+            'document_code' => $document->code,
             'workflow_id' => $workflow->id,
+            'workflow_type' => $workflowType,
+            'workflow_status' => $workflow->status,
             'signers_count' => count($signers),
+            'digital_signatures_created' => $createdSignatures,
+            'current_signer_id' => $document->current_signer_id,
         ]);
+
+        // Registrar auditoría adicional
+        DocumentAudit::log(
+            $document->id,
+            'workflow_recreated',
+            'system',
+            "Nuevo flujo de firmas creado: {$workflowType}, {$createdSignatures} firmantes configurados"
+        );
     }
 
     protected function resolveSignerUserId(array $signerConfig, JobProfile $jobProfile): ?string
@@ -401,10 +503,21 @@ class RegenerateApprovedJobProfileDocuments extends Command
         }
 
         $this->newLine();
-        $this->info("📊 Perfiles procesados:  {$this->processedCount}");
-        $this->info("✅ Exitosos:             {$this->successCount}");
-        $this->info("⏭️  Omitidos:             {$this->skippedCount}");
-        $this->error("❌ Errores:              {$this->errorCount}");
+        $this->info('📄 DOCUMENTOS:');
+        $this->info("   • Procesados:         {$this->processedCount}");
+        $this->info("   • Exitosos:           {$this->successCount}");
+        $this->info("   • Omitidos:           {$this->skippedCount}");
+        if ($this->errorCount > 0) {
+            $this->error("   • Errores:            {$this->errorCount}");
+        } else {
+            $this->info("   • Errores:            {$this->errorCount}");
+        }
+
+        $this->newLine();
+        $this->info('🔄 FLUJOS DE FIRMA:');
+        $this->info("   • Workflows resetea.. {$this->workflowsResetCount}");
+        $this->info("   • Workflows creados:  {$this->workflowsCreatedCount}");
+
         $this->info('═══════════════════════════════════════════════════════');
 
         if (!empty($this->errors)) {
@@ -420,7 +533,16 @@ class RegenerateApprovedJobProfileDocuments extends Command
         if ($dryRun) {
             $this->warn('💡 Para ejecutar los cambios reales, ejecuta el comando sin --dry-run');
         } else {
-            $this->info('✨ Regeneración completada exitosamente');
+            if ($this->errorCount === 0) {
+                $this->info('✨ Regeneración completada exitosamente');
+                if ($this->workflowsCreatedCount > 0) {
+                    $this->newLine();
+                    $this->warn("⚠️  IMPORTANTE: Se crearon {$this->workflowsCreatedCount} nuevos workflows de firma.");
+                    $this->warn('   Los firmantes recibirán notificaciones para firmar los documentos.');
+                }
+            } else {
+                $this->error('⚠️  Regeneración completada con errores. Revisa el log para más detalles.');
+            }
         }
     }
 }
