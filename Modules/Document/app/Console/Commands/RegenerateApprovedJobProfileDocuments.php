@@ -170,11 +170,15 @@ class RegenerateApprovedJobProfileDocuments extends Command
 
             // Verificar si tiene firmas ANTES de resetear
             $hadSignatures = $existingDocument->hasAnySignature();
+            $requiresSignature = $template->requiresSignature();
 
-            // PASO 1: Si el documento tiene firmas y NO queremos mantenerlas, resetear flujo COMPLETO
-            if ($hadSignatures && !$keepSignatures) {
+            // PASO 1: SIEMPRE resetear el flujo de firmas si NO queremos mantenerlas
+            // Esto es necesario incluso si no tenía firmas, para limpiar cualquier workflow pendiente
+            if (!$keepSignatures) {
                 $this->resetSignatureWorkflow($existingDocument);
-                $this->workflowsResetCount++;
+                if ($hadSignatures) {
+                    $this->workflowsResetCount++;
+                }
             }
 
             // PASO 2: Preparar datos con la información actualizada del perfil
@@ -184,10 +188,15 @@ class RegenerateApprovedJobProfileDocuments extends Command
             $renderedHtml = $this->templateRenderer->render($template->content, $data);
 
             // PASO 4: Actualizar el documento con el nuevo contenido
+            // Establecer el estado correcto según el flujo original de generación
             $existingDocument->update([
                 'title' => $data['title'] ?? $existingDocument->title,
                 'content' => json_encode($data),
                 'rendered_html' => $renderedHtml,
+                // Resetear a 'draft' como cuando se genera por primera vez
+                'status' => 'draft',
+                'signature_status' => $requiresSignature ? 'pending' : null,
+                'signature_required' => $requiresSignature,
             ]);
 
             // PASO 5: Generar nuevo PDF con el contenido corregido
@@ -202,8 +211,9 @@ class RegenerateApprovedJobProfileDocuments extends Command
                 'Documento regenerado masivamente por comando artisan (corrigiendo error en contenido PDF)'
             );
 
-            // PASO 7: Si el documento requiere firma Y reseteamos el flujo, crear nuevo workflow
-            if ($template->requiresSignature() && $hadSignatures && !$keepSignatures) {
+            // PASO 7: Crear el workflow de firmas si el template lo requiere
+            // Esto replica el comportamiento del listener GenerateJobProfileDocument
+            if ($requiresSignature && !$keepSignatures) {
                 $this->createSignatureWorkflow($existingDocument, $jobProfile, $template);
                 $this->workflowsCreatedCount++;
             }
@@ -213,8 +223,11 @@ class RegenerateApprovedJobProfileDocuments extends Command
                 'document_id' => $existingDocument->id,
                 'document_code' => $existingDocument->code,
                 'had_signatures' => $hadSignatures,
-                'signatures_reset' => $hadSignatures && !$keepSignatures,
-                'workflow_recreated' => $template->requiresSignature() && $hadSignatures && !$keepSignatures,
+                'requires_signature' => $requiresSignature,
+                'workflow_reset' => !$keepSignatures,
+                'workflow_created' => $requiresSignature && !$keepSignatures,
+                'final_status' => $existingDocument->fresh()->status,
+                'final_signature_status' => $existingDocument->fresh()->signature_status,
             ]);
         });
     }
