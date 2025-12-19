@@ -176,6 +176,12 @@ class ReniecService
     {
         // Calcular el código verificador según algoritmo RENIEC
         $codigoCalculado = $this->calcularCodigoVerificador($dni);
+        Log::info("RENIEC: Cálculo de código verificador", [
+            'dni' => $dni,
+            'codigo_verificador' => $codigoVerificador,
+            'codigo_calculado' => $codigoCalculado
+        ]);
+
 
         return $codigoCalculado === strtoupper($codigoVerificador);
     }

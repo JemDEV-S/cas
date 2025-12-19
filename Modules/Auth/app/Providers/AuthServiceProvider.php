@@ -51,6 +51,9 @@ class AuthServiceProvider extends ServiceProvider
         $this->app->singleton(\Modules\Auth\Repositories\RoleRepository::class);
         $this->app->singleton(\Modules\Auth\Repositories\PermissionRepository::class);
 
+        // Registrar servicios de RENIEC
+        $this->registerReniecServices();
+
         // Registrar middleware
         $this->app['router']->aliasMiddleware('role', \Modules\Auth\Middleware\CheckRole::class);
         $this->app['router']->aliasMiddleware('permission', \Modules\Auth\Middleware\CheckPermission::class);
@@ -58,6 +61,44 @@ class AuthServiceProvider extends ServiceProvider
         // Registrar policies
         Gate::policy(\Modules\Auth\Entities\Role::class, \Modules\Auth\Policies\RolePolicy::class);
         Gate::policy(\Modules\Auth\Entities\Permission::class, \Modules\Auth\Policies\PermissionPolicy::class);
+    }
+
+    /**
+     * Registrar servicios de RENIEC con sus dependencias
+     */
+    protected function registerReniecServices(): void
+    {
+        // Registrar ReniecApiClient
+        $this->app->singleton(\Modules\Auth\Services\Reniec\ReniecApiClient::class, function ($app) {
+            return new \Modules\Auth\Services\Reniec\ReniecApiClient(
+                apiUrl: config('auth.reniec.api.url'),
+                apiToken: config('auth.reniec.api.token'),
+                timeout: config('auth.reniec.api.timeout'),
+                retryTimes: config('auth.reniec.api.retry.times'),
+                retrySleep: config('auth.reniec.api.retry.sleep'),
+            );
+        });
+
+        // Registrar ReniecValidator
+        $this->app->singleton(\Modules\Auth\Services\Reniec\ReniecValidator::class);
+
+        // Registrar ReniecCacheService
+        $this->app->singleton(\Modules\Auth\Services\Reniec\ReniecCacheService::class, function ($app) {
+            return new \Modules\Auth\Services\Reniec\ReniecCacheService(
+                enabled: config('auth.reniec.cache.enabled'),
+                ttl: config('auth.reniec.cache.ttl'),
+            );
+        });
+
+        // Registrar ReniecService principal
+        $this->app->singleton(\Modules\Auth\Services\Reniec\ReniecService::class, function ($app) {
+            return new \Modules\Auth\Services\Reniec\ReniecService(
+                enabled: config('auth.reniec.enabled'),
+                apiClient: $app->make(\Modules\Auth\Services\Reniec\ReniecApiClient::class),
+                validator: $app->make(\Modules\Auth\Services\Reniec\ReniecValidator::class),
+                cache: $app->make(\Modules\Auth\Services\Reniec\ReniecCacheService::class),
+            );
+        });
     }
 
     /**

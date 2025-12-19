@@ -3,150 +3,84 @@
 namespace Modules\Auth\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Modules\User\Entities\User;
+use Modules\Auth\Entities\Role;
+use Modules\Auth\Http\Requests\RegisterRequest;
+use Modules\Auth\Services\Reniec\ReniecService;
+use Modules\Auth\Exceptions\ReniecException;
 use Modules\User\Services\UserService;
-use Modules\Auth\Services\ReniecService;
 
 class RegisterController extends Controller
 {
     public function __construct(
-        protected UserService $userService,
-        protected ReniecService $reniecService
+        private readonly UserService $userService,
+        private readonly ReniecService $reniecService
     ) {}
 
     /**
-     * Show the registration form.
+     * Mostrar formulario de registro
      */
     public function showRegistrationForm()
     {
-        // Verificar si RENIEC está habilitado
-        $reniecEnabled = $this->reniecService->isEnabled();
-
-        Log::info('RegisterController: Mostrando formulario de registro', [
-            'reniec_enabled' => $reniecEnabled
-        ]);
-
         return view('auth::register', [
-            'reniecEnabled' => $reniecEnabled
+            'reniecEnabled' => $this->reniecService->isEnabled()
         ]);
     }
 
     /**
-     * Handle registration request.
+     * Procesar registro de usuario
      */
-    public function register(Request $request)
+    public function register(RegisterRequest $request)
     {
-        // Reglas de validación base
-        $rules = [
-            'dni' => ['required', 'string', 'size:8', 'unique:users,dni', 'regex:/^[0-9]{8}$/'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
-            'first_name' => ['required', 'string', 'max:100'],
-            'last_name' => ['required', 'string', 'max:100'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
-            'phone' => ['nullable', 'string', 'max:20'],
-        ];
-
-        // Si RENIEC está habilitado y requiere código verificador, agregarlo a las reglas
-        $reniecEnabled = $this->reniecService->isEnabled();
-        $requireVerificationCode = config('auth.reniec.require_verification_code', true);
-
-        if ($reniecEnabled && $requireVerificationCode) {
-            $rules['codigo_verificador'] = ['required', 'string', 'size:1'];
-        }
-
-        $messages = [
-            'dni.regex' => 'El DNI debe contener exactamente 8 dígitos numéricos.',
-            'dni.size' => 'El DNI debe tener exactamente 8 caracteres.',
-            'dni.unique' => 'Este DNI ya está registrado en el sistema.',
-            'email.unique' => 'Este correo electrónico ya está registrado.',
-            'password.min' => 'La contraseña debe tener al menos 8 caracteres.',
-            'password.confirmed' => 'La confirmación de contraseña no coincide.',
-            'codigo_verificador.required' => 'El código verificador del DNI es obligatorio.',
-            'codigo_verificador.size' => 'El código verificador debe ser de 1 carácter.',
-        ];
-
-        $request->validate($rules, $messages);
-
         try {
             // Validar con RENIEC si está habilitado
-            if ($reniecEnabled) {
-                $dni = $request->dni;
-                $codigoVerificador = $request->codigo_verificador;
-
-                Log::info('RegisterController: Validando DNI con RENIEC', [
-                    'dni' => $dni
-                ]);
-
-                $validacion = $this->reniecService->validarParaRegistro($dni, $codigoVerificador);
-
-                if (!$validacion['valid']) {
-                    Log::warning('RegisterController: Validación RENIEC fallida', [
-                        'dni' => $dni,
-                        'message' => $validacion['message']
-                    ]);
-
-                    return redirect()
-                        ->back()
-                        ->withInput()
-                        ->withErrors(['dni' => $validacion['message']]);
-                }
-
-                Log::info('RegisterController: DNI validado exitosamente con RENIEC', [
-                    'dni' => $dni
-                ]);
-
-                // Opcional: Verificar que los nombres coincidan con RENIEC
-                // Esto es útil para evitar registros con datos incorrectos
-                $datosReniec = $validacion['data'];
-
-                // Aquí puedes decidir si quieres forzar los datos de RENIEC
-                // o permitir que el usuario los modifique
-                // Por ahora, solo validamos que el DNI sea correcto
+            if ($request->shouldValidateWithReniec()) {
+                $this->validateWithReniec($request);
             }
 
-            // Crear el usuario
-            Log::info('RegisterController: Creando usuario', [
-                'dni' => $request->dni,
-                'email' => $request->email
-            ]);
+            // Crear usuario en una transacción
+            $user = DB::transaction(function () use ($request) {
+                // Preparar datos del usuario, convirtiendo a mayúsculas
+                $userData = [
+                    'dni' => $request->input('dni'),
+                    'email' => strtolower($request->input('email')), // Email en minúsculas
+                    'first_name' => strtoupper($request->input('first_name')),
+                    'last_name' => strtoupper($request->input('last_name')),
+                    'gender' => strtoupper($request->input('gender')),
+                    'birth_date' => $request->input('birth_date'),
+                    'address' => strtoupper($request->input('address')),
+                    'district' => strtoupper($request->input('district')),
+                    'province' => strtoupper($request->input('province')),
+                    'department' => strtoupper($request->input('department')),
+                    'password' => $request->input('password'),
+                    'phone' => $request->input('phone'),
+                    'is_active' => true,
+                    'email_verified_at' => now(), // Marcar email como verificado
+                ];
 
-            $user = $this->userService->create([
-                'dni' => $request->dni,
-                'email' => $request->email,
-                'first_name' => $request->first_name,
-                'last_name' => $request->last_name,
-                'password' => $request->password,
-                'phone' => $request->phone,
-                'is_active' => true,
-            ]);
+                $user = $this->userService->create($userData);
 
-            // Asignar rol de postulante
-            $role = \Modules\Auth\Entities\Role::where('slug', 'applicant')->first();
-            if (!$role) {
-                throw new \Exception('Rol "applicant" no encontrado. ¿Ejecutaste los seeders?');
-            }
-            $user->syncRoles([$role->id]);
+                // Asignar rol de postulante
+                $this->assignApplicantRole($user);
 
-            Log::info('RegisterController: Usuario registrado exitosamente', [
-                'user_id' => $user->id,
-                'dni' => $user->dni
-            ]);
+                return $user;
+            });
 
             // Iniciar sesión automáticamente
             Auth::login($user);
 
-            return redirect()->route('dashboard')->with('success', 'Registro exitoso. Bienvenido al sistema.');
+            return redirect()
+                ->route('dashboard')
+                ->with('success', 'Registro exitoso. Bienvenido al sistema.');
 
+        } catch (ReniecException $e) {
+            return $this->handleReniecError($e);
         } catch (\Exception $e) {
-            Log::error('RegisterController: Error en registro de usuario', [
-                'dni' => $request->dni,
-                'email' => $request->email,
+            Log::error('RegisterController: Error en registro', [
+                'dni' => $request->getDni(),
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
             ]);
 
             return redirect()
@@ -154,5 +88,51 @@ class RegisterController extends Controller
                 ->withInput()
                 ->withErrors(['general' => 'Error al registrar usuario. Por favor, intente nuevamente.']);
         }
+    }
+
+    /**
+     * Validar DNI con RENIEC
+     */
+    private function validateWithReniec(RegisterRequest $request): void
+    {
+        $result = $this->reniecService->validateWithCheckDigit(
+            $request->getDni(),
+            $request->getCodigoVerificador()
+        );
+
+        if (!$result->isValid) {
+            throw new \Illuminate\Validation\ValidationException(
+                validator: validator([], []),
+                response: redirect()
+                    ->back()
+                    ->withInput()
+                    ->withErrors(['dni' => $result->message])
+            );
+        }
+    }
+
+    /**
+     * Asignar rol de postulante al usuario
+     */
+    private function assignApplicantRole($user): void
+    {
+        $role = Role::where('slug', 'applicant')->first();
+
+        if (!$role) {
+            throw new \RuntimeException('Rol "applicant" no encontrado. ¿Ejecutaste los seeders?');
+        }
+
+        $user->syncRoles([$role->id]);
+    }
+
+    /**
+     * Manejar errores de RENIEC
+     */
+    private function handleReniecError(ReniecException $e)
+    {
+        return redirect()
+            ->back()
+            ->withInput()
+            ->withErrors(['dni' => $e->getMessage()]);
     }
 }
