@@ -211,7 +211,7 @@
                                     </div>
                                 </div>
 
-                                <form action="{{ route('documents.sign.cancel', $document) }}" method="POST" class="mt-4">
+                                <!-- <form action="{{ route('documents.sign.cancel', $document) }}" method="POST" class="mt-4">
                                     @csrf
                                     <button type="submit"
                                         class="w-full px-4 py-3 rounded-lg border-2 border-gray-300 hover:bg-gray-50 font-semibold text-gray-700 transition flex items-center justify-center space-x-2">
@@ -220,7 +220,7 @@
                                         </svg>
                                         <span>Cancelar Proceso</span>
                                     </button>
-                                </form>
+                                </form> -->
                             </div>
                         </div>
 
