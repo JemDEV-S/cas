@@ -271,4 +271,9 @@ class User extends Authenticatable
         // Si no, usar la implementación por defecto de Laravel (Policies)
         return parent::can($ability, $arguments);
     }
+
+    public function applications():HasMany
+    {
+        return $this->hasMany(\Modules\Application\Entities\Application::class, 'applicant_id');
+    }
 }
