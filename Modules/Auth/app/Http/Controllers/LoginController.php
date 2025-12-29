@@ -25,7 +25,9 @@ class LoginController extends Controller
     public function login(Request $request)
     {
         $request->validate([
-            'login' => ['required', 'string'],
+            'login' => ['required', 'string'],   
+
+            
             'password' => ['required', 'string'],
             'remember' => ['nullable', 'boolean'],
         ]);
@@ -55,6 +57,12 @@ class LoginController extends Controller
             ]);
 
             RateLimiter::clear($this->throttleKey($request));
+
+            $user = Auth::user();
+
+            if ( $user->hasRole('applicant')) {
+                return redirect()->intended(route('applicant.dashboard')); 
+            }
 
             return redirect()->intended(route('dashboard'));
         }

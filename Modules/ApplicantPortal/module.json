@@ -1,0 +1,11 @@
+{
+    "name": "ApplicantPortal",
+    "alias": "applicantportal",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\ApplicantPortal\\Providers\\ApplicantPortalServiceProvider"
+    ],
+    "files": []
+}

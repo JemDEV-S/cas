@@ -8,6 +8,8 @@ use Illuminate\Support\Str;
 use Carbon\Carbon;
 use Modules\JobPosting\Entities\{JobPosting, JobPostingHistory, ProcessPhase, JobPostingSchedule};
 use Modules\User\Entities\User;
+use Modules\JobPosting\Enums\JobPostingStatusEnum;
+
 
 class JobPostingService
 {
@@ -502,6 +504,16 @@ class JobPostingService
                 $q->where('end_date', '<', now())
                   ->where('status', '!=', 'COMPLETED');
             }])
+            ->get();
+    }
+    //--------METODOS PARA OTROS MOCULOS---------
+
+    public function getActivePostings($limit = 10) 
+    {
+        return JobPosting::where('status', JobPostingStatusEnum::EN_PROCESO)
+            ->with(['organizationalUnit', 'profiles'])
+            ->latest('published_at')
+            ->limit($limit)
             ->get();
     }
 }

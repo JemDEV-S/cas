@@ -9,5 +9,6 @@
     "Document": true,
     "Evaluation": true,
     "Application": true,
-    "Jury": true
+    "Jury": true,
+    "ApplicantPortal": true
 }

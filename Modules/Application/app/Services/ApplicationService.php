@@ -275,4 +275,14 @@ class ApplicationService
             'special_condition_bonus' => $application->special_condition_bonus,
         ];
     }
+    /**
+     * Obtener las postulaciones de un usuario por id
+     */
+    public function getUserApplications($userId)
+    {
+        return Application::where('applicant_id', $userId)
+            ->with(['vacancy.jobProfile.jobPosting'])
+            ->latest()
+            ->get();
+    }
 }
