@@ -6,6 +6,7 @@ enum DocumentCategoryEnum: string
 {
     case PERFIL = 'perfil';
     case CONVOCATORIA = 'convocatoria';
+    case CONVOCATORIA_COMPLETA = 'convocatoria_completa';
     case EVALUACION = 'evaluacion';
     case CONTRATO = 'contrato';
     case ACTA = 'acta';
@@ -22,6 +23,7 @@ enum DocumentCategoryEnum: string
         return match($this) {
             self::PERFIL => 'Perfil de Puesto',
             self::CONVOCATORIA => 'Convocatoria',
+            self::CONVOCATORIA_COMPLETA => 'Convocatoria Completa',
             self::EVALUACION => 'Evaluación',
             self::CONTRATO => 'Contrato',
             self::ACTA => 'Acta',
@@ -40,6 +42,7 @@ enum DocumentCategoryEnum: string
         return match($this) {
             self::PERFIL => 'fas fa-user-tie',
             self::CONVOCATORIA => 'fas fa-bullhorn',
+            self::CONVOCATORIA_COMPLETA => 'fas fa-file-pdf',
             self::EVALUACION => 'fas fa-clipboard-check',
             self::CONTRATO => 'fas fa-file-contract',
             self::ACTA => 'fas fa-file-alt',

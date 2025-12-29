@@ -20,9 +20,14 @@ class EventServiceProvider extends ServiceProvider
             \Modules\Document\Listeners\RegenerateJobProfileDocument::class,
         ],
 
+        // Cuando se solicita publicación de convocatoria → generar PDF
+        \Modules\JobPosting\Events\JobPostingPublicationRequested::class => [
+            \Modules\Document\Listeners\GenerateConvocatoriaPdf::class,
+        ],
+
         // Eventos propios del módulo Document
         \Modules\Document\Events\DocumentGenerated::class => [
-            // Agregar listeners si es necesario
+            \Modules\Jury\Listeners\AssignJuriesToSign::class,
         ],
         \Modules\Document\Events\DocumentReadyForSignature::class => [
             // Notificar al usuario que debe firmar
@@ -33,6 +38,7 @@ class EventServiceProvider extends ServiceProvider
         \Modules\Document\Events\SignatureRejected::class => [
             // Notificar rechazo de firma
         ],
+        \Modules\Document\Events\DocumentFullySigned::class => [],
     ];
 
     /**

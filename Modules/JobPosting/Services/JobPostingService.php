@@ -9,6 +9,8 @@ use Carbon\Carbon;
 use Modules\JobPosting\Entities\{JobPosting, JobPostingHistory, ProcessPhase, JobPostingSchedule};
 use Modules\User\Entities\User;
 use Modules\JobPosting\Enums\JobPostingStatusEnum;
+use Modules\JobPosting\Events\JobPostingPublicationRequested;
+use Illuminate\Support\Facades\Log;
 
 
 class JobPostingService
@@ -126,27 +128,48 @@ class JobPostingService
     }
 
     /**
-     * Publicar convocatoria
+     * Publicar convocatoria (inicia flujo de firma)
      */
     public function publish(JobPosting $jobPosting, User $user): JobPosting
     {
-        if (!$jobPosting->canBePublished()) {
-            throw new \Exception('La convocatoria no puede ser publicada. Verifique que tenga un cronograma completo.');
+        // Validar estado actual
+        if (!$jobPosting->status->canBePublished()) {
+            throw new \Exception('La convocatoria no puede ser publicada en su estado actual');
         }
 
-        return DB::transaction(function() use ($jobPosting, $user) {
+        // Validar que tenga al menos un perfil aprobado
+        $approvedProfilesCount = $jobPosting->jobProfiles()
+            ->where('status', 'approved')
+            ->count();
+
+        if ($approvedProfilesCount === 0) {
+            throw new \Exception('La convocatoria debe tener al menos un perfil aprobado para ser publicada');
+        }
+
+        return DB::transaction(function() use ($jobPosting, $user, $approvedProfilesCount) {
             $oldStatus = $jobPosting->status->value;
 
-            $jobPosting->publish($user);
+            // CAMBIO: Ya no publicar directamente, pasar a EN_FIRMA
+            $jobPosting->status = JobPostingStatusEnum::EN_FIRMA;
+            $jobPosting->save();
 
+            // Registrar en historial
             JobPostingHistory::log(
                 $jobPosting,
-                'published',
+                'sent_to_signature',
                 $user,
                 $oldStatus,
                 $jobPosting->status->value,
-                description: 'Convocatoria publicada oficialmente'
+                description: 'Convocatoria enviada a proceso de firma'
             );
+
+            // Disparar evento para iniciar flujo de generación de documento y firma
+            event(new JobPostingPublicationRequested($jobPosting));
+
+            Log::info('Convocatoria enviada a proceso de firma', [
+                'job_posting_id' => $jobPosting->id,
+                'approved_profiles' => $approvedProfilesCount,
+            ]);
 
             return $jobPosting->fresh();
         });

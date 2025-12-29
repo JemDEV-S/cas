@@ -2,7 +2,7 @@
 
 > **Sistema CAS - Gestión de Convocatorias**
 > **Fecha:** Diciembre 2025
-> **Arquitectura:** Laravel 11 + nwidart/laravel-modules + DDD + Event-Driven
+> **Arquitectura:** Laravel 12 + nwidart/laravel-modules + DDD + Event-Driven
 
 ---
 

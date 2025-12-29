@@ -10,9 +10,23 @@ class TemplateRendererService
     /**
      * Renderiza un template con los datos proporcionados
      */
-    public function render(string $template, array $data = []): string
+    public function render(?string $template, array $data = []): string
     {
         try {
+            // Si no hay content, buscar vista por convención
+            if (empty($template)) {
+                $templateCode = $data['template_code'] ?? null;
+                if ($templateCode) {
+                    $viewName = 'document::templates.' . strtolower(str_replace('TPL_', '', $templateCode));
+
+                    if (View::exists($viewName)) {
+                        return View::make($viewName, $data)->render();
+                    }
+                }
+
+                throw new \Exception('No se encontró template ni vista para renderizar');
+            }
+
             // Crear un archivo temporal para el template
             $tempPath = storage_path('framework/views/temp_' . md5($template . microtime()) . '.blade.php');
 

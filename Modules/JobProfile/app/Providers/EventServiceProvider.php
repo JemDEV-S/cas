@@ -19,6 +19,11 @@ class EventServiceProvider extends ServiceProvider
         \Modules\JobProfile\Events\ProfileModificationRequested::class => [
             \Modules\JobProfile\Listeners\NotifyModificationRequested::class,
         ],
+
+        // Cuando se publica convocatoria → activar perfiles
+        \Modules\JobPosting\Events\JobPostingPublished::class => [
+            \Modules\JobProfile\Listeners\ActivateJobProfiles::class,
+        ],
     ];
 
     /**

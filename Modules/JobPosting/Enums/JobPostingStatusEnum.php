@@ -5,6 +5,7 @@ namespace Modules\JobPosting\Enums;
 enum JobPostingStatusEnum: string
 {
     case BORRADOR = 'BORRADOR';
+    case EN_FIRMA = 'EN_FIRMA';
     case PUBLICADA = 'PUBLICADA';
     case EN_PROCESO = 'EN_PROCESO';
     case FINALIZADA = 'FINALIZADA';
@@ -17,6 +18,7 @@ enum JobPostingStatusEnum: string
     {
         return match($this) {
             self::BORRADOR => 'Borrador',
+            self::EN_FIRMA => 'En Proceso de Firma',
             self::PUBLICADA => 'Publicada',
             self::EN_PROCESO => 'En Proceso',
             self::FINALIZADA => 'Finalizada',
@@ -31,6 +33,7 @@ enum JobPostingStatusEnum: string
     {
         return match($this) {
             self::BORRADOR => 'gray',
+            self::EN_FIRMA => 'yellow',
             self::PUBLICADA => 'blue',
             self::EN_PROCESO => 'yellow',
             self::FINALIZADA => 'green',
@@ -47,6 +50,7 @@ enum JobPostingStatusEnum: string
     {
         return match($this) {
             self::BORRADOR => '📝',
+            self::EN_FIRMA => '✍️',
             self::PUBLICADA => '📢',
             self::EN_PROCESO => '⚙️',
             self::FINALIZADA => '✅',
@@ -100,6 +104,7 @@ enum JobPostingStatusEnum: string
     {
         return match($this) {
             self::BORRADOR => 'bg-gray-100 text-gray-700 border border-gray-300',
+            self::EN_FIRMA => 'bg-amber-100 text-amber-700 border border-amber-300',
             self::PUBLICADA => 'bg-blue-100 text-blue-700 border border-blue-300',
             self::EN_PROCESO => 'bg-amber-100 text-amber-700 border border-amber-300',
             self::FINALIZADA => 'bg-green-100 text-green-700 border border-green-300',
@@ -111,6 +116,7 @@ enum JobPostingStatusEnum: string
     {
         return match($this) {
             self::BORRADOR => 'from-gray-500 to-gray-600',
+            self::EN_FIRMA => 'from-amber-500 to-amber-600',
             self::PUBLICADA => 'from-blue-500 to-blue-600',
             self::EN_PROCESO => 'from-amber-500 to-amber-600',
             self::FINALIZADA => 'from-green-500 to-green-600',
@@ -122,6 +128,7 @@ enum JobPostingStatusEnum: string
     {
         return match($this) {
             self::BORRADOR => '📝',
+            self::EN_FIRMA => '✍️',
             self::PUBLICADA => '📢',
             self::EN_PROCESO => '⚙️',
             self::FINALIZADA => '✅',

@@ -11,7 +11,11 @@ class EventServiceProvider extends ServiceProvider
      *
      * @var array<string, array<int, string>>
      */
-    protected $listen = [];
+    protected $listen = [
+        \Modules\Document\Events\DocumentGenerated::class => [
+            \Modules\Jury\Listeners\AssignJuriesToSign::class,
+        ],
+    ];
 
     /**
      * Indicates if events should be discovered.

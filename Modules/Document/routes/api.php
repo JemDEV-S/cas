@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Document\Http\Controllers\DocumentSignatureController;
+use Modules\Document\Http\Controllers\DocumentRegenerationController;
 
 // Rutas API para FIRMA PERÚ
 // IMPORTANTE: Estas rutas NO usan sesión ni autenticación de usuario
@@ -25,4 +26,10 @@ Route::prefix('documents')
 
         Route::get('/signature-stamp', [DocumentSignatureController::class, 'getSignatureStamp'])
             ->name('signature-stamp');
+
+        // Ruta para regenerar documentos de convocatoria (requiere autenticación)
+        Route::middleware(['auth:sanctum'])->group(function () {
+            Route::post('/regenerate-convocatoria/{jobPostingId}', [DocumentRegenerationController::class, 'regenerateConvocatoria'])
+                ->name('regenerate-convocatoria');
+        });
     });

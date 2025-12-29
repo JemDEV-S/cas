@@ -9,6 +9,7 @@ use Modules\Document\Entities\DocumentAudit;
 use Modules\Document\Events\DocumentReadyForSignature;
 use Modules\Document\Events\DocumentSigned;
 use Modules\Document\Events\SignatureRejected;
+use Modules\Document\Events\DocumentFullySigned;
 use Illuminate\Support\Facades\DB;
 
 class SignatureService
@@ -176,6 +177,9 @@ class SignatureService
                 $document->current_signer_id ?? auth()->id(),
                 'Documento completamente firmado'
             );
+
+            // Disparar evento de documento completamente firmado
+            event(new DocumentFullySigned($document));
 
             return;
         }
