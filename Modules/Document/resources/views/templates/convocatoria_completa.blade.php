@@ -4,15 +4,19 @@
     <meta charset="UTF-8">
     <title>{{ $title ?? 'Convocatoria Completa' }}</title>
     <style>
-        @page { margin: 2cm 1.5cm; }
+        @page {
+            size: A4 portrait;
+        }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: Arial, Helvetica, sans-serif;
-            font-size: 9pt;
+            font-size: 8pt;
             line-height: 1.3;
             color: #222;
+            margin: 20mm 15mm;
+            padding: 0;
         }
 
         /* ENCABEZADO */
@@ -24,7 +28,7 @@
         }
 
         .header h1 {
-            font-size: 13pt;
+            font-size: 11pt;
             color: #1a1a1a;
             margin-bottom: 4px;
             text-transform: uppercase;
@@ -32,270 +36,275 @@
         }
 
         .header .subtitle {
-            font-size: 10pt;
+            font-size: 9pt;
             color: #444;
             margin-bottom: 3px;
         }
 
         .header .code {
-            font-size: 9pt;
+            font-size: 8pt;
             color: #666;
             font-weight: bold;
         }
 
-        /* RESUMEN */
-        .summary {
-            background: #ecf0f1;
-            padding: 8px 10px;
-            margin-bottom: 12px;
-            border-left: 4px solid #3498db;
-            font-size: 8.5pt;
+        /* CONTENEDOR DE PERFIL */
+        .profile-page {
+            page-break-after: always;
+            page-break-inside: avoid;
         }
 
-        .summary-item {
-            display: inline-block;
-            margin-right: 15px;
-            font-weight: bold;
-        }
-
-        .summary-item span {
-            color: #2c3e50;
-            font-size: 9.5pt;
-        }
-
-        /* TÍTULOS DE SECCIÓN */
-        .section-title {
+        .profile-header {
             background: #2c3e50;
             color: white;
-            padding: 6px 10px;
-            margin: 12px 0 8px 0;
-            font-weight: bold;
-            font-size: 9.5pt;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
+            padding: 10px;
+            margin-bottom: 12px;
+            text-align: center;
         }
 
-        /* TABLA DE PERFILES */
-        .profiles-table {
+        .profile-header h2 {
+            font-size: 10pt;
+            margin-bottom: 3px;
+        }
+
+        .profile-header .profile-code {
+            font-size: 8pt;
+            font-weight: normal;
+        }
+
+        /* TABLA DE DATOS DEL PERFIL */
+        .profile-data-table {
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 15px;
-            font-size: 7.5pt;
         }
 
-        .profiles-table thead {
+        .profile-data-table th {
             background: #34495e;
             color: white;
-        }
-
-        .profiles-table th {
-            padding: 6px 4px;
+            padding: 6px 8px;
             text-align: left;
             font-weight: bold;
-            border: 1px solid #2c3e50;
             font-size: 7.5pt;
-            vertical-align: middle;
-        }
-
-        .profiles-table td {
-            padding: 5px 4px;
-            border: 1px solid #bdc3c7;
+            border: 1px solid #2c3e50;
+            width: 30%;
             vertical-align: top;
         }
 
-        .profiles-table tbody tr:nth-child(even) {
+        .profile-data-table td {
+            padding: 6px 8px;
+            border: 1px solid #bdc3c7;
+            font-size: 7.5pt;
+            background: white;
+            vertical-align: top;
+        }
+
+        .profile-data-table tr:nth-child(even) td {
             background: #f8f9fa;
         }
 
-        .profiles-table tbody tr:hover {
-            background: #e8f4f8;
+        /* LISTAS DENTRO DE TABLA */
+        .profile-list {
+            margin: 3px 0 0 0;
+            padding-left: 16px;
+            line-height: 1.4;
         }
 
-        .profile-code {
+        .profile-list li {
+            margin-bottom: 3px;
+            font-size: 7pt;
+        }
+
+        /* VALORES DESTACADOS */
+        .highlight-value {
             font-weight: bold;
             color: #2c3e50;
             font-size: 8pt;
         }
 
-        .vacancies {
-            text-align: center;
+        .vacancies-badge {
+            display: inline-block;
+            background: #27ae60;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 3px;
             font-weight: bold;
-            color: #27ae60;
-            font-size: 9pt;
+            font-size: 8.5pt;
         }
 
-        .salary {
+        .salary-badge {
+            display: inline-block;
+            background: #c0392b;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 3px;
             font-weight: bold;
-            color: #c0392b;
-            white-space: nowrap;
             font-size: 8pt;
-        }
-
-        .list-compact {
-            margin: 0;
-            padding-left: 12px;
-            font-size: 7pt;
-            line-height: 1.2;
-        }
-
-        .list-compact li {
-            margin-bottom: 2px;
         }
 
         /* PIE DE PÁGINA */
         .footer {
-            margin-top: 20px;
-            padding-top: 8px;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 8px 0;
             border-top: 1px solid #bdc3c7;
             text-align: center;
-            font-size: 7.5pt;
+            font-size: 7pt;
             color: #777;
+            background: white;
         }
 
         .page-break {
             page-break-after: always;
         }
-
-        .detail-box {
-            margin-bottom: 15px;
-            border: 1px solid #ddd;
-            padding: 8px;
-            page-break-inside: avoid;
-        }
-
-        .detail-box h3 {
-            color: #2c3e50;
-            font-size: 9pt;
-            margin-bottom: 6px;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 3px;
-        }
-
-        .detail-label {
-            color: #34495e;
-            font-weight: bold;
-            font-size: 8pt;
-            margin-top: 5px;
-            margin-bottom: 3px;
-        }
     </style>
 </head>
 <body>
-    <!-- ENCABEZADO PRINCIPAL -->
-    <div class="header">
-        <h1>MUNICIPALIDAD DISTRITAL DE SAN JUAN DE MIRAFLORES</h1>
-        <div class="subtitle">{{ $convocatoria_nombre }}</div>
-        <div class="code">{{ $convocatoria_codigo }} | {{ $proceso_nombre }} - {{ $año }}</div>
-    </div>
-
-    <!-- RESUMEN EJECUTIVO -->
-    <div class="summary">
-        <div class="summary-item">
-            TOTAL PERFILES: <span>{{ $total_perfiles }}</span>
-        </div>
-        <div class="summary-item">
-            TOTAL VACANTES: <span>{{ $total_vacantes }}</span>
-        </div>
-        <div class="summary-item">
-            FECHA: <span>{{ $fecha_generacion }}</span>
-        </div>
-    </div>
-
-    <!-- TABLA DE PERFILES CONVOCADOS -->
-    <div class="section-title">I. Perfiles Convocados</div>
-
     @if(count($perfiles) > 0)
-        <table class="profiles-table">
-            <thead>
-                <tr>
-                    <th style="width: 7%;">CÓD.</th>
-                    <th style="width: 18%;">CARGO</th>
-                    <th style="width: 15%;">UNIDAD ORGÁNICA</th>
-                    <th style="width: 5%;">VAC.</th>
-                    <th style="width: 12%;">CONTRATO</th>
-                    <th style="width: 13%;">EDUCACIÓN</th>
-                    <th style="width: 10%;">EXPERIENCIA</th>
-                    <th style="width: 10%;">REMUN.</th>
-                    <th style="width: 10%;">UBICACIÓN</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($perfiles as $perfil)
-                <tr>
-                    <td class="profile-code">{{ $perfil['codigo'] }}</td>
-                    <td>
-                        <strong>{{ $perfil['titulo'] }}</strong><br>
-                        <small style="font-size: 6.5pt;">{{ $perfil['nombre_perfil'] }}</small>
-                    </td>
-                    <td style="font-size: 7pt;">{{ $perfil['unidad_organica'] }}</td>
-                    <td class="vacancies">{{ $perfil['vacantes'] }}</td>
-                    <td style="font-size: 7pt;">
-                        {{ $perfil['tipo_contrato'] }}<br>
-                        <small style="font-size: 6.5pt;">{{ $perfil['regimen_laboral'] }}</small>
-                    </td>
-                    <td style="font-size: 7pt;">{{ $perfil['nivel_educativo'] }}</td>
-                    <td style="font-size: 7pt;">
-                        <strong>Gral:</strong> {{ $perfil['experiencia_general'] }} años<br>
-                        <strong>Esp:</strong> {{ $perfil['experiencia_especifica'] }} años
-                    </td>
-                    <td class="salary">{{ $perfil['remuneracion'] }}</td>
-                    <td style="font-size: 7pt;">{{ $perfil['ubicacion'] }}</td>
-                </tr>
-                @endforeach
-            </tbody>
-        </table>
-
-        <!-- DETALLE DE FUNCIONES Y COMPETENCIAS -->
-        <div class="page-break"></div>
-
-        <div class="section-title">II. Funciones y Competencias por Perfil</div>
-
         @foreach($perfiles as $index => $perfil)
-            <div class="detail-box">
-                <h3>{{ $perfil['codigo'] }} - {{ $perfil['titulo'] }}</h3>
+            <!-- PÁGINA POR PERFIL -->
+            <div class="profile-page">
+                <!-- ENCABEZADO -->
+                <div class="header">
+                    <h1>MUNICIPALIDAD DISTRITAL DE SAN JERÓNIMO</h1>
+                    <div class="subtitle">{{ $convocatoria_nombre }}</div>
+                    <div class="code">{{ $convocatoria_codigo }} | {{ $proceso_nombre }} - {{ $año }}</div>
+                </div>
 
-                @if(!empty($perfil['funciones_principales']))
-                    <div class="detail-label">FUNCIONES PRINCIPALES:</div>
-                    <ul class="list-compact">
-                        @foreach($perfil['funciones_principales'] as $funcion)
-                            <li>{{ $funcion }}</li>
-                        @endforeach
-                    </ul>
-                @endif
+                <!-- ENCABEZADO DEL PERFIL -->
+                <div class="profile-header">
+                    <h2>{{ $perfil['titulo'] }}</h2>
+                    <div class="profile-code">CÓDIGO: {{ $perfil['codigo'] }}</div>
+                </div>
 
-                @if(!empty($perfil['competencias_requeridas']))
-                    <div class="detail-label">COMPETENCIAS REQUERIDAS:</div>
-                    <ul class="list-compact">
-                        @foreach($perfil['competencias_requeridas'] as $competencia)
-                            <li>{{ $competencia }}</li>
-                        @endforeach
-                    </ul>
-                @endif
+                <!-- TABLA DE DATOS DEL PERFIL -->
+                <table class="profile-data-table">
+                    <tr>
+                        <th>NOMBRE DEL PERFIL</th>
+                        <td>{{ $perfil['nombre_perfil'] }}</td>
+                    </tr>
+                    @if(!empty($perfil['codigo_cargo']) || !empty($perfil['nombre_cargo']))
+                    <tr>
+                        <th>CÓDIGO DE CARGO</th>
+                        <td><span class="highlight-value">{{ $perfil['codigo_cargo'] }}</span> - {{ $perfil['nombre_cargo'] }}</td>
+                    </tr>
+                    @endif
+                    <tr>
+                        <th>UNIDAD ORGÁNICA</th>
+                        <td>{{ $perfil['unidad_organica'] }}</td>
+                    </tr>
+                    <tr>
+                        <th>NÚMERO DE VACANTES</th>
+                        <td><span class="vacancies-badge">{{ $perfil['vacantes'] }} {{ $perfil['vacantes'] == 1 ? 'VACANTE' : 'VACANTES' }}</span></td>
+                    </tr>
+                    <tr>
+                        <th>RÉGIMEN LABORAL</th>
+                        <td>{{ $perfil['regimen_laboral'] }}</td>
+                    </tr>
+                    <tr>
+                        <th>REMUNERACIÓN MENSUAL</th>
+                        <td><span class="salary-badge">{{ $perfil['remuneracion'] }}</span></td>
+                    </tr>
+                    <tr>
+                        <th>UBICACIÓN</th>
+                        <td>{{ $perfil['ubicacion'] }}</td>
+                    </tr>
+                    <tr>
+                        <th>NIVEL EDUCATIVO</th>
+                        <td>{{ $perfil['nivel_educativo'] }}</td>
+                    </tr>
+                    @if(!empty($perfil['area_estudios']))
+                    <tr>
+                        <th>ÁREA DE ESTUDIOS</th>
+                        <td>{{ $perfil['area_estudios'] }}</td>
+                    </tr>
+                    @endif
+                    <tr>
+                        <th>EXPERIENCIA GENERAL</th>
+                        <td><span class="highlight-value">{{ $perfil['experiencia_general'] }}</span></td>
+                    </tr>
+                    <tr>
+                        <th>EXPERIENCIA ESPECÍFICA</th>
+                        <td><span class="highlight-value">{{ $perfil['experiencia_especifica'] }}</span></td>
+                    </tr>
+                    @if(!empty($perfil['experiencia_especifica_descripcion']))
+                    <tr>
+                        <th>DESCRIPCIÓN DE EXPERIENCIA ESPECÍFICA</th>
+                        <td>{{ $perfil['experiencia_especifica_descripcion'] }}</td>
+                    </tr>
+                    @endif
 
-                @if(!empty($perfil['conocimientos']))
-                    <div class="detail-label">CONOCIMIENTOS:</div>
-                    <ul class="list-compact">
-                        @foreach($perfil['conocimientos'] as $conocimiento)
-                            <li>{{ $conocimiento }}</li>
-                        @endforeach
-                    </ul>
-                @endif
+                    @if(!empty($perfil['funciones_principales']))
+                    <tr>
+                        <th>FUNCIONES PRINCIPALES</th>
+                        <td>
+                            <ul class="profile-list">
+                                @foreach($perfil['funciones_principales'] as $funcion)
+                                    <li>{{ $funcion }}</li>
+                                @endforeach
+                            </ul>
+                        </td>
+                    </tr>
+                    @endif
+
+                    @if(!empty($perfil['competencias_requeridas']))
+                    <tr>
+                        <th>COMPETENCIAS REQUERIDAS</th>
+                        <td>
+                            <ul class="profile-list">
+                                @foreach($perfil['competencias_requeridas'] as $competencia)
+                                    <li>{{ $competencia }}</li>
+                                @endforeach
+                            </ul>
+                        </td>
+                    </tr>
+                    @endif
+
+                    @if(!empty($perfil['conocimientos']))
+                    <tr>
+                        <th>CONOCIMIENTOS</th>
+                        <td>
+                            <ul class="profile-list">
+                                @foreach($perfil['conocimientos'] as $conocimiento)
+                                    <li>{{ $conocimiento }}</li>
+                                @endforeach
+                            </ul>
+                        </td>
+                    </tr>
+                    @endif
+
+                    @if(!empty($perfil['capacitaciones']))
+                    <tr>
+                        <th>CAPACITACIONES</th>
+                        <td>
+                            <ul class="profile-list">
+                                @foreach($perfil['capacitaciones'] as $capacitacion)
+                                    <li>{{ $capacitacion }}</li>
+                                @endforeach
+                            </ul>
+                        </td>
+                    </tr>
+                    @endif
+                </table>
+
+                <!-- PIE DE PÁGINA -->
+                <div style="margin-top: 20px; padding-top: 8px; border-top: 1px solid #bdc3c7; text-align: center; font-size: 7pt; color: #777;">
+                    <p><strong>Documento Oficial</strong> | Generado: {{ $fecha_generacion }}</p>
+                    <p>MUNICIPALIDAD DISTRITAL DE SAN JERÓNIMO | Sistema CAS</p>
+                    <p>Perfil {{ $index + 1 }} de {{ $total_perfiles }}</p>
+                </div>
             </div>
-
-            @if(($index + 1) % 2 === 0 && ($index + 1) < count($perfiles))
-                <div class="page-break"></div>
-            @endif
         @endforeach
     @else
+        <div class="header">
+            <h1>MUNICIPALIDAD DISTRITAL DE SAN JERÓNIMO</h1>
+            <div class="subtitle">{{ $convocatoria_nombre }}</div>
+            <div class="code">{{ $convocatoria_codigo }} | {{ $proceso_nombre }} - {{ $año }}</div>
+        </div>
         <p style="text-align: center; padding: 30px; color: #999;">
             No hay perfiles aprobados para mostrar
         </p>
     @endif
-
-    <!-- PIE DE PÁGINA -->
-    <div class="footer">
-        <p><strong>Documento Oficial</strong> | Generado: {{ $fecha_generacion }}</p>
-        <p>Municipalidad Distrital de San Juan de Miraflores | Sistema CAS</p>
-    </div>
 </body>
 </html>

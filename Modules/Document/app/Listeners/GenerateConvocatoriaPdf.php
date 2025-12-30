@@ -46,7 +46,11 @@ class GenerateConvocatoriaPdf
                 'reviewedBy',
                 'approvedBy'
             ])
-            ->get();
+            ->get()
+            ->sortBy(function($profile) {
+                return $profile->organizationalUnit?->name ?? 'ZZZZ'; // Los sin unidad van al final
+            })
+            ->values(); // Reindexa el array después de ordenar
 
         if ($approvedProfiles->isEmpty()) {
             Log::warning('No hay perfiles aprobados para generar convocatoria', [
@@ -91,6 +95,7 @@ class GenerateConvocatoriaPdf
     private function prepareConvocatoriaData(JobPosting $jobPosting, $approvedProfiles): array
     {
         return [
+            'template_code' => 'TPL_CONVOCATORIA_COMPLETA',
             'title' => "CONVOCATORIA {$jobPosting->code} - BASES INTEGRADAS",
             'convocatoria_codigo' => mb_strtoupper($jobPosting->code ?? ''),
             'convocatoria_nombre' => mb_strtoupper($jobPosting->name ?? ''),
@@ -104,18 +109,31 @@ class GenerateConvocatoriaPdf
                     'codigo' => mb_strtoupper($profile->code ?? ''),
                     'titulo' => mb_strtoupper($profile->title ?? ''),
                     'nombre_perfil' => mb_strtoupper($profile->profile_name ?? ''),
+                    'codigo_cargo' => mb_strtoupper($profile->positionCode?->code ?? ''),
+                    'nombre_cargo' => mb_strtoupper($profile->positionCode?->name ?? ''),
                     'unidad_organica' => mb_strtoupper($profile->organizationalUnit?->name ?? ''),
                     'vacantes' => $profile->total_vacancies,
-                    'tipo_contrato' => mb_strtoupper($profile->contract_type?->label() ?? ''),
-                    'regimen_laboral' => mb_strtoupper($profile->work_regime?->label() ?? ''),
+                    'tipo_contrato' => mb_strtoupper($profile->contract_type ? \Modules\JobProfile\Enums\ContractTypeEnum::from($profile->contract_type)->label() : ''),
+                    'regimen_laboral' => mb_strtoupper($profile->work_regime_label ?? ''),
                     'nivel_educativo' => mb_strtoupper($profile->education_level_label ?? ''),
-                    'experiencia_general' => $profile->general_experience_years?->years ?? 0,
-                    'experiencia_especifica' => $profile->specific_experience_years?->years ?? 0,
+                    'area_estudios' => mb_strtoupper($profile->career_field ?? ''),
+                    'experiencia_general' => mb_strtoupper($profile->general_experience_years?->toHuman() ?? 'SIN EXPERIENCIA'),
+                    'experiencia_especifica' => mb_strtoupper($profile->specific_experience_years?->toHuman() ?? 'SIN EXPERIENCIA'),
+                    'experiencia_especifica_descripcion' => mb_strtoupper($profile->specific_experience_description ?? ''),
                     'remuneracion' => $profile->formatted_salary ?? '',
                     'ubicacion' => mb_strtoupper($profile->work_location ?? ''),
-                    'funciones_principales' => $this->toUpperArray($profile->main_functions ?? []),
-                    'competencias_requeridas' => $this->toUpperArray($profile->required_competencies ?? []),
-                    'conocimientos' => $this->toUpperArray($profile->knowledge_areas ?? []),
+                    'funciones_principales' => $this->toUpperArray(
+                        is_array($profile->main_functions) ? $profile->main_functions : []
+                    ),
+                    'competencias_requeridas' => $this->toUpperArray(
+                        is_array($profile->required_competencies) ? $profile->required_competencies : []
+                    ),
+                    'conocimientos' => $this->toUpperArray(
+                        is_array($profile->knowledge_areas) ? $profile->knowledge_areas : []
+                    ),
+                    'capacitaciones' => $this->toUpperArray(
+                        is_array($profile->required_courses) ? $profile->required_courses : []
+                    ),
                 ];
             })->toArray(),
         ];
@@ -124,8 +142,16 @@ class GenerateConvocatoriaPdf
     /**
      * Convierte array de strings a mayúsculas
      */
-    private function toUpperArray(array $data): array
+    private function toUpperArray(array|null $data): array
     {
-        return array_map(fn($item) => is_string($item) ? mb_strtoupper($item) : $item, $data);
+        if (empty($data) || !is_array($data)) {
+            return [];
+        }
+
+        // Asegurar que sea un array secuencial con valores válidos
+        return array_values(array_filter(
+            array_map(fn($item) => is_string($item) ? mb_strtoupper($item) : (is_array($item) ? '' : $item), $data),
+            fn($item) => !empty($item)
+        ));
     }
 }

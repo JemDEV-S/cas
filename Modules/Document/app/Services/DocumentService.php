@@ -89,14 +89,10 @@ class DocumentService
         $orientation = $template->orientation ?? 'portrait';
         $pdf->setPaper($paperSize, $orientation);
 
-        // Configurar márgenes si existen
-        if ($template->margins) {
-            $margins = $template->margins;
-            $pdf->setOption('margin-top', $margins['top'] ?? 20);
-            $pdf->setOption('margin-right', $margins['right'] ?? 15);
-            $pdf->setOption('margin-bottom', $margins['bottom'] ?? 20);
-            $pdf->setOption('margin-left', $margins['left'] ?? 15);
-        }
+        // Configurar opciones de DomPDF
+        $pdf->setOption('isHtml5ParserEnabled', true);
+        $pdf->setOption('isRemoteEnabled', false);
+        $pdf->setOption('defaultFont', 'Arial');
 
         // Generar nombre de archivo
         $filename = $this->generatePdfFilename($document);
@@ -264,7 +260,20 @@ class DocumentService
      */
     protected function generateDocumentCode(DocumentTemplate $template, $documentable): string
     {
-        $prefix = strtoupper(substr($template->code, 0, 3));
+        // Extraer un prefijo más específico del código del template
+        // Ejemplo: TPL_CONVOCATORIA_COMPLETA -> CONV
+        //          TPL_ANEXO_2 -> ANX2
+        //          TPL_PERFIL_PUBLICADO -> PERF
+        $templateCode = str_replace('TPL_', '', $template->code);
+
+        // Mapeo de códigos de template a prefijos de documento
+        $prefixMap = [
+            'CONVOCATORIA_COMPLETA' => 'CONV',
+            'ANEXO_2' => 'ANX2',
+            'PERFIL_PUBLICADO' => 'PERF',
+        ];
+
+        $prefix = $prefixMap[$templateCode] ?? strtoupper(substr($templateCode, 0, 4));
         $year = now()->year;
         $month = now()->format('m');
 
