@@ -38,14 +38,14 @@ class JobPostingController extends Controller
         $appliedPostingIds = $userApplications->pluck('job_posting_id')->toArray();
 
         // Get filters data
-        $organizationalUnits = $this->jobPostingService->getOrganizationalUnitsWithPostings();
-        $educationLevels = $this->jobPostingService->getEducationLevels();
+        //$organizationalUnits = $this->jobPostingService->getOrganizationalUnitsWithPostings();
+        //$educationLevels = $this->jobPostingService->getEducationLevels();
 
         return view('applicantportal::job-postings.index', compact(
             'postings',
             'appliedPostingIds',
-            'organizationalUnits',
-            'educationLevels',
+            //'organizationalUnits',
+            //'educationLevels',
             'search',
             'organizationalUnit',
             'educationLevel'

@@ -26,7 +26,7 @@ class ActivateJobProfiles
         // Activar cada perfil
         $updated = 0;
         foreach ($approvedProfiles as $profile) {
-            $profile->status = JobProfileStatusEnum::ACTIVE;
+            $profile->status = JobProfileStatusEnum::ACTIVE->value;
             $profile->save();
             $updated++;
         }

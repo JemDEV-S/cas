@@ -69,16 +69,34 @@ class GenerateConvocatoriaPdf
             data: $data
         );
 
-        // 5. Crear workflow de firmas secuencial (sin firmantes aún)
-        if ($template->requiresSignature()) {
+        // 5. Verificar si hay jurados titulares activos
+        $hasJurors = \Modules\Jury\Entities\JuryAssignment::where('job_posting_id', $jobPosting->id)
+            ->where('member_type', \Modules\Jury\Enums\MemberType::TITULAR)
+            ->where('is_active', true)
+            ->exists();
+
+        // 6. Crear workflow de firmas SOLO si hay jurados y el template lo requiere
+        if ($template->requiresSignature() && $hasJurors) {
             $this->signatureService->createWorkflow(
                 document: $document,
                 signers: [], // Se asignarán en el siguiente listener
                 workflowType: $template->getSignatureWorkflowType()
             );
+
+            Log::info('Workflow de firmas creado, esperando asignación de jurados', [
+                'job_posting_id' => $jobPosting->id,
+                'document_id' => $document->id,
+            ]);
+        } else {
+            Log::info('No se requieren firmas o no hay jurados disponibles', [
+                'job_posting_id' => $jobPosting->id,
+                'document_id' => $document->id,
+                'has_jurors' => $hasJurors,
+                'requires_signature' => $template->requiresSignature(),
+            ]);
         }
 
-        // 6. Disparar evento de documento generado
+        // 7. Disparar evento de documento generado
         event(new DocumentGenerated($document, auth()->id()));
 
         Log::info('PDF de convocatoria completa generado exitosamente', [

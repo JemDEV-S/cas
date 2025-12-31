@@ -29,15 +29,6 @@ class AssignJuriesToSign
 
         $jobPosting = $document->documentable;
 
-        // Obtener workflow del documento
-        $workflow = $document->signatureWorkflow;
-        if (!$workflow) {
-            Log::warning('No se encontró workflow de firmas para el documento', [
-                'document_id' => $document->id,
-            ]);
-            return;
-        }
-
         // Obtener jurados titulares activos de esta convocatoria ordenados
         $titularJurors = JuryAssignment::where('job_posting_id', $jobPosting->id)
             ->where('member_type', MemberType::TITULAR)
@@ -46,10 +37,23 @@ class AssignJuriesToSign
             ->orderBy('order')
             ->get();
 
+        // Si no hay jurados: publicar directamente sin firmas
         if ($titularJurors->isEmpty()) {
-            Log::warning('No hay jurados titulares activos para asignar firmas', [
+            Log::info('No hay jurados titulares activos. Publicando convocatoria sin firmas', [
                 'job_posting_id' => $jobPosting->id,
                 'document_id' => $document->id,
+            ]);
+
+            $this->publishJobPostingWithoutSignatures($jobPosting, $document);
+            return;
+        }
+
+        // Si hay jurados pero no hay workflow, algo salió mal
+        $workflow = $document->signatureWorkflow;
+        if (!$workflow) {
+            Log::warning('No se encontró workflow de firmas para el documento con jurados', [
+                'document_id' => $document->id,
+                'job_posting_id' => $jobPosting->id,
             ]);
             return;
         }
@@ -119,5 +123,43 @@ class AssignJuriesToSign
     {
         return $document->template
             && $document->template->category === DocumentCategoryEnum::CONVOCATORIA_COMPLETA->value;
+    }
+
+    /**
+     * Publica la convocatoria directamente sin proceso de firmas
+     */
+    private function publishJobPostingWithoutSignatures(JobPosting $jobPosting, $document): void
+    {
+        // Actualizar documento como completado sin firmas
+        $document->update([
+            'status' => 'generated',
+            'signature_status' => 'not_required',
+            'total_signatures_required' => 0,
+            'signatures_completed' => 0,
+            'current_signer_id' => null,
+        ]);
+
+        // Verificar que está en estado EN_FIRMA
+        if ($jobPosting->status !== \Modules\JobPosting\Enums\JobPostingStatusEnum::EN_FIRMA) {
+            Log::warning('JobPosting no está en estado EN_FIRMA, no se puede publicar', [
+                'job_posting_id' => $jobPosting->id,
+                'current_status' => $jobPosting->status->value,
+            ]);
+            return;
+        }
+
+        // Cambiar estado a PUBLICADA
+        $jobPosting->status = \Modules\JobPosting\Enums\JobPostingStatusEnum::PUBLICADA;
+        $jobPosting->published_at = now();
+        $jobPosting->save();
+
+        // Disparar evento de publicación (esto activará los perfiles automáticamente)
+        event(new \Modules\JobPosting\Events\JobPostingPublished($jobPosting));
+
+        Log::info('Convocatoria publicada sin firmas (sin jurados)', [
+            'job_posting_id' => $jobPosting->id,
+            'document_id' => $document->id,
+            'published_at' => $jobPosting->published_at->format('d/m/Y H:i:s'),
+        ]);
     }
 }
