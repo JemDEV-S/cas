@@ -4,6 +4,7 @@ namespace Modules\Application\Enums;
 
 enum ApplicationStatus: string
 {
+    case DRAFT = 'BORRADOR';
     case SUBMITTED = 'PRESENTADA';
     case IN_REVIEW = 'EN_REVISION';
     case ELIGIBLE = 'APTO';
@@ -17,6 +18,7 @@ enum ApplicationStatus: string
     public function label(): string
     {
         return match($this) {
+            self::DRAFT => 'Borrador',
             self::SUBMITTED => 'Presentada',
             self::IN_REVIEW => 'En Revisión',
             self::ELIGIBLE => 'Apto',
@@ -32,6 +34,7 @@ enum ApplicationStatus: string
     public function color(): string
     {
         return match($this) {
+            self::DRAFT => 'yellow',
             self::SUBMITTED => 'blue',
             self::IN_REVIEW => 'yellow',
             self::ELIGIBLE => 'green',
@@ -47,8 +50,14 @@ enum ApplicationStatus: string
     public function canTransitionTo(self $status): bool
     {
         return match($this) {
+            self::DRAFT => in_array($status, [
+                self::SUBMITTED,
+                self::WITHDRAWN
+            ]),
             self::SUBMITTED => in_array($status, [
                 self::IN_REVIEW,
+                self::ELIGIBLE,
+                self::NOT_ELIGIBLE,
                 self::WITHDRAWN
             ]),
             self::IN_REVIEW => in_array($status, [
@@ -77,8 +86,7 @@ enum ApplicationStatus: string
     public function isEditable(): bool
     {
         return in_array($this, [
-            self::SUBMITTED,
-            self::IN_REVIEW,
+            self::DRAFT,
             self::AMENDMENT_REQUIRED
         ]);
     }

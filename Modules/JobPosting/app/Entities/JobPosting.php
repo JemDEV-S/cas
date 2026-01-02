@@ -24,6 +24,9 @@ class JobPosting extends Model
         'end_date',
         'published_at',
         'published_by',
+        'results_published',
+        'results_published_at',
+        'results_published_by',
         'finalized_at',
         'finalized_by',
         'cancelled_at',
@@ -37,6 +40,8 @@ class JobPosting extends Model
         'start_date' => 'date',
         'end_date' => 'date',
         'published_at' => 'datetime',
+        'results_published' => 'boolean',
+        'results_published_at' => 'datetime',
         'finalized_at' => 'datetime',
         'cancelled_at' => 'datetime',
         'metadata' => 'array',
@@ -92,6 +97,14 @@ class JobPosting extends Model
     public function canceller(): BelongsTo
     {
         return $this->belongsTo(User::class, 'cancelled_by');
+    }
+
+    /**
+     * Usuario que publicó resultados
+     */
+    public function resultsPublisher(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'results_published_by');
     }
 
     /**
@@ -229,12 +242,45 @@ class JobPosting extends Model
 
     /**
      * Obtener fase actual
+     * MEJORADO: Con fallback por fechas/horas si no hay fase marcada como IN_PROGRESS
      */
     public function getCurrentPhase(): ?JobPostingSchedule
     {
-        return $this->schedules()
+        // 1. Buscar fase explícitamente marcada como IN_PROGRESS
+        $inProgress = $this->schedules()
             ->where('status', ScheduleStatusEnum::IN_PROGRESS)
+            ->with('phase')
             ->first();
+
+        if ($inProgress) {
+            return $inProgress;
+        }
+
+        // 2. Fallback: buscar por rango de fechas/horas
+        $now = now();
+
+        return $this->schedules()
+            ->with('phase')
+            ->get()
+            ->first(function($schedule) use ($now) {
+                // Combinar fecha y hora para comparación precisa
+                $start = \Carbon\Carbon::parse($schedule->start_date);
+                $end = \Carbon\Carbon::parse($schedule->end_date);
+
+                // Agregar horas si existen
+                if ($schedule->start_time) {
+                    $timeParts = explode(':', $schedule->start_time);
+                    $start->setTime((int)$timeParts[0], (int)($timeParts[1] ?? 0));
+                }
+
+                if ($schedule->end_time) {
+                    $timeParts = explode(':', $schedule->end_time);
+                    $end->setTime((int)$timeParts[0], (int)($timeParts[1] ?? 0));
+                }
+
+                // Verificar si NOW está dentro del rango
+                return $now->gte($start) && $now->lte($end);
+            });
     }
 
     /**

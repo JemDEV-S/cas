@@ -25,6 +25,7 @@ class ProcessPhase extends Model
         'is_active',
         'is_system', // <--- AGREGADO: Para proteger las fases base
         'default_duration_days',
+        'default_duration_hours',
         'metadata',
     ];
 
@@ -36,6 +37,7 @@ class ProcessPhase extends Model
         'is_active' => 'boolean',
         'is_system' => 'boolean', // <--- AGREGADO
         'default_duration_days' => 'integer',
+        'default_duration_hours' => 'integer',
         'metadata' => 'array',
     ];
 

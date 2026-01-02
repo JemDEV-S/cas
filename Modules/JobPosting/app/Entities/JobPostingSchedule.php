@@ -166,6 +166,9 @@ class JobPostingSchedule extends Model
             'status' => ScheduleStatusEnum::IN_PROGRESS,
             'actual_start_date' => now(),
         ]);
+
+        // Disparar evento
+        event(new \Modules\JobPosting\Events\PhaseStarted($this));
     }
 
     /**
@@ -177,6 +180,9 @@ class JobPostingSchedule extends Model
             'status' => ScheduleStatusEnum::COMPLETED,
             'actual_end_date' => now(),
         ]);
+
+        // Disparar evento
+        event(new \Modules\JobPosting\Events\PhaseCompleted($this));
     }
 
     /**

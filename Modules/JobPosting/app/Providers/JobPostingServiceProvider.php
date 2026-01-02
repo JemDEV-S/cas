@@ -27,6 +27,15 @@ class JobPostingServiceProvider extends ServiceProvider
         $this->registerConfig();
         $this->registerViews();
         $this->loadMigrationsFrom(module_path($this->name, 'database/migrations'));
+        $this->registerObservers();
+    }
+
+    /**
+     * Register model observers
+     */
+    protected function registerObservers(): void
+    {
+        \Modules\JobPosting\Entities\JobPosting::observe(\Modules\JobPosting\Observers\JobPostingObserver::class);
     }
 
     /**
