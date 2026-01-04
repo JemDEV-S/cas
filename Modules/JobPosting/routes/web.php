@@ -34,6 +34,12 @@ Route::middleware(['auth', 'verified'])->prefix('convocatorias')->name('jobposti
     Route::put('/{jobPosting}/cronograma', [ScheduleController::class, 'update'])->name('schedule.update');
     Route::post('/{jobPosting}/cronograma/init', [ScheduleController::class, 'initialize'])->name('schedule.init');
 
+    // Gestión de Fases
+    Route::post('/{jobPosting}/actualizar-fases', [JobPostingController::class, 'updatePhases'])->name('updatePhases')->can('jobposting.manage.phases');
+    Route::post('/fase/{schedule}/iniciar', [ScheduleController::class, 'startPhase'])->name('phase.start')->can('jobposting.manage.phases');
+    Route::post('/fase/{schedule}/completar', [ScheduleController::class, 'completePhase'])->name('phase.complete')->can('jobposting.manage.phases');
+    Route::post('/fase/{schedule}/saltar-siguiente', [ScheduleController::class, 'skipToNext'])->name('phase.skipToNext')->can('jobposting.manage.phases');
+
     // Historial
     Route::get('/{jobPosting}/historial', [JobPostingController::class, 'history'])->name('history');
 });

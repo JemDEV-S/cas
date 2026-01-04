@@ -35,9 +35,9 @@ class GenerateConvocatoriaPdf
             return;
         }
 
-        // 2. Obtener perfiles aprobados con todas las relaciones necesarias
+        // 2. Obtener perfiles aprobados o activos con todas las relaciones necesarias
         $approvedProfiles = $jobPosting->jobProfiles()
-            ->where('status', 'approved')
+            ->whereIn('status', ['approved', 'active'])
             ->with([
                 'organizationalUnit',
                 'requestingUnit.parent',
@@ -53,7 +53,7 @@ class GenerateConvocatoriaPdf
             ->values(); // Reindexa el array después de ordenar
 
         if ($approvedProfiles->isEmpty()) {
-            Log::warning('No hay perfiles aprobados para generar convocatoria', [
+            Log::warning('No hay perfiles aprobados o activos para generar convocatoria', [
                 'job_posting_id' => $jobPosting->id,
             ]);
             return;
@@ -135,6 +135,7 @@ class GenerateConvocatoriaPdf
                     'regimen_laboral' => mb_strtoupper($profile->work_regime_label ?? ''),
                     'nivel_educativo' => mb_strtoupper($profile->education_level_label ?? ''),
                     'area_estudios' => mb_strtoupper($profile->career_field ?? ''),
+                    'colegiatura_requerida' => $profile->colegiatura_required ? 'SÍ' : 'NO',
                     'experiencia_general' => mb_strtoupper($profile->general_experience_years?->toHuman() ?? 'SIN EXPERIENCIA'),
                     'experiencia_especifica' => mb_strtoupper($profile->specific_experience_years?->toHuman() ?? 'SIN EXPERIENCIA'),
                     'experiencia_especifica_descripcion' => mb_strtoupper($profile->specific_experience_description ?? ''),
@@ -152,6 +153,9 @@ class GenerateConvocatoriaPdf
                     'capacitaciones' => $this->toUpperArray(
                         is_array($profile->required_courses) ? $profile->required_courses : []
                     ),
+                    // Justificación y vigencia del contrato
+                    'justificacion' => mb_strtoupper($profile->justification_text ?? ''),
+                    'vigencia_contrato' => mb_strtoupper($profile->contract_duration ?? '3 MESES'),
                 ];
             })->toArray(),
         ];

@@ -115,4 +115,83 @@ class ScheduleController extends Controller
         return redirect()->route('jobposting.schedule.edit', $jobPosting)
             ->with('success', '⚡ Cronograma automático generado.');
     }
+
+    /**
+     * Iniciar fase manualmente
+     */
+    public function startPhase(\Modules\JobPosting\Entities\JobPostingSchedule $schedule)
+    {
+        try {
+            if ($schedule->status === \Modules\JobPosting\Enums\ScheduleStatusEnum::IN_PROGRESS) {
+                return back()->with('info', 'ℹ️ La fase ya está en progreso.');
+            }
+
+            if ($schedule->status === \Modules\JobPosting\Enums\ScheduleStatusEnum::COMPLETED) {
+                return back()->with('error', '❌ No se puede iniciar una fase ya completada.');
+            }
+
+            $schedule->start();
+
+            return back()->with('success', "✅ Fase '{$schedule->phase->name}' iniciada manualmente.");
+
+        } catch (\Exception $e) {
+            \Log::error('Error iniciando fase manualmente: ' . $e->getMessage());
+            return back()->with('error', '❌ Error al iniciar fase: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Completar fase manualmente
+     */
+    public function completePhase(\Modules\JobPosting\Entities\JobPostingSchedule $schedule)
+    {
+        try {
+            if ($schedule->status === \Modules\JobPosting\Enums\ScheduleStatusEnum::COMPLETED) {
+                return back()->with('info', 'ℹ️ La fase ya está completada.');
+            }
+
+            $schedule->complete();
+
+            return back()->with('success', "✅ Fase '{$schedule->phase->name}' completada manualmente.");
+
+        } catch (\Exception $e) {
+            \Log::error('Error completando fase manualmente: ' . $e->getMessage());
+            return back()->with('error', '❌ Error al completar fase: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Saltar a la siguiente fase (completa actual e inicia siguiente)
+     */
+    public function skipToNext(\Modules\JobPosting\Entities\JobPostingSchedule $schedule)
+    {
+        try {
+            // Completar la fase actual
+            if ($schedule->status !== \Modules\JobPosting\Enums\ScheduleStatusEnum::COMPLETED) {
+                $schedule->complete();
+            }
+
+            // Buscar la siguiente fase
+            $nextSchedule = \Modules\JobPosting\Entities\JobPostingSchedule::where('job_posting_id', $schedule->job_posting_id)
+                ->where('status', \Modules\JobPosting\Enums\ScheduleStatusEnum::PENDING)
+                ->whereHas('phase', function($q) use ($schedule) {
+                    $q->where('phase_number', '>', $schedule->phase->phase_number);
+                })
+                ->orderBy('start_date')
+                ->first();
+
+            if (!$nextSchedule) {
+                return back()->with('info', "✅ Fase '{$schedule->phase->name}' completada. No hay más fases pendientes.");
+            }
+
+            // Iniciar la siguiente fase
+            $nextSchedule->start();
+
+            return back()->with('success', "✅ Fase '{$schedule->phase->name}' completada y '{$nextSchedule->phase->name}' iniciada.");
+
+        } catch (\Exception $e) {
+            \Log::error('Error saltando a siguiente fase: ' . $e->getMessage());
+            return back()->with('error', '❌ Error al saltar a siguiente fase: ' . $e->getMessage());
+        }
+    }
 }

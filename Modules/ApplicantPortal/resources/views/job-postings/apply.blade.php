@@ -1082,7 +1082,7 @@ function applicationWizard() {
             // Guardar como borrador (no enviar)
             const form = document.createElement('form');
             form.method = 'POST';
-            form.action = '{{ route("applicant.job-postings.store-application", [$posting->id, $jobProfile->id]) }}';
+            form.action = '{{ route("applicant.job-postings.apply.store", [$posting->id, $jobProfile->id]) }}';
 
             const csrfField = document.createElement('input');
             csrfField.type = 'hidden';

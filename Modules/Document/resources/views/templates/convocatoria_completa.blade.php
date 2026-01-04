@@ -220,6 +220,12 @@
                         <td>{{ $perfil['area_estudios'] }}</td>
                     </tr>
                     @endif
+                    @if(isset($perfil['colegiatura_requerida']))
+                    <tr>
+                        <th>COLEGIATURA Y HABILITACIÓN PROFESIONAL VIGENTE</th>
+                        <td><span class="highlight-value">{{ $perfil['colegiatura_requerida'] }}</span></td>
+                    </tr>
+                    @endif
                     <tr>
                         <th>EXPERIENCIA GENERAL</th>
                         <td><span class="highlight-value">{{ $perfil['experiencia_general'] }}</span></td>
@@ -284,6 +290,20 @@
                                 @endforeach
                             </ul>
                         </td>
+                    </tr>
+                    @endif
+
+                    @if(!empty($perfil['vigencia_contrato']))
+                    <tr>
+                        <th>VIGENCIA DEL CONTRATO</th>
+                        <td><span class="highlight-value">{{ $perfil['vigencia_contrato'] }}</span></td>
+                    </tr>
+                    @endif
+
+                    @if(!empty($perfil['justificacion']))
+                    <tr>
+                        <th>JUSTIFICACIÓN</th>
+                        <td>{{ $perfil['justificacion'] }}</td>
                     </tr>
                     @endif
                 </table>

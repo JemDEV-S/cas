@@ -531,7 +531,7 @@ class JobPostingService
     }
     //--------METODOS PARA OTROS MOCULOS---------
 
-    public function getActivePostings($limit = 10) 
+    public function getActivePostings($limit = 10)
     {
         return JobPosting::where('status', JobPostingStatusEnum::EN_PROCESO)
             ->with(['organizationalUnit', 'profiles'])
@@ -539,4 +539,22 @@ class JobPostingService
             ->limit($limit)
             ->get();
     }
+
+    //-------Obtener convocatoria por ID----------
+
+    public function getJobPostingById(string $uuid): ?JobPosting
+    {
+        return JobPosting::where('id', $uuid)->first();
+    }
+
+    //-------Obtener la fase actual---------------
+    public function getCurrentPhase(string $uuid): ?JobPostingSchedule
+    {
+        $jobPosting = JobPosting::firstWhere('id', $uuid);
+
+        return $jobPosting?->getCurrentPhase();
+    }
+
+
+
 }

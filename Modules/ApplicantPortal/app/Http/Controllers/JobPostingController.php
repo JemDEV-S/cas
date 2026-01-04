@@ -118,7 +118,7 @@ class JobPostingController extends Controller
 
         // Check if posting is in registration phase
         $currentPhase = $this->jobPostingService->getCurrentPhase($postingId);
-        if (!$currentPhase || !in_array($currentPhase->code ?? '', ['PHASE_03_REGISTRATION', 'REGISTRATION'])) {
+        if (!$currentPhase || !in_array($currentPhase->phase?->code ?? '', ['PHASE_03_REGISTRATION', 'REGISTRATION'])) {
             return redirect()
                 ->route('applicant.job-postings.show', $postingId)
                 ->with('error', 'Esta convocatoria no está en fase de registro.');

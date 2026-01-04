@@ -92,6 +92,8 @@ class DocumentServiceProvider extends ServiceProvider
     {
         $this->commands([
             \Modules\Document\Console\Commands\RegenerateApprovedJobProfileDocuments::class,
+            \Modules\Document\Console\Commands\RegenerateConvocatoriaDocument::class,
+            \Modules\Document\Console\Commands\UpdateConvocatoriaDocumentData::class,
         ]);
     }
 

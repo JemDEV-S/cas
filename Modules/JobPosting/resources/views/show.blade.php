@@ -230,9 +230,51 @@
                                 <div class="flex-1">
                                     <div class="flex items-center justify-between">
                                         <span class="font-bold text-gray-800">{{ $schedule->phase->name }}</span>
-                                        <span class="px-3 py-1 rounded-full text-sm font-bold text-white {{ $schedule->status->badgeClass() }}">
-                                            {{ $schedule->status->icon() }}
-                                        </span>
+                                        <div class="flex items-center space-x-2">
+                                            <span class="px-3 py-1 rounded-full text-sm font-bold text-white {{ $schedule->status->badgeClass() }}">
+                                                {{ $schedule->status->icon() }}
+                                            </span>
+                                            @can('jobposting.manage.phases')
+                                            @if($schedule->status->value !== 'COMPLETED')
+                                            <div class="relative phase-menu-{{ $schedule->id }}">
+                                                <button type="button" data-schedule-id="{{ $schedule->id }}" class="phase-menu-toggle p-2 hover:bg-white rounded-lg transition-colors">
+                                                    <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"/>
+                                                    </svg>
+                                                </button>
+                                                <div id="phase-menu-{{ $schedule->id }}" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-2xl border-2 border-gray-200 z-50">
+                                                    @if($schedule->status->value === 'PENDING' || $schedule->status->value === 'DELAYED')
+                                                    <form action="{{ route('jobposting.phase.start', $schedule) }}" method="POST">
+                                                        @csrf
+                                                        <button type="submit" class="w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors flex items-center space-x-2 rounded-t-xl">
+                                                            <span class="text-blue-600">▶️</span>
+                                                            <span class="font-medium text-gray-700">Iniciar Fase</span>
+                                                        </button>
+                                                    </form>
+                                                    @endif
+                                                    @if($schedule->status->value === 'IN_PROGRESS' || $schedule->status->value === 'DELAYED')
+                                                    <form action="{{ route('jobposting.phase.complete', $schedule) }}" method="POST">
+                                                        @csrf
+                                                        <button type="submit" class="w-full text-left px-4 py-3 hover:bg-green-50 transition-colors flex items-center space-x-2">
+                                                            <span class="text-green-600">✅</span>
+                                                            <span class="font-medium text-gray-700">Completar Fase</span>
+                                                        </button>
+                                                    </form>
+                                                    @endif
+                                                    @if($schedule->status->value === 'IN_PROGRESS')
+                                                    <form action="{{ route('jobposting.phase.skipToNext', $schedule) }}" method="POST">
+                                                        @csrf
+                                                        <button type="submit" class="w-full text-left px-4 py-3 hover:bg-purple-50 transition-colors flex items-center space-x-2 rounded-b-xl" onclick="return confirm(&quot;¿Completar esta fase e iniciar la siguiente?&quot;)">
+                                                            <span class="text-purple-600">⏭️</span>
+                                                            <span class="font-medium text-gray-700">Saltar a Siguiente</span>
+                                                        </button>
+                                                    </form>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                            @endif
+                                            @endcan
+                                        </div>
                                     </div>
                                     <div class="text-sm text-gray-600 mt-1">
                                         {{ $schedule->start_date->format('d/m/Y') }} - {{ $schedule->end_date->format('d/m/Y') }}
@@ -410,6 +452,17 @@
                         </a>
                         @endcan
 
+                        @can('jobposting.manage.phases')
+                        <form action="{{ route('jobposting.updatePhases', $jobPosting) }}" method="POST">
+                            @csrf
+                            <button type="submit"
+                                    class="w-full px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-bold hover:from-indigo-600 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl"
+                                    onclick="return confirm(&quot;¿Actualizar automáticamente las fases según fechas/horas actuales?&quot;)">
+                                🔄 Actualizar Fases
+                            </button>
+                        </form>
+                        @endcan
+
                         @can('jobposting.manage.profiles')
                         @if($jobPosting->isDraft())
                         <a href="{{ route('jobprofile.profiles.create', ['job_posting_id' => $jobPosting->id]) }}"
@@ -529,6 +582,40 @@ document.getElementById('cancelModal').addEventListener('click', function(e) {
     if (e.target === this) {
         hideCancelModal();
     }
+});
+
+// Toggle phase menu con event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    // Agregar event listeners a todos los botones de menú
+    document.querySelectorAll('.phase-menu-toggle').forEach(function(button) {
+        button.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const scheduleId = this.getAttribute('data-schedule-id');
+            const menu = document.getElementById('phase-menu-' + scheduleId);
+            const allMenus = document.querySelectorAll('[id^="phase-menu-"]');
+
+            // Cerrar todos los demás menús
+            allMenus.forEach(function(m) {
+                if (m.id !== 'phase-menu-' + scheduleId) {
+                    m.classList.add('hidden');
+                }
+            });
+
+            // Toggle el menú actual
+            menu.classList.toggle('hidden');
+        });
+    });
+
+    // Cerrar menús al hacer clic fuera
+    document.addEventListener('click', function(e) {
+        // Si el clic no es en un botón de menú ni dentro del menú
+        if (!e.target.closest('.phase-menu-toggle') && !e.target.closest('[id^="phase-menu-"]')) {
+            const allMenus = document.querySelectorAll('[id^="phase-menu-"]');
+            allMenus.forEach(function(m) {
+                m.classList.add('hidden');
+            });
+        }
+    });
 });
 </script>
 @endpush

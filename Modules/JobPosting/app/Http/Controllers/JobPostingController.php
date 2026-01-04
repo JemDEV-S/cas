@@ -333,6 +333,118 @@ class JobPostingController extends Controller
     }
 
     /**
+     * Actualizar fases automáticamente según fechas/horas
+     */
+    public function updatePhases(JobPosting $jobPosting): RedirectResponse
+    {
+        try {
+            $now = \Carbon\Carbon::now();
+            $phasesStarted = 0;
+            $phasesCompleted = 0;
+            $phasesDelayed = 0;
+
+            foreach ($jobPosting->schedules as $schedule) {
+                $result = $this->processScheduleUpdate($schedule, $now);
+
+                if ($result === 'started') {
+                    $phasesStarted++;
+                } elseif ($result === 'completed') {
+                    $phasesCompleted++;
+                } elseif ($result === 'delayed') {
+                    $phasesDelayed++;
+                }
+            }
+
+            $totalChanges = $phasesStarted + $phasesCompleted + $phasesDelayed;
+
+            if ($totalChanges === 0) {
+                return back()->with('info', 'ℹ️ No hay fases para actualizar en este momento.');
+            }
+
+            $message = "✅ Fases actualizadas: {$phasesStarted} iniciadas, {$phasesCompleted} completadas, {$phasesDelayed} retrasadas";
+
+            return back()->with('success', $message);
+
+        } catch (\Exception $e) {
+            \Log::error('Error actualizando fases: ' . $e->getMessage());
+            return back()->with('error', '❌ Error al actualizar fases: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Procesar actualización de un schedule individual
+     */
+    protected function processScheduleUpdate($schedule, $now): ?string
+    {
+        $scheduleStart = $this->combineDatetime($schedule->start_date, $schedule->start_time);
+        $scheduleEnd = $this->combineDatetime($schedule->end_date, $schedule->end_time);
+
+        // 1. Iniciar fases PENDING que ya deberían estar en progreso
+        if ($schedule->status === \Modules\JobPosting\Enums\ScheduleStatusEnum::PENDING && $now->gte($scheduleStart)) {
+            $schedule->start();
+            return 'started';
+        }
+
+        // 2. Completar fases IN_PROGRESS que ya terminaron
+        if ($schedule->status === \Modules\JobPosting\Enums\ScheduleStatusEnum::IN_PROGRESS && $now->gt($scheduleEnd)) {
+            $schedule->complete();
+
+            // Auto-iniciar siguiente fase si existe y ya debe estar activa
+            $this->autoStartNextPhase($schedule, $now);
+            return 'completed';
+        }
+
+        // 3. Marcar como DELAYED fases que pasaron su end_date sin completarse
+        if (in_array($schedule->status, [\Modules\JobPosting\Enums\ScheduleStatusEnum::PENDING, \Modules\JobPosting\Enums\ScheduleStatusEnum::IN_PROGRESS])
+            && $now->gt($scheduleEnd)
+            && $schedule->status !== \Modules\JobPosting\Enums\ScheduleStatusEnum::DELAYED) {
+
+            $schedule->update(['status' => \Modules\JobPosting\Enums\ScheduleStatusEnum::DELAYED]);
+            event(new \Modules\JobPosting\Events\PhaseDelayed($schedule));
+            return 'delayed';
+        }
+
+        return null;
+    }
+
+    /**
+     * Auto-iniciar siguiente fase si corresponde
+     */
+    protected function autoStartNextPhase($completedSchedule, $now): void
+    {
+        $nextSchedule = \Modules\JobPosting\Entities\JobPostingSchedule::where('job_posting_id', $completedSchedule->job_posting_id)
+            ->where('status', \Modules\JobPosting\Enums\ScheduleStatusEnum::PENDING)
+            ->whereHas('phase', function($q) use ($completedSchedule) {
+                $q->where('phase_number', '>', $completedSchedule->phase->phase_number);
+            })
+            ->orderBy('start_date')
+            ->first();
+
+        if ($nextSchedule) {
+            $nextStart = $this->combineDatetime($nextSchedule->start_date, $nextSchedule->start_time);
+
+            if ($now->gte($nextStart)) {
+                $nextSchedule->start();
+            }
+        }
+    }
+
+    /**
+     * Combinar fecha y hora en un Carbon
+     */
+    protected function combineDatetime($date, $time = null)
+    {
+        $carbon = \Carbon\Carbon::parse($date);
+
+        if ($time) {
+            $timeParts = explode(':', $time);
+            $carbon->setTime((int)$timeParts[0], (int)($timeParts[1] ?? 0), (int)($timeParts[2] ?? 0));
+        }
+
+        return $carbon;
+    }
+
+    /**
      * Dashboard general
      */
     public function dashboard(Request $request)
