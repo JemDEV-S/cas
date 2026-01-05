@@ -130,26 +130,53 @@
         <div x-show="currentStep === 1" class="fade-in">
             <h2 class="text-2xl font-bold text-gray-900 mb-6">Datos Personales</h2>
 
+            @if(empty($user->birth_date) || empty($user->address) || empty($user->phone))
+            <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-6 rounded">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-yellow-700">
+                            <strong>¡Atención!</strong> Algunos de tus datos personales están incompletos.
+                            Debes actualizar tu perfil de usuario antes de poder postular. Campos faltantes:
+                            @if(empty($user->birth_date)) Fecha de Nacimiento @endif
+                            @if(empty($user->address)){{ empty($user->birth_date) ? ', ' : '' }}Dirección @endif
+                            @if(empty($user->phone)){{ (empty($user->birth_date) || empty($user->address)) ? ', ' : '' }}Teléfono @endif
+                        </p>
+                    </div>
+                </div>
+            </div>
+            @endif
+
+            <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded">
+                <p class="text-sm text-blue-700">
+                    <strong>Información:</strong> Los datos personales se cargan automáticamente de tu perfil de usuario. Los campos bloqueados no pueden ser modificados en este formulario.
+                </p>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="md:col-span-2">
                     <label class="block text-sm font-semibold text-gray-700 mb-2">Nombre Completo *</label>
                     <input type="text"
                            x-model="formData.personal.fullName"
-                           @input="autoSave"
+                           readonly
                            required
-                           class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                           class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-gray-50 cursor-not-allowed">
+                    <p class="text-xs text-gray-500 mt-1">Este campo no es editable</p>
                 </div>
 
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">DNI *</label>
                     <input type="text"
                            x-model="formData.personal.dni"
-                           @input="autoSave"
                            required
                            maxlength="8"
                            pattern="[0-9]{8}"
                            readonly
-                           class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-gray-50">
+                           class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-gray-50 cursor-not-allowed">
                     <p class="text-xs text-gray-500 mt-1">Este campo no es editable</p>
                 </div>
 
@@ -157,50 +184,41 @@
                     <label class="block text-sm font-semibold text-gray-700 mb-2">Fecha de Nacimiento *</label>
                     <input type="date"
                            x-model="formData.personal.birthDate"
-                           @input="autoSave"
+                           readonly
                            required
-                           class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                           class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-gray-50 cursor-not-allowed">
+                    <p class="text-xs text-gray-500 mt-1">Este campo no es editable</p>
                 </div>
 
                 <div class="md:col-span-2">
                     <label class="block text-sm font-semibold text-gray-700 mb-2">Dirección Completa *</label>
                     <input type="text"
                            x-model="formData.personal.address"
-                           @input="autoSave"
+                           readonly
                            required
                            placeholder="Ej: Av. Los Incas 123, San Jerónimo, Cusco"
-                           class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                           class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-gray-50 cursor-not-allowed">
+                    <p class="text-xs text-gray-500 mt-1">Este campo no es editable</p>
                 </div>
 
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Teléfono Fijo</label>
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Teléfono / Celular *</label>
                     <input type="tel"
                            x-model="formData.personal.phone"
-                           @input="autoSave"
-                           placeholder="Ej: 084-123456"
-                           class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                </div>
-
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Celular *</label>
-                    <input type="tel"
-                           x-model="formData.personal.mobilePhone"
-                           @input="autoSave"
+                           readonly
                            required
-                           pattern="[0-9]{9}"
-                           maxlength="9"
-                           placeholder="Ej: 987654321"
-                           class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                           placeholder="Ej: 987654321 o 084-123456"
+                           class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-gray-50 cursor-not-allowed">
+                    <p class="text-xs text-gray-500 mt-1">Este campo no es editable</p>
                 </div>
 
                 <div class="md:col-span-2">
                     <label class="block text-sm font-semibold text-gray-700 mb-2">Email *</label>
                     <input type="email"
                            x-model="formData.personal.email"
-                           @input="autoSave"
                            required
                            readonly
-                           class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-gray-50">
+                           class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-gray-50 cursor-not-allowed">
                     <p class="text-xs text-gray-500 mt-1">Este campo no es editable</p>
                 </div>
             </div>
@@ -297,27 +315,125 @@
         <!-- Paso 3: Experiencia Laboral -->
         <div x-show="currentStep === 3" class="fade-in">
             <h2 class="text-2xl font-bold text-gray-900 mb-2">Experiencia Laboral</h2>
-            <p class="text-gray-600 mb-6">Declara tu experiencia laboral. El sistema calculará automáticamente la duración.</p>
+            <p class="text-gray-600 mb-6">Declara tu experiencia laboral. El sistema calculará automáticamente la duración exacta en años, meses y días.</p>
 
-            <!-- Requisitos del perfil -->
-            <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded">
-                <p class="text-sm text-blue-700 mb-1">
-                    <strong>Experiencia General:</strong> {{ $jobProfile->general_experience_years ?? 0 }} años mínimo
-                </p>
-                <p class="text-sm text-blue-700">
-                    <strong>Experiencia Específica:</strong> {{ $jobProfile->specific_experience_years ?? 0 }} años mínimo
-                </p>
+            <!-- Explicación importante -->
+            <div class="bg-amber-50 border-l-4 border-amber-500 p-4 mb-6 rounded">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-amber-800">
+                            <strong>¡Importante!</strong> Marca correctamente cada experiencia:
+                        </p>
+                        <ul class="mt-2 text-sm text-amber-700 list-disc list-inside space-y-1">
+                            <li><strong>Experiencia General:</strong> Toda tu experiencia laboral cuenta automáticamente</li>
+                            <li><strong>Experiencia Específica:</strong> Solo marca el checkbox si las funciones están <strong>directamente relacionadas</strong> con el puesto al que postulas</li>
+                            <li><strong>Sector Público:</strong> Marca si trabajaste en instituciones del Estado</li>
+                        </ul>
+                    </div>
+                </div>
             </div>
 
-            <!-- Totales calculados -->
-            <div class="grid grid-cols-2 gap-4 mb-6">
-                <div class="bg-green-50 border border-green-200 rounded-xl p-4">
-                    <p class="text-sm text-green-700 font-semibold mb-1">Experiencia General Total</p>
-                    <p class="text-2xl font-bold text-green-900" x-text="calculateTotalExperience('general')"></p>
+            <!-- Requisitos del perfil con semáforo -->
+            <div class="bg-gradient-to-r from-blue-50 to-blue-100 border-2 border-blue-300 rounded-xl p-5 mb-6 shadow-sm">
+                <h3 class="font-bold text-blue-900 mb-3 flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+                        <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/>
+                    </svg>
+                    Requisitos del Perfil
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="flex items-start">
+                        <span class="text-2xl mr-2">📋</span>
+                        <div>
+                            <p class="font-semibold text-blue-900">Experiencia General Requerida:</p>
+                            <p class="text-lg font-bold text-blue-700">
+                                @if($jobProfile->general_experience_years)
+                                    {{ is_object($jobProfile->general_experience_years) ? $jobProfile->general_experience_years->toHuman() : $jobProfile->general_experience_years . ' años' }}
+                                @else
+                                    No requerida
+                                @endif
+                                (mínimo)
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex items-start">
+                        <span class="text-2xl mr-2">🎯</span>
+                        <div>
+                            <p class="font-semibold text-purple-900">Experiencia Específica Requerida:</p>
+                            <p class="text-lg font-bold text-purple-700">
+                                @if($jobProfile->specific_experience_years)
+                                    {{ is_object($jobProfile->specific_experience_years) ? $jobProfile->specific_experience_years->toHuman() : $jobProfile->specific_experience_years . ' años' }}
+                                @else
+                                    No requerida
+                                @endif
+                                (mínimo)
+                            </p>
+                        </div>
+                    </div>
                 </div>
-                <div class="bg-purple-50 border border-purple-200 rounded-xl p-4">
-                    <p class="text-sm text-purple-700 font-semibold mb-1">Experiencia Específica Total</p>
-                    <p class="text-2xl font-bold text-purple-900" x-text="calculateTotalExperience('specific')"></p>
+            </div>
+
+            <!-- Totales calculados con semáforo -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div class="relative overflow-hidden bg-gradient-to-br from-green-50 to-green-100 border-2 rounded-xl p-5 shadow-sm"
+                     :class="{
+                         'border-green-500': checkExperienceRequirement('general'),
+                         'border-yellow-500': !checkExperienceRequirement('general')
+                     }">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <p class="text-sm text-green-700 font-semibold mb-1 flex items-center">
+                                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+                                    <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/>
+                                </svg>
+                                Experiencia General Total
+                            </p>
+                            <p class="text-3xl font-bold text-green-900" x-text="calculateTotalExperience('general')"></p>
+                        </div>
+                        <div class="ml-3">
+                            <span x-show="checkExperienceRequirement('general')" class="text-3xl">✅</span>
+                            <span x-show="!checkExperienceRequirement('general')" class="text-3xl">⚠️</span>
+                        </div>
+                    </div>
+                    <p class="text-xs mt-2"
+                       :class="checkExperienceRequirement('general') ? 'text-green-600' : 'text-yellow-600'">
+                        <span x-show="checkExperienceRequirement('general')">✓ Cumples el requisito</span>
+                        <span x-show="!checkExperienceRequirement('general')">⚠ No cumples el requisito mínimo</span>
+                    </p>
+                </div>
+
+                <div class="relative overflow-hidden bg-gradient-to-br from-purple-50 to-purple-100 border-2 rounded-xl p-5 shadow-sm"
+                     :class="{
+                         'border-purple-500': checkExperienceRequirement('specific'),
+                         'border-yellow-500': !checkExperienceRequirement('specific')
+                     }">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <p class="text-sm text-purple-700 font-semibold mb-1 flex items-center">
+                                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                </svg>
+                                Experiencia Específica Total
+                            </p>
+                            <p class="text-3xl font-bold text-purple-900" x-text="calculateTotalExperience('specific')"></p>
+                        </div>
+                        <div class="ml-3">
+                            <span x-show="checkExperienceRequirement('specific')" class="text-3xl">✅</span>
+                            <span x-show="!checkExperienceRequirement('specific')" class="text-3xl">⚠️</span>
+                        </div>
+                    </div>
+                    <p class="text-xs mt-2"
+                       :class="checkExperienceRequirement('specific') ? 'text-purple-600' : 'text-yellow-600'">
+                        <span x-show="checkExperienceRequirement('specific')">✓ Cumples el requisito</span>
+                        <span x-show="!checkExperienceRequirement('specific')">⚠ No cumples el requisito mínimo</span>
+                    </p>
                 </div>
             </div>
 
@@ -356,7 +472,7 @@
 
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">Fecha de Inicio *</label>
-                            <input type="month"
+                            <input type="date"
                                    x-model="experience.startDate"
                                    @input="autoSave"
                                    required
@@ -365,11 +481,11 @@
 
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">Fecha de Fin</label>
-                            <input type="month"
+                            <input type="date"
                                    x-model="experience.endDate"
                                    @input="autoSave"
                                    :disabled="experience.isCurrent"
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500">
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed">
                             <label class="flex items-center mt-2">
                                 <input type="checkbox"
                                        x-model="experience.isCurrent"
@@ -380,22 +496,39 @@
                         </div>
 
                         <div class="md:col-span-2">
-                            <div class="flex gap-4">
-                                <label class="flex items-center">
+                            <p class="text-sm font-semibold text-gray-700 mb-3">Tipo de Experiencia (marca lo que corresponda):</p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <label class="flex items-start p-3 border-2 rounded-lg cursor-pointer transition-all"
+                                       :class="experience.isPublicSector ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300'">
                                     <input type="checkbox"
                                            x-model="experience.isPublicSector"
                                            @change="autoSave"
-                                           class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                                    <span class="ml-2 text-sm text-gray-700">¿Es experiencia en el sector público?</span>
+                                           class="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                    <div class="ml-3">
+                                        <span class="text-sm font-semibold text-gray-900 flex items-center">
+                                            🏛️ Sector Público
+                                        </span>
+                                        <span class="text-xs text-gray-600">Experiencia en instituciones del Estado</span>
+                                    </div>
                                 </label>
-                                <label class="flex items-center">
+
+                                <label class="flex items-start p-3 border-2 rounded-lg cursor-pointer transition-all"
+                                       :class="experience.isSpecific ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-purple-300'">
                                     <input type="checkbox"
                                            x-model="experience.isSpecific"
                                            @change="autoSave"
-                                           class="rounded border-gray-300 text-purple-600 focus:ring-purple-500">
-                                    <span class="ml-2 text-sm text-gray-700">¿Es experiencia específica relacionada al puesto?</span>
+                                           class="mt-0.5 rounded border-gray-300 text-purple-600 focus:ring-purple-500">
+                                    <div class="ml-3">
+                                        <span class="text-sm font-semibold text-gray-900 flex items-center">
+                                            🎯 Experiencia Específica
+                                        </span>
+                                        <span class="text-xs text-gray-600">Funciones relacionadas al puesto</span>
+                                    </div>
                                 </label>
                             </div>
+                            <p class="text-xs text-amber-600 mt-2" x-show="experience.isSpecific">
+                                ⚠️ Solo marca como específica si las funciones que realizaste están <strong>directamente relacionadas</strong> con el puesto al que postulas
+                            </p>
                         </div>
 
                         <div class="md:col-span-2">
@@ -862,13 +995,12 @@ function applicationWizard() {
 
         formData: {
             personal: {
-                fullName: '{{ auth()->user()->name ?? '' }}',
-                dni: '{{ auth()->user()->dni ?? '' }}',
-                birthDate: '',
-                address: '',
-                phone: '',
-                mobilePhone: '',
-                email: '{{ auth()->user()->email ?? '' }}'
+                fullName: '{{ $user->first_name ?? "" }} {{ $user->last_name ?? "" }}'.trim(),
+                dni: '{{ $user->dni ?? "" }}',
+                birthDate: '{{ $user->birth_date ? \Carbon\Carbon::parse($user->birth_date)->format("Y-m-d") : "" }}',
+                address: '{{ $user->address ?? "" }}',
+                phone: '{{ $user->phone ?? "" }}',
+                email: '{{ $user->email ?? "" }}'
             },
             academics: [{
                 degreeType: '',
@@ -917,8 +1049,35 @@ function applicationWizard() {
         },
 
         init() {
+            // Debug: Mostrar datos cargados del usuario (ANTES de localStorage)
+            console.log('1. Datos del usuario cargados (inicial):', {
+                fullName: this.formData.personal.fullName,
+                dni: this.formData.personal.dni,
+                birthDate: this.formData.personal.birthDate,
+                address: this.formData.personal.address,
+                phone: this.formData.personal.phone,
+                email: this.formData.personal.email
+            });
+
             // Cargar datos desde localStorage si existen
             this.loadFromLocalStorage();
+
+            // Debug: Mostrar datos después de cargar localStorage
+            console.log('2. Datos después de localStorage:', {
+                fullName: this.formData.personal.fullName,
+                dni: this.formData.personal.dni,
+                birthDate: this.formData.personal.birthDate,
+                address: this.formData.personal.address,
+                phone: this.formData.personal.phone,
+                email: this.formData.personal.email
+            });
+
+            // Función helper para limpiar localStorage (usar en consola si es necesario)
+            window.clearApplicationDraft = () => {
+                localStorage.removeItem('applicationDraft_{{ $jobProfile->id }}');
+                console.log('✅ Borrador eliminado. Recarga la página para ver datos frescos.');
+            };
+            console.log('💡 Tip: Si los datos no se muestran, ejecuta clearApplicationDraft() en la consola y recarga.');
 
             // Auto-save cada 30 segundos
             setInterval(() => {
@@ -1022,22 +1181,72 @@ function applicationWizard() {
         },
 
         calculateDuration(start, end) {
-            if (!start) return '0 años, 0 meses';
+            if (!start) return '0 años, 0 meses, 0 días';
 
-            const startDate = new Date(start + '-01');
-            const endDate = end ? new Date(end + '-01') : new Date();
+            // Parsear fechas (ahora en formato YYYY-MM-DD completo)
+            const startDate = new Date(start);
 
-            const months = (endDate.getFullYear() - startDate.getFullYear()) * 12 +
-                          (endDate.getMonth() - startDate.getMonth());
+            // Si hay fecha de fin, usar esa, sino usar la fecha actual
+            const endDate = end ? new Date(end) : new Date();
 
-            const years = Math.floor(months / 12);
-            const remainingMonths = months % 12;
+            // Calcular años, meses y días
+            let years = endDate.getFullYear() - startDate.getFullYear();
+            let months = endDate.getMonth() - startDate.getMonth();
+            let days = endDate.getDate() - startDate.getDate();
 
-            return `${years} año(s), ${remainingMonths} mes(es)`;
+            // Ajustar si los días son negativos
+            if (days < 0) {
+                months--;
+                // Obtener el número de días del mes anterior
+                const prevMonth = new Date(endDate.getFullYear(), endDate.getMonth(), 0);
+                days += prevMonth.getDate();
+            }
+
+            // Ajustar si los meses son negativos
+            if (months < 0) {
+                years--;
+                months += 12;
+            }
+
+            return `${years} año(s), ${months} mes(es), ${days} día(s)`;
         },
 
         calculateTotalExperience(type) {
-            let totalMonths = 0;
+            let totalDays = 0;
+
+            this.formData.experiences.forEach(exp => {
+                if (type === 'specific' && !exp.isSpecific) return;
+
+                if (exp.startDate) {
+                    const startDate = new Date(exp.startDate);
+                    const endDate = exp.endDate ? new Date(exp.endDate) :
+                                   (exp.isCurrent ? new Date() : null);
+
+                    if (endDate) {
+                        // Calcular diferencia en días
+                        const diffTime = Math.abs(endDate - startDate);
+                        const days = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                        totalDays += days;
+                    }
+                }
+            });
+
+            // Convertir días totales a años, meses y días de manera más precisa
+            const years = Math.floor(totalDays / 365);
+            const remainingDaysAfterYears = totalDays % 365;
+            const months = Math.floor(remainingDaysAfterYears / 30);
+            const days = remainingDaysAfterYears % 30;
+
+            return `${years} año(s), ${months} mes(es), ${days} día(s)`;
+        },
+
+        // Función para verificar si cumple con los requisitos de experiencia
+        checkExperienceRequirement(type) {
+            const requiredYears = type === 'general'
+                ? parseFloat('{{ $jobProfile->general_experience_years ? (is_object($jobProfile->general_experience_years) ? $jobProfile->general_experience_years->toDecimal() : $jobProfile->general_experience_years) : 0 }}')
+                : parseFloat('{{ $jobProfile->specific_experience_years ? (is_object($jobProfile->specific_experience_years) ? $jobProfile->specific_experience_years->toDecimal() : $jobProfile->specific_experience_years) : 0 }}');
+
+            let totalDays = 0;
 
             this.formData.experiences.forEach(exp => {
                 if (type === 'specific' && !exp.isSpecific) return;
@@ -1048,17 +1257,15 @@ function applicationWizard() {
                                    (exp.isCurrent ? new Date() : null);
 
                     if (endDate) {
-                        const months = (endDate.getFullYear() - startDate.getFullYear()) * 12 +
-                                     (endDate.getMonth() - startDate.getMonth());
-                        totalMonths += months;
+                        const diffTime = Math.abs(endDate - startDate);
+                        const days = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                        totalDays += days;
                     }
                 }
             });
 
-            const years = Math.floor(totalMonths / 12);
-            const months = totalMonths % 12;
-
-            return `${years} año(s), ${months} mes(es)`;
+            const totalYears = totalDays / 365;
+            return totalYears >= requiredYears;
         },
 
         autoSave() {
@@ -1071,7 +1278,17 @@ function applicationWizard() {
             if (saved) {
                 try {
                     const data = JSON.parse(saved);
+
+                    // Preservar datos personales del usuario (no sobrescribirlos con localStorage)
+                    const personalDataBackup = { ...this.formData.personal };
+
+                    // Cargar datos del localStorage
                     this.formData = { ...this.formData, ...data };
+
+                    // Restaurar datos personales del usuario (siempre vienen del backend)
+                    this.formData.personal = personalDataBackup;
+
+                    console.log('Borrador cargado desde localStorage (datos personales preservados)');
                 } catch (e) {
                     console.error('Error loading draft:', e);
                 }

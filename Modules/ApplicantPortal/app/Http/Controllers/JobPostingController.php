@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Modules\JobPosting\Services\JobPostingService;
 use Modules\Application\Services\ApplicationService;
+use Modules\JobProfile\Enums\EducationLevelEnum;
 
 class JobPostingController extends Controller
 {
@@ -76,7 +77,31 @@ class JobPostingController extends Controller
                 'requirements',
                 'requirements.competence'
             ])
-            ->get();
+            ->get()
+            ->map(function($profile) {
+                // Formatear niveles educativos de manera profesional
+                if ($profile->education_levels && is_array($profile->education_levels)) {
+                    $profile->formatted_education_levels = EducationLevelEnum::formatMultiple($profile->education_levels);
+                } else {
+                    $profile->formatted_education_levels = 'No especificado';
+                }
+
+                // Formatear experiencia general
+                if ($profile->general_experience_years) {
+                    $profile->formatted_general_experience = $profile->general_experience_years->toHuman();
+                } else {
+                    $profile->formatted_general_experience = null;
+                }
+
+                // Formatear experiencia específica
+                if ($profile->specific_experience_years) {
+                    $profile->formatted_specific_experience = $profile->specific_experience_years->toHuman();
+                } else {
+                    $profile->formatted_specific_experience = null;
+                }
+
+                return $profile;
+            });
 
         // Verificar postulaciones del usuario por PERFIL
         $user = Auth::user();
@@ -126,6 +151,10 @@ class JobPostingController extends Controller
 
         // Check if user has already applied to this profile
         $user = Auth::user();
+
+        // Recargar el usuario con todos sus datos (incluyendo birth_date, address, phone)
+        $user->refresh();
+
         $existingApplication = \Modules\Application\Entities\Application::where('applicant_id', $user->id)
             ->whereHas('vacancy', function($q) use ($profileId) {
                 $q->where('job_profile_id', $profileId);
@@ -140,7 +169,8 @@ class JobPostingController extends Controller
 
         return view('applicantportal::job-postings.apply', compact(
             'posting',
-            'jobProfile'
+            'jobProfile',
+            'user'
         ));
     }
 
@@ -195,13 +225,13 @@ class JobPostingController extends Controller
                 applicantId: $user->id,
                 jobProfileVacancyId: $vacancy->id,
                 personalData: new \Modules\Application\DTOs\PersonalDataDTO(
-                    fullName: $formData['personal']['fullName'] ?? $user->name,
+                    fullName: $formData['personal']['fullName'] ?? ($user->first_name . ' ' . $user->last_name),
                     dni: $formData['personal']['dni'] ?? $user->dni,
-                    birthDate: $formData['personal']['birthDate'] ?? null,
-                    address: $formData['personal']['address'] ?? '',
-                    mobilePhone: $formData['personal']['mobilePhone'] ?? '',
+                    birthDate: $formData['personal']['birthDate'] ?? $user->birth_date,
+                    address: $formData['personal']['address'] ?? $user->address,
+                    mobilePhone: $formData['personal']['phone'] ?? $user->phone,
                     email: $formData['personal']['email'] ?? $user->email,
-                    phone: $formData['personal']['phone'] ?? null
+                    phone: $formData['personal']['phone'] ?? $user->phone
                 ),
                 academics: $this->mapAcademics($formData['academics'] ?? []),
                 experiences: $this->mapExperiences($formData['experiences'] ?? []),
