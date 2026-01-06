@@ -116,7 +116,7 @@ class AutoGraderService
     }
 
     /**
-     * Validar formación académica
+     * Validar formación académica (MEJORADO con tabla pivote)
      */
     private function validateAcademics(Application $application, $jobProfile): array
     {
@@ -129,29 +129,86 @@ class AutoGraderService
             ];
         }
 
-        // Verificar nivel educativo requerido
-        $requiredLevel = $jobProfile->education_level;
-        $hasRequiredLevel = $academics->contains(function ($academic) use ($requiredLevel) {
-            return $this->compareEducationLevel($academic->degree_type, $requiredLevel) >= 0;
-        });
+        // 1. Validar nivel educativo requerido (soporte para education_levels array)
+        $requiredLevels = !empty($jobProfile->education_levels)
+            ? $jobProfile->education_levels
+            : [$jobProfile->education_level];
+
+        $hasRequiredLevel = false;
+        foreach ($requiredLevels as $requiredLevel) {
+            if ($academics->contains(function ($academic) use ($requiredLevel) {
+                return $this->compareEducationLevel($academic->degree_type, $requiredLevel) >= 0;
+            })) {
+                $hasRequiredLevel = true;
+                break;
+            }
+        }
 
         if (!$hasRequiredLevel) {
             return [
                 'passed' => false,
-                'reason' => "No cumple con el nivel educativo requerido: {$requiredLevel}",
+                'reason' => sprintf(
+                    'No cumple con el nivel educativo requerido: %s',
+                    implode(' o ', $requiredLevels)
+                ),
             ];
         }
 
-        // Verificar carrera específica (si es requerida)
-        if ($jobProfile->career_field) {
-            $hasCareer = $academics->contains(function ($academic) use ($jobProfile) {
-                return stripos($academic->career_field, $jobProfile->career_field) !== false;
-            });
+        // 2. 💎 Validar carrera profesional usando tabla pivote
+        $acceptedCareerIds = $jobProfile->getAcceptedCareerIds(includeEquivalences: true);
 
-            if (!$hasCareer) {
+        if (!empty($acceptedCareerIds)) {
+            // Verificar si el postulante tiene alguna carrera aceptada
+            $applicantCareerIds = $academics->pluck('career_id')->filter()->unique()->toArray();
+
+            $hasRequiredCareer = !empty(array_intersect($applicantCareerIds, $acceptedCareerIds));
+
+            if (!$hasRequiredCareer) {
+                $requiredCareerNames = \Modules\Application\Entities\AcademicCareer::whereIn('id', $jobProfile->careers()->pluck('career_id'))
+                    ->pluck('name')
+                    ->toArray();
+
+                $applicantCareerNames = \Modules\Application\Entities\AcademicCareer::whereIn('id', $applicantCareerIds)
+                    ->pluck('name')
+                    ->toArray();
+
                 return [
                     'passed' => false,
-                    'reason' => "No cumple con la carrera requerida: {$jobProfile->career_field}",
+                    'reason' => sprintf(
+                        'Carrera profesional no cumple requisito. Requiere: %s. Tiene: %s',
+                        implode(' o ', $requiredCareerNames),
+                        !empty($applicantCareerNames) ? implode(', ', $applicantCareerNames) : 'No especificada'
+                    ),
+                ];
+            }
+        } else {
+            // Fallback: Si el perfil no tiene carreras mapeadas, usar career_field legacy (solo advertencia)
+            if (!empty($jobProfile->career_field)) {
+                // Validación legacy con stripos (menos precisa)
+                $hasCareer = $academics->contains(function ($academic) use ($jobProfile) {
+                    return stripos($academic->career_field, $jobProfile->career_field) !== false;
+                });
+
+                if (!$hasCareer) {
+                    return [
+                        'passed' => false,
+                        'reason' => "No cumple con la carrera requerida: {$jobProfile->career_field} (validación legacy)",
+                    ];
+                }
+            }
+        }
+
+        // 3. Validar colegiatura si es requerida
+        if ($jobProfile->colegiatura_required) {
+            $hasColegiatura = $application->professionalRegistrations()
+                ->where('registration_type', 'COLEGIATURA')
+                ->whereRaw('(expiry_date IS NULL OR expiry_date >= CURDATE())')
+                ->exists();
+
+            if (!$hasColegiatura) {
+                return [
+                    'passed' => false,
+                    'reason' => 'Requiere colegiatura profesional vigente',
                 ];
             }
         }

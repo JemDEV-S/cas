@@ -1,0 +1,303 @@
+{
+  "total_individual_careers": 54,
+  "total_job_profile_strings": 91,
+  "matches": 52,
+  "no_matches": 2,
+  "match_percentage": 96.29629629629629,
+  "top_20_frequent": [
+    [
+      "ADMINISTRACION",
+      39
+    ],
+    [
+      "CONTABILIDAD",
+      36
+    ],
+    [
+      "ECONOMIA",
+      25
+    ],
+    [
+      "INFORMATICA",
+      7
+    ],
+    [
+      "DERECHO",
+      6
+    ],
+    [
+      "TURISMO",
+      5
+    ],
+    [
+      "BIOLOGIA",
+      5
+    ],
+    [
+      "ARQUITECTURA",
+      4
+    ],
+    [
+      "INGENIERIA DE SISTEMAS",
+      4
+    ],
+    [
+      "ING. AMBIENTAL",
+      4
+    ],
+    [
+      "CIENCIAS SOCIALES",
+      3
+    ],
+    [
+      "CIENCIAS DE LA SALUD",
+      3
+    ],
+    [
+      "INGENIERO DE SISTEMAS",
+      3
+    ],
+    [
+      "PSICOLOGIA",
+      3
+    ],
+    [
+      "TRABAJO SOCIAL",
+      2
+    ],
+    [
+      "ING. DE SISTEMAS",
+      2
+    ],
+    [
+      "CIENCIAS DE LA COMUNICACION",
+      2
+    ],
+    [
+      "INGENIERIA CIVIL",
+      2
+    ],
+    [
+      "MEDICO VETERINARIO",
+      2
+    ],
+    [
+      "CARRERAS",
+      2
+    ]
+  ],
+  "careers_without_sunedu_match": [
+    "SEGURIDAD INDUSTRIAL Y PREVENCION DE RIESGOS",
+    "TECNICO AGROPECUARIO."
+  ],
+  "all_matches": {
+    "ABOGADO": {
+      "sunedu_match": "GRABADO",
+      "score": 0.7142857142857143
+    },
+    "ADMINISTRACION": {
+      "sunedu_match": "ADMINISTRACIÓN",
+      "score": 1.0
+    },
+    "ANALISTA DE SISTEMAS": {
+      "sunedu_match": "INGENIERÍA DE SISTEMAS",
+      "score": 0.7142857142857143
+    },
+    "ANTROPOLOGIA": {
+      "sunedu_match": "ANTROPOLOGÍA",
+      "score": 1.0
+    },
+    "ARQUITECTURA": {
+      "sunedu_match": "ARQUITECTURA",
+      "score": 1.0
+    },
+    "BIOLOGIA": {
+      "sunedu_match": "BIOLOGÍA",
+      "score": 1.0
+    },
+    "CARRERAS": {
+      "sunedu_match": "SEGUNDA TITULACIÓN PARA PROFESIONALES DE OTRAS CARRERAS DISTINTAS A EDUCACIÓN, QUE CUENTAN CON GRADO DE BACHILLER Y TÍTULO PROFESIONAL, CONDUCENTE A LA LICENCIATURA EN EDUCACIÓN",
+      "score": 1.0
+    },
+    "CIENCIAS ADMINISTRATIVAS": {
+      "sunedu_match": "CIENCIAS ADMINISTRATIVAS",
+      "score": 1.0
+    },
+    "CIENCIAS AGRARIAS": {
+      "sunedu_match": "CIENCIAS AGRARIAS",
+      "score": 1.0
+    },
+    "CIENCIAS DE LA COMUNICACION": {
+      "sunedu_match": "CIENCIAS DE LA COMUNICACIÓN",
+      "score": 1.0
+    },
+    "CIENCIAS DE LA SALUD": {
+      "sunedu_match": "CIENCIAS DE LA NUTRICIÓN",
+      "score": 0.7272727272727273
+    },
+    "CIENCIAS SOCIALES": {
+      "sunedu_match": "EDUCACIÓN CON MENCIÓN EN CIENCIAS SOCIALES, FILOSOFÍA Y RELIGIÓN",
+      "score": 1.0
+    },
+    "COMPUTACION E INFORMATICA": {
+      "sunedu_match": "MATEMÁTICA, COMPUTACIÓN E INFORMÁTICA",
+      "score": 1.0
+    },
+    "CONTABILIDAD": {
+      "sunedu_match": "CONTABILIDAD",
+      "score": 1.0
+    },
+    "CONTABILIDAD ECONOMIA": {
+      "sunedu_match": "ECONOMÍA",
+      "score": 1.0
+    },
+    "DERECHO": {
+      "sunedu_match": "DERECHO",
+      "score": 1.0
+    },
+    "ECONOMIA": {
+      "sunedu_match": "ECONOMÍA",
+      "score": 1.0
+    },
+    "ECONOMIA.": {
+      "sunedu_match": "ECONOMÍA",
+      "score": 1.0
+    },
+    "EDUCACION": {
+      "sunedu_match": "EDUCACIÓN",
+      "score": 1.0
+    },
+    "EDUCACION INICIAL": {
+      "sunedu_match": "EDUCACIÓN INICIAL",
+      "score": 1.0
+    },
+    "EDUCACION.": {
+      "sunedu_match": "CIENCIAS DE LA EDUCACIÓN. NIVEL SECUNDARIA. ESPECIALIDAD LENGUA Y LITERATURA",
+      "score": 1.0
+    },
+    "ENFERMERIA": {
+      "sunedu_match": "ENFERMERÍA",
+      "score": 1.0
+    },
+    "HISTORIA": {
+      "sunedu_match": "HISTORIA",
+      "score": 1.0
+    },
+    "INFORMATICA": {
+      "sunedu_match": "EDUCACIÓN SECUNDARIA: CIENCIAS MATEMÁTICAS E INFORMÁTICA",
+      "score": 1.0
+    },
+    "ING. AMBIENTAL": {
+      "sunedu_match": "INGENIERÍA AMBIENTAL",
+      "score": 0.7647058823529411
+    },
+    "ING. DE SISTEMAS": {
+      "sunedu_match": "INGENIERÍA DE SISTEMAS",
+      "score": 0.7894736842105263
+    },
+    "ING. MECANICA": {
+      "sunedu_match": "INGENIERÍA MECÁNICA",
+      "score": 0.75
+    },
+    "ING. QUIMICA": {
+      "sunedu_match": "QUÍMICA",
+      "score": 1.0
+    },
+    "INGENIERIA": {
+      "sunedu_match": "INGENIERÍA AGROECOLÓGICA Y DESARROLLO RURAL",
+      "score": 1.0
+    },
+    "INGENIERIA CIVIL": {
+      "sunedu_match": "INGENIERÍA CIVIL",
+      "score": 1.0
+    },
+    "INGENIERIA COMERCIAL": {
+      "sunedu_match": "INGENIERÍA COMERCIAL",
+      "score": 1.0
+    },
+    "INGENIERIA DE SISTEMAS": {
+      "sunedu_match": "INGENIERÍA DE SISTEMAS",
+      "score": 1.0
+    },
+    "INGENIERIA DE SISTEMAS .": {
+      "sunedu_match": "INGENIERÍA DE SISTEMAS",
+      "score": 1.0
+    },
+    "INGENIERIA GEOLOGICA": {
+      "sunedu_match": "INGENIERÍA GEOLÓGICA",
+      "score": 1.0
+    },
+    "INGENIERIA INDUSTRIAL": {
+      "sunedu_match": "INGENIERÍA INDUSTRIAL",
+      "score": 1.0
+    },
+    "INGENIERIA INFORMATICA": {
+      "sunedu_match": "INGENIERÍA INFORMÁTICA",
+      "score": 1.0
+    },
+    "INGENIERIA MECANICA": {
+      "sunedu_match": "INGENIERÍA MECÁNICA",
+      "score": 1.0
+    },
+    "INGENIERIA ZOOTECNIA": {
+      "sunedu_match": "INGENIERÍA ZOOTECNIA",
+      "score": 1.0
+    },
+    "INGENIERO CIVIL": {
+      "sunedu_match": "INGENIERÍA CIVIL",
+      "score": 0.9032258064516129
+    },
+    "INGENIERO DE SISTEMAS": {
+      "sunedu_match": "INGENIERÍA DE SISTEMAS",
+      "score": 0.9302325581395349
+    },
+    "MEDICINA VETERINARIA": {
+      "sunedu_match": "MEDICINA VETERINARIA",
+      "score": 1.0
+    },
+    "MEDICO VETERINARIO": {
+      "sunedu_match": "MEDICINA VETERINARIA",
+      "score": 0.8421052631578947
+    },
+    "NUTRICION": {
+      "sunedu_match": "NUTRICIÓN",
+      "score": 1.0
+    },
+    "OBSTETRICIA": {
+      "sunedu_match": "OBSTETRICIA",
+      "score": 1.0
+    },
+    "PSICOLOGIA": {
+      "sunedu_match": "PSICOLOGÍA",
+      "score": 1.0
+    },
+    "SISTEMAS": {
+      "sunedu_match": "INGENIERÍA DE SISTEMAS DE INFORMACIÓN",
+      "score": 1.0
+    },
+    "SOCIAL": {
+      "sunedu_match": "EDUCACIÓN CON MENCIÓN EN CIENCIAS SOCIALES, FILOSOFÍA Y RELIGIÓN",
+      "score": 1.0
+    },
+    "SOCIOLOGIA": {
+      "sunedu_match": "SOCIOLOGÍA",
+      "score": 1.0
+    },
+    "TELECOMUNICACIONES": {
+      "sunedu_match": "INGENIERÍA DE LAS TELECOMUNICACIONES",
+      "score": 1.0
+    },
+    "TRABAJO SOCIAL": {
+      "sunedu_match": "TRABAJO SOCIAL",
+      "score": 1.0
+    },
+    "TURISMO": {
+      "sunedu_match": "TURISMO",
+      "score": 1.0
+    },
+    "ZOOTECNIA": {
+      "sunedu_match": "ZOOTECNIA",
+      "score": 1.0
+    }
+  }
+}

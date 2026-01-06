@@ -138,7 +138,8 @@ class JobPostingController extends Controller
         $jobProfile = \Modules\JobProfile\Entities\JobProfile::with([
             'positionCode',
             'requestingUnit',
-            'organizationalUnit'
+            'organizationalUnit',
+            'careers.career'
         ])->findOrFail($profileId);
 
         // Check if posting is in registration phase
@@ -167,10 +168,54 @@ class JobPostingController extends Controller
                 ->with('info', 'Ya has postulado a este perfil. Puedes editar tu postulación si está en estado Borrador.');
         }
 
+        // 💎 Cargar catálogo de carreras ACTIVAS, agrupadas y ordenadas
+        $academicCareers = \Modules\Application\Entities\AcademicCareer::where('is_active', true)
+            ->orderBy('display_order')
+            ->orderBy('name')
+            ->get()
+            ->groupBy('category_group');
+
+        // 💎 Obtener carreras aceptadas desde tabla pivote (con equivalencias)
+        $acceptedCareerIds = $jobProfile->getAcceptedCareerIds(includeEquivalences: true);
+
+        // Obtener nombres de carreras aceptadas para mostrar al usuario
+        $acceptedCareerNames = \Modules\Application\Entities\AcademicCareer::whereIn('id', $jobProfile->careers()->pluck('career_id'))
+            ->pluck('name')
+            ->toArray();
+
+        // 💎 Preparar estructura inicial de cumplimiento de capacitaciones requeridas
+        $requiredCoursesComplianceInitial = collect($jobProfile->required_courses ?? [])->map(function($course, $index) {
+            return [
+                'courseName' => $course,
+                'hasIt' => false,
+                'institution' => '',
+                'year' => '',
+                'hours' => '',
+                'isRelated' => false,
+                'relatedCourseName' => '',
+                'relatedInstitution' => '',
+                'relatedYear' => '',
+                'relatedHours' => ''
+            ];
+        })->values()->all();
+
+        // 💎 Preparar estructura inicial de cumplimiento de conocimientos técnicos
+        $knowledgeComplianceInitial = collect($jobProfile->knowledge_areas ?? [])->map(function($area, $index) {
+            return [
+                'area' => $area,
+                'hasIt' => false
+            ];
+        })->values()->all();
+
         return view('applicantportal::job-postings.apply', compact(
             'posting',
             'jobProfile',
-            'user'
+            'user',
+            'academicCareers',
+            'acceptedCareerIds',
+            'acceptedCareerNames',
+            'requiredCoursesComplianceInitial',
+            'knowledgeComplianceInitial'
         ));
     }
 
@@ -279,16 +324,20 @@ class JobPostingController extends Controller
     }
 
     /**
-     * Mapear datos académicos al formato DTO
+     * Mapear datos académicos al formato DTO (MEJORADO con career_id)
      */
     private function mapAcademics(array $academics): array
     {
         return array_map(function($academic) {
             return new \Modules\Application\DTOs\AcademicDTO(
+                institutionName: $academic['institution'] ?? '',
                 degreeType: $academic['degreeType'] ?? '',
-                institution: $academic['institution'] ?? '',
-                careerField: $academic['careerField'] ?? '',
-                year: $academic['year'] ?? null
+                degreeTitle: $academic['degreeTitle'] ?? ($academic['careerField'] ?? ''),
+                issueDate: $academic['year'] ?? date('Y'),
+                careerField: $academic['careerField'] ?? '', // Mantener por compatibilidad
+                careerId: $academic['careerId'] ?? null, // 💎 ID de la carrera del catálogo
+                isRelatedCareer: $academic['isRelatedCareer'] ?? false, // 💎 NUEVO: Es carrera afín
+                relatedCareerName: $academic['relatedCareerName'] ?? null, // 💎 NUEVO: Nombre de carrera afín
             );
         }, $academics);
     }

@@ -16,6 +16,9 @@ class ApplicationAcademic extends Model
         'institution_name',
         'degree_type',
         'career_field',
+        'career_id',
+        'is_related_career', // 💎 NUEVO: Es carrera afín
+        'related_career_name', // 💎 NUEVO: Nombre de carrera afín
         'degree_title',
         'issue_date',
         'is_verified',
@@ -25,6 +28,7 @@ class ApplicationAcademic extends Model
     protected $casts = [
         'issue_date' => 'date',
         'is_verified' => 'boolean',
+        'is_related_career' => 'boolean', // 💎 NUEVO
     ];
 
     /**
@@ -33,6 +37,14 @@ class ApplicationAcademic extends Model
     public function application(): BelongsTo
     {
         return $this->belongsTo(Application::class);
+    }
+
+    /**
+     * Relación con la carrera académica
+     */
+    public function career(): BelongsTo
+    {
+        return $this->belongsTo(AcademicCareer::class, 'career_id');
     }
 
     /**

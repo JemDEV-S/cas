@@ -158,6 +158,33 @@ class JobProfile extends BaseSoftDelete
         return $this->hasMany(JobProfileHistory::class)->orderBy('created_at', 'desc');
     }
 
+    /**
+     * Relación con carreras académicas (tabla pivote)
+     */
+    public function careers(): HasMany
+    {
+        return $this->hasMany(JobProfileCareer::class, 'job_profile_id');
+    }
+
+    /**
+     * Obtener IDs de carreras aceptadas (incluyendo equivalencias)
+     */
+    public function getAcceptedCareerIds(bool $includeEquivalences = true): array
+    {
+        $careerIds = $this->careers()->pluck('career_id')->toArray();
+
+        if ($includeEquivalences) {
+            $allIds = $careerIds;
+            foreach ($careerIds as $careerId) {
+                $equivalents = \Modules\Application\Entities\AcademicCareerEquivalence::getEquivalentCareerIds($careerId);
+                $allIds = array_merge($allIds, $equivalents);
+            }
+            return array_unique($allIds);
+        }
+
+        return $careerIds;
+    }
+
     // Scopes
     public function scopeByStatus($query, string $status)
     {

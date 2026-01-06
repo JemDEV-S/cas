@@ -229,14 +229,51 @@
             <h2 class="text-2xl font-bold text-gray-900 mb-2">Formación Académica</h2>
             <p class="text-gray-600 mb-6">Declara tu formación académica. Los documentos sustentatorios serán solicitados en la Fase 5.</p>
 
-            <!-- Requisito del perfil -->
-            <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded">
-                <p class="text-sm text-blue-700">
-                    <strong>Requisito del perfil:</strong> {{ $jobProfile->education_level ?? 'No especificado' }}
-                    @if($jobProfile->career_field)
-                        - {{ $jobProfile->career_field }}
-                    @endif
-                </p>
+            {{-- Información de requisitos académicos --}}
+            <div class="alert bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded">
+                <h5 class="font-bold text-blue-900 mb-3"><i class="fas fa-graduation-cap"></i> Requisitos Académicos del Puesto</h5>
+
+                {{-- Nivel educativo requerido --}}
+                @if(!empty($jobProfile->education_levels))
+                    <div class="mb-3">
+                        <p class="text-sm text-blue-800 font-semibold mb-1">Nivel Educativo Requerido:</p>
+                        <p class="text-sm text-blue-700">
+                            <strong>{{ \Modules\JobProfile\Enums\EducationLevelEnum::formatMultiple($jobProfile->education_levels) }}</strong>
+                        </p>
+                    </div>
+                @elseif($jobProfile->education_level)
+                    <div class="mb-3">
+                        <p class="text-sm text-blue-800 font-semibold mb-1">Nivel Educativo Requerido:</p>
+                        <p class="text-sm text-blue-700">
+                            <strong>{{ $jobProfile->education_level }}</strong>
+                        </p>
+                    </div>
+                @endif
+
+                {{-- Carreras profesionales requeridas --}}
+                @if(!empty($acceptedCareerNames))
+                    <div>
+                        <p class="text-sm text-blue-800 font-semibold mb-1">Carreras Profesionales Requeridas:</p>
+                        <p class="text-sm text-blue-700">
+                            <strong>{{ implode(' • ', $acceptedCareerNames) }}</strong>
+                        </p>
+                        @if(count($acceptedCareerNames) > 1)
+                            <small class="text-xs text-blue-600 mt-1 block">
+                                ✓ Se aceptan carreras equivalentes según normativa vigente
+                            </small>
+                        @endif
+                        <small class="text-xs text-blue-600 mt-1 block">
+                            ℹ️ Si tu carrera es afín pero no aparece en la lista, puedes indicarlo marcando la opción correspondiente
+                        </small>
+                    </div>
+                @elseif($jobProfile->career_field)
+                    <div>
+                        <p class="text-sm text-blue-800 font-semibold mb-1">Campo de Carrera:</p>
+                        <p class="text-sm text-blue-700">
+                            <strong>{{ $jobProfile->career_field }}</strong>
+                        </p>
+                    </div>
+                @endif
             </div>
 
             <template x-for="(academic, index) in formData.academics" :key="index">
@@ -280,12 +317,96 @@
                         </div>
 
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">Carrera/Especialidad *</label>
-                            <input type="text"
-                                   x-model="academic.careerField"
-                                   @input="autoSave"
-                                   required
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Carrera Profesional *</label>
+                            <select
+                                :name="`academics[${index}][careerId]`"
+                                x-model="academic.careerId"
+                                @change="checkCareerMatch(index); autoSave()"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+                                required
+                            >
+                                <option value="">Seleccione una carrera</option>
+                                @foreach($academicCareers as $categoryGroup => $careers)
+                                    <optgroup label="{{ $categoryGroup }}">
+                                        @foreach($careers as $career)
+                                            <option
+                                                value="{{ $career->id }}"
+                                                @if(in_array($career->id, $acceptedCareerIds)) data-accepted="true" @endif
+                                            >
+                                                {{ $career->name }}
+                                                @if(in_array($career->id, $acceptedCareerIds))
+                                                    ✓
+                                                @endif
+                                            </option>
+                                        @endforeach
+                                    </optgroup>
+                                @endforeach
+                            </select>
+
+                            {{-- Advertencia si no coincide con requisito --}}
+                            <div
+                                x-show="academic.careerId && !isCareerAccepted(academic.careerId)"
+                                class="mt-2 p-2 bg-yellow-50 border border-yellow-300 rounded"
+                                style="display: none;"
+                            >
+                                <i class="fas fa-exclamation-triangle text-yellow-600"></i>
+                                <span class="text-yellow-800 text-sm">
+                                    La carrera seleccionada no coincide con el requisito del perfil.
+                                    Puedes postular, pero es probable que seas declarado NO APTO.
+                                </span>
+                            </div>
+
+                            {{-- Indicador de match --}}
+                            <div
+                                x-show="academic.careerId && isCareerAccepted(academic.careerId)"
+                                class="mt-2 p-2 bg-green-50 border border-green-300 rounded"
+                                style="display: none;"
+                            >
+                                <i class="fas fa-check-circle text-green-600"></i>
+                                <span class="text-green-800 text-sm">
+                                    ✓ Cumple con el requisito de carrera profesional
+                                </span>
+                            </div>
+
+                            {{-- Checkbox: Mi carrera es afín --}}
+                            <div class="mt-3">
+                                <label class="flex items-start cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        x-model="academic.isRelatedCareer"
+                                        @change="autoSave"
+                                        class="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                    >
+                                    <span class="ml-2 text-sm text-gray-700">
+                                        <strong>Mi carrera es afín pero no aparece en la lista</strong>
+                                        <span class="block text-xs text-gray-500 mt-1">
+                                            Si tu carrera profesional no se encuentra en el catálogo pero consideras que es afín al puesto, marca esta opción e indica el nombre de tu carrera.
+                                        </span>
+                                    </span>
+                                </label>
+                            </div>
+
+                            {{-- Input de carrera afín (se muestra solo si marca el checkbox) --}}
+                            <div x-show="academic.isRelatedCareer" class="mt-3" style="display: none;">
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                    Nombre de tu Carrera Afín *
+                                </label>
+                                <input
+                                    type="text"
+                                    x-model="academic.relatedCareerName"
+                                    @input="autoSave"
+                                    :required="academic.isRelatedCareer"
+                                    placeholder="Ej: Ingeniería de Software, Administración de Empresas, etc."
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+                                >
+                                <p class="text-xs text-amber-600 mt-2">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <strong>Importante:</strong> Tu postulación será evaluada por el comité de selección para determinar si tu carrera es afín al puesto. Deberás presentar el título profesional en la Fase 5.
+                                </p>
+                            </div>
+
+                            {{-- Campo legacy (mantener por compatibilidad) --}}
+                            <input type="hidden" x-model="academic.careerField">
                         </div>
 
                         <div>
@@ -563,15 +684,161 @@
         <!-- Paso 4: Capacitaciones y Cursos -->
         <div x-show="currentStep === 4" class="fade-in">
             <h2 class="text-2xl font-bold text-gray-900 mb-2">Capacitaciones y Cursos</h2>
-            <p class="text-gray-600 mb-6">Declara tus capacitaciones y cursos. Los certificados serán solicitados en la Fase 5.</p>
+            <p class="text-gray-600 mb-6">Marca las capacitaciones que cumples y declara información adicional. Los certificados serán solicitados en la Fase 5.</p>
 
-            <template x-for="(training, index) in formData.trainings" :key="index">
+            {{-- Listado de capacitaciones requeridas --}}
+            @if(!empty($jobProfile->required_courses) && count($jobProfile->required_courses) > 0)
+                <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded">
+                    <h5 class="font-bold text-blue-900 mb-3"><i class="fas fa-certificate"></i> Capacitaciones Requeridas</h5>
+                    <div class="space-y-3">
+                        @foreach($jobProfile->required_courses as $index => $course)
+                            <div class="bg-white p-4 rounded-lg border border-blue-200">
+                                <label class="flex items-start cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        x-model="formData.requiredCoursesCompliance[{{ $index }}].hasIt"
+                                        @change="autoSave"
+                                        class="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                    >
+                                    <div class="ml-3 flex-1">
+                                        <span class="font-semibold text-gray-900">{{ $course }}</span>
+
+                                        {{-- Inputs para detalles si marca que sí cumple --}}
+                                        <div x-show="formData.requiredCoursesCompliance[{{ $index }}].hasIt" class="mt-3 space-y-2" style="display: none;">
+                                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                                <div>
+                                                    <label class="block text-xs text-gray-700 mb-1">Institución *</label>
+                                                    <input
+                                                        type="text"
+                                                        x-model="formData.requiredCoursesCompliance[{{ $index }}].institution"
+                                                        @input="autoSave"
+                                                        :required="formData.requiredCoursesCompliance[{{ $index }}].hasIt"
+                                                        placeholder="Nombre de la institución"
+                                                        class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                                    >
+                                                </div>
+                                                <div>
+                                                    <label class="block text-xs text-gray-700 mb-1">Año *</label>
+                                                    <input
+                                                        type="number"
+                                                        x-model="formData.requiredCoursesCompliance[{{ $index }}].year"
+                                                        @input="autoSave"
+                                                        :required="formData.requiredCoursesCompliance[{{ $index }}].hasIt"
+                                                        placeholder="2020"
+                                                        min="1990"
+                                                        :max="new Date().getFullYear()"
+                                                        class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                                    >
+                                                </div>
+                                                <div>
+                                                    <label class="block text-xs text-gray-700 mb-1">Horas *</label>
+                                                    <input
+                                                        type="number"
+                                                        x-model="formData.requiredCoursesCompliance[{{ $index }}].hours"
+                                                        @input="autoSave"
+                                                        :required="formData.requiredCoursesCompliance[{{ $index }}].hasIt"
+                                                        placeholder="40"
+                                                        min="1"
+                                                        class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                                    >
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {{-- Checkbox de capacitación afín --}}
+                                        <div class="mt-2">
+                                            <label class="flex items-start cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    x-model="formData.requiredCoursesCompliance[{{ $index }}].isRelated"
+                                                    @change="autoSave"
+                                                    class="mt-0.5 rounded border-gray-300 text-amber-600 focus:ring-amber-500"
+                                                >
+                                                <span class="ml-2 text-sm text-gray-600">
+                                                    Tengo una capacitación afín pero con nombre diferente
+                                                </span>
+                                            </label>
+                                        </div>
+
+                                        {{-- Inputs para capacitación afín --}}
+                                        <div x-show="formData.requiredCoursesCompliance[{{ $index }}].isRelated" class="mt-3" style="display: none;">
+                                            <div class="space-y-2">
+                                                <div>
+                                                    <label class="block text-xs text-gray-700 mb-1">Nombre de tu capacitación afín *</label>
+                                                    <input
+                                                        type="text"
+                                                        x-model="formData.requiredCoursesCompliance[{{ $index }}].relatedCourseName"
+                                                        @input="autoSave"
+                                                        :required="formData.requiredCoursesCompliance[{{ $index }}].isRelated"
+                                                        placeholder="Ej: Curso similar con otro nombre"
+                                                        class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                                                    >
+                                                </div>
+                                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                                    <div>
+                                                        <label class="block text-xs text-gray-700 mb-1">Institución *</label>
+                                                        <input
+                                                            type="text"
+                                                            x-model="formData.requiredCoursesCompliance[{{ $index }}].relatedInstitution"
+                                                            @input="autoSave"
+                                                            :required="formData.requiredCoursesCompliance[{{ $index }}].isRelated"
+                                                            placeholder="Nombre de la institución"
+                                                            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                                                        >
+                                                    </div>
+                                                    <div>
+                                                        <label class="block text-xs text-gray-700 mb-1">Año *</label>
+                                                        <input
+                                                            type="number"
+                                                            x-model="formData.requiredCoursesCompliance[{{ $index }}].relatedYear"
+                                                            @input="autoSave"
+                                                            :required="formData.requiredCoursesCompliance[{{ $index }}].isRelated"
+                                                            placeholder="2020"
+                                                            min="1990"
+                                                            :max="new Date().getFullYear()"
+                                                            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                                                        >
+                                                    </div>
+                                                    <div>
+                                                        <label class="block text-xs text-gray-700 mb-1">Horas *</label>
+                                                        <input
+                                                            type="number"
+                                                            x-model="formData.requiredCoursesCompliance[{{ $index }}].relatedHours"
+                                                            @input="autoSave"
+                                                            :required="formData.requiredCoursesCompliance[{{ $index }}].isRelated"
+                                                            placeholder="40"
+                                                            min="1"
+                                                            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                                                        >
+                                                    </div>
+                                                </div>
+                                                <p class="text-xs text-amber-600 mt-1">
+                                                    <i class="fas fa-exclamation-triangle"></i>
+                                                    Esta capacitación será evaluada por el comité para determinar si es afín.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+
+            {{-- Capacitaciones adicionales (campo libre) --}}
+            <div class="mb-6">
+                <h5 class="font-semibold text-gray-900 mb-3">Capacitaciones Adicionales (Opcional)</h5>
+                <p class="text-sm text-gray-600 mb-4">Si tienes otras capacitaciones que consideras relevantes para el puesto, agrégalas aquí.</p>
+            </div>
+
+            <template x-for="(training, index) in formData.additionalTrainings" :key="index">
                 <div class="border border-gray-200 rounded-xl p-6 mb-4">
                     <div class="flex justify-between items-start mb-4">
                         <h3 class="font-bold text-gray-900">Capacitación <span x-text="index + 1"></span></h3>
                         <button type="button"
-                                @click="removeTraining(index)"
-                                x-show="formData.trainings.length > 1"
+                                @click="removeAdditionalTraining(index)"
+                                x-show="formData.additionalTrainings.length > 1"
                                 class="text-red-600 hover:text-red-800">
                             <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
@@ -621,56 +888,38 @@
             </template>
 
             <button type="button"
-                    @click="addTraining"
+                    @click="addAdditionalTraining"
                     class="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-600 hover:border-blue-500 hover:text-blue-500 transition-colors">
                 <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
                 </svg>
-                Agregar otra capacitación
+                Agregar otra capacitación adicional
             </button>
         </div>
 
         <!-- Paso 5: Conocimientos Técnicos -->
         <div x-show="currentStep === 5" class="fade-in">
             <h2 class="text-2xl font-bold text-gray-900 mb-2">Conocimientos Técnicos</h2>
-            <p class="text-gray-600 mb-6">Indica tu nivel de conocimiento en cada área requerida.</p>
+            <p class="text-gray-600 mb-6">Marca los conocimientos técnicos que posees.</p>
 
             @if($jobProfile->knowledge_areas && count($jobProfile->knowledge_areas) > 0)
-                <div class="space-y-4 mb-6">
-                    @foreach($jobProfile->knowledge_areas as $index => $area)
-                        <div class="border border-gray-200 rounded-xl p-4">
-                            <label class="block text-sm font-semibold text-gray-700 mb-3">{{ $area }}</label>
-                            <div class="flex gap-4">
-                                <label class="flex items-center">
-                                    <input type="radio"
-                                           x-model="formData.knowledge[{{ $index }}].level"
-                                           value="Básico"
-                                           @change="autoSave"
-                                           name="knowledge_{{ $index }}"
-                                           class="text-blue-600 focus:ring-blue-500">
-                                    <span class="ml-2 text-sm">Básico</span>
-                                </label>
-                                <label class="flex items-center">
-                                    <input type="radio"
-                                           x-model="formData.knowledge[{{ $index }}].level"
-                                           value="Intermedio"
-                                           @change="autoSave"
-                                           name="knowledge_{{ $index }}"
-                                           class="text-blue-600 focus:ring-blue-500">
-                                    <span class="ml-2 text-sm">Intermedio</span>
-                                </label>
-                                <label class="flex items-center">
-                                    <input type="radio"
-                                           x-model="formData.knowledge[{{ $index }}].level"
-                                           value="Avanzado"
-                                           @change="autoSave"
-                                           name="knowledge_{{ $index }}"
-                                           class="text-blue-600 focus:ring-blue-500">
-                                    <span class="ml-2 text-sm">Avanzado</span>
+                <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded">
+                    <h5 class="font-bold text-blue-900 mb-3"><i class="fas fa-laptop-code"></i> Conocimientos Técnicos Requeridos</h5>
+                    <div class="space-y-3">
+                        @foreach($jobProfile->knowledge_areas as $index => $area)
+                            <div class="bg-white p-4 rounded-lg border border-blue-200">
+                                <label class="flex items-start cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        x-model="formData.knowledgeCompliance[{{ $index }}].hasIt"
+                                        @change="autoSave"
+                                        class="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                    >
+                                    <span class="ml-3 font-semibold text-gray-900">{{ $area }}</span>
                                 </label>
                             </div>
-                        </div>
-                    @endforeach
+                        @endforeach
+                    </div>
                 </div>
             @else
                 <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-6">
@@ -900,7 +1149,10 @@
 
                 <div class="border border-gray-200 rounded-xl p-4">
                     <h4 class="font-bold text-gray-900 mb-2">Capacitaciones</h4>
-                    <p class="text-sm text-gray-600" x-text="`${formData.trainings.length} capacitación(es) declarada(s)`"></p>
+                    <p class="text-sm text-gray-600">
+                        <span x-text="`Requeridas: ${formData.requiredCoursesCompliance.filter(c => c.hasIt || c.isRelated).length} de ${formData.requiredCoursesCompliance.length}`"></span><br>
+                        <span x-text="`Adicionales: ${formData.additionalTrainings.length}`"></span>
+                    </p>
                 </div>
             </div>
 
@@ -993,6 +1245,8 @@ function applicationWizard() {
         lastSaved: null,
         complianceStatus: 'partial', // full, partial, none
 
+        acceptedCareerIds: @json($acceptedCareerIds),
+
         formData: {
             personal: {
                 fullName: '{{ $user->first_name ?? "" }} {{ $user->last_name ?? "" }}'.trim(),
@@ -1005,7 +1259,10 @@ function applicationWizard() {
             academics: [{
                 degreeType: '',
                 institution: '',
-                careerField: '',
+                careerId: '', // 💎 ID de carrera del catálogo
+                careerField: '', // Mantener por compatibilidad
+                isRelatedCareer: false, // 💎 NUEVO: Checkbox de carrera afín
+                relatedCareerName: '', // 💎 NUEVO: Nombre de la carrera afín
                 year: ''
             }],
             experiences: [{
@@ -1018,13 +1275,17 @@ function applicationWizard() {
                 isSpecific: false,
                 description: ''
             }],
-            trainings: [{
+            // 💎 NUEVO: Cumplimiento de capacitaciones requeridas
+            requiredCoursesCompliance: @json($requiredCoursesComplianceInitial),
+            // Capacitaciones adicionales (las que no están en required_courses)
+            additionalTrainings: [{
                 courseName: '',
                 institution: '',
                 hours: '',
                 certificationDate: ''
             }],
-            knowledge: [],
+            // 💎 NUEVO: Cumplimiento de conocimientos técnicos (simple checklist)
+            knowledgeCompliance: @json($knowledgeComplianceInitial),
             otherKnowledge: '',
             registrations: {
                 colegiatura: {
@@ -1083,16 +1344,6 @@ function applicationWizard() {
             setInterval(() => {
                 this.autoSave();
             }, 30000);
-
-            // Inicializar knowledge array con las áreas del perfil
-            @if($jobProfile->knowledge_areas)
-                @foreach($jobProfile->knowledge_areas as $index => $area)
-                    this.formData.knowledge[{{ $index }}] = {
-                        area: '{{ $area }}',
-                        level: ''
-                    };
-                @endforeach
-            @endif
         },
 
         getStepName(step) {
@@ -1137,11 +1388,29 @@ function applicationWizard() {
             }
         },
 
+        isCareerAccepted(careerId) {
+            if (!careerId) return false;
+            // Convertir a string para comparar (los IDs son UUIDs)
+            const careerIdStr = String(careerId);
+            return this.acceptedCareerIds.includes(careerIdStr);
+        },
+
+        checkCareerMatch(index) {
+            const careerId = this.formData.academics[index].careerId;
+            // Simplemente validar sin console.log
+            if (careerId && this.isCareerAccepted(careerId)) {
+                // Carrera cumple con requisito
+            }
+        },
+
         addAcademic() {
             this.formData.academics.push({
                 degreeType: '',
                 institution: '',
+                careerId: '',
                 careerField: '',
+                isRelatedCareer: false,
+                relatedCareerName: '',
                 year: ''
             });
         },
@@ -1167,8 +1436,8 @@ function applicationWizard() {
             this.formData.experiences.splice(index, 1);
         },
 
-        addTraining() {
-            this.formData.trainings.push({
+        addAdditionalTraining() {
+            this.formData.additionalTrainings.push({
                 courseName: '',
                 institution: '',
                 hours: '',
@@ -1176,8 +1445,8 @@ function applicationWizard() {
             });
         },
 
-        removeTraining(index) {
-            this.formData.trainings.splice(index, 1);
+        removeAdditionalTraining(index) {
+            this.formData.additionalTrainings.splice(index, 1);
         },
 
         calculateDuration(start, end) {
@@ -1246,14 +1515,20 @@ function applicationWizard() {
                 ? parseFloat('{{ $jobProfile->general_experience_years ? (is_object($jobProfile->general_experience_years) ? $jobProfile->general_experience_years->toDecimal() : $jobProfile->general_experience_years) : 0 }}')
                 : parseFloat('{{ $jobProfile->specific_experience_years ? (is_object($jobProfile->specific_experience_years) ? $jobProfile->specific_experience_years->toDecimal() : $jobProfile->specific_experience_years) : 0 }}');
 
+            // Si no hay requisito, siempre cumple
+            if (!requiredYears || requiredYears === 0) {
+                return true;
+            }
+
             let totalDays = 0;
 
             this.formData.experiences.forEach(exp => {
                 if (type === 'specific' && !exp.isSpecific) return;
 
                 if (exp.startDate) {
-                    const startDate = new Date(exp.startDate + '-01');
-                    const endDate = exp.endDate ? new Date(exp.endDate + '-01') :
+                    // Usar el mismo formato que calculateTotalExperience (sin agregar '-01')
+                    const startDate = new Date(exp.startDate);
+                    const endDate = exp.endDate ? new Date(exp.endDate) :
                                    (exp.isCurrent ? new Date() : null);
 
                     if (endDate) {
