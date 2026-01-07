@@ -11,6 +11,8 @@ class ApplicationHistory extends Model
 {
     use HasFactory, HasUuids;
 
+    protected $table = 'application_history';
+
     public $timestamps = false;
 
     protected $fillable = [

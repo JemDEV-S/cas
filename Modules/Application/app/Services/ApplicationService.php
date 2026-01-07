@@ -163,12 +163,16 @@ class ApplicationService
      */
     public function withdraw(Application $application, string $reason = null): Application
     {
-        if (!in_array($application->status, ['PRESENTADA', 'EN_REVISION', 'APTO'])) {
+        if (!in_array($application->status, [
+            \Modules\Application\Enums\ApplicationStatus::SUBMITTED,
+            \Modules\Application\Enums\ApplicationStatus::IN_REVIEW,
+            \Modules\Application\Enums\ApplicationStatus::ELIGIBLE
+        ])) {
             throw new \Exception('No se puede desistir de la postulación en su estado actual');
         }
 
         $this->repository->update($application, [
-            'status' => 'DESISTIDA',
+            'status' => \Modules\Application\Enums\ApplicationStatus::WITHDRAWN,
             'notes' => ($application->notes ? $application->notes . "\n\n" : '') . "Desistimiento: " . ($reason ?? 'Sin especificar'),
         ]);
 
@@ -278,11 +282,75 @@ class ApplicationService
     /**
      * Obtener las postulaciones de un usuario por id
      */
-    public function getUserApplications($userId)
+    public function getUserApplications($userId, $status = null, $search = null)
     {
-        return Application::where('applicant_id', $userId)
-            ->with(['vacancy.jobProfile.jobPosting'])
-            ->latest()
-            ->get();
+        $query = Application::where('applicant_id', $userId)
+            ->with(['vacancy.jobProfile.jobPosting']);
+
+        // Filtrar por estado si se proporciona
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        // Buscar por código o nombre si se proporciona
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('code', 'LIKE', "%{$search}%")
+                  ->orWhere('full_name', 'LIKE', "%{$search}%")
+                  ->orWhereHas('vacancy.jobProfile', function($query) use ($search) {
+                      $query->where('profile_name', 'LIKE', "%{$search}%");
+                  });
+            });
+        }
+
+        return $query->latest()->get();
+    }
+
+    /**
+     * Obtener el conteo de postulaciones por estado de un usuario
+     */
+    public function getUserApplicationStatusCounts(string $userId): array
+    {
+        $applications = Application::where('applicant_id', $userId)->get();
+
+        return [
+            'all' => $applications->count(),
+            'draft' => $applications->where('status', \Modules\Application\Enums\ApplicationStatus::DRAFT)->count(),
+            'submitted' => $applications->where('status', \Modules\Application\Enums\ApplicationStatus::SUBMITTED)->count(),
+            'in_review' => $applications->where('status', \Modules\Application\Enums\ApplicationStatus::IN_REVIEW)->count(),
+            'eligible' => $applications->where('status', \Modules\Application\Enums\ApplicationStatus::ELIGIBLE)->count(),
+            'not_eligible' => $applications->where('status', \Modules\Application\Enums\ApplicationStatus::NOT_ELIGIBLE)->count(),
+            'in_evaluation' => $applications->where('status', \Modules\Application\Enums\ApplicationStatus::IN_EVALUATION)->count(),
+            'amendment_required' => $applications->where('status', \Modules\Application\Enums\ApplicationStatus::AMENDMENT_REQUIRED)->count(),
+            'approved' => $applications->where('status', \Modules\Application\Enums\ApplicationStatus::APPROVED)->count(),
+            'rejected' => $applications->where('status', \Modules\Application\Enums\ApplicationStatus::REJECTED)->count(),
+            'withdrawn' => $applications->where('status', \Modules\Application\Enums\ApplicationStatus::WITHDRAWN)->count(),
+        ];
+    }
+
+    /**
+     * Obtener una postulación por ID
+     */
+    public function getApplicationById($applicationId)
+    {
+        return Application::find($applicationId);
+    }
+
+    /**
+     * Desistir de una postulación
+     */
+    public function withdrawApplication(string $applicationId, string $userId, string $reason = null): Application
+    {
+        $application = $this->getApplicationById($applicationId);
+
+        if (!$application) {
+            throw new \Exception('Postulación no encontrada');
+        }
+
+        if ($application->applicant_id !== $userId) {
+            throw new \Exception('No tienes permiso para desistir de esta postulación');
+        }
+
+        return $this->withdraw($application, $reason);
     }
 }

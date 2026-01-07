@@ -187,15 +187,17 @@ class JobPostingController extends Controller
         $requiredCoursesComplianceInitial = collect($jobProfile->required_courses ?? [])->map(function($course, $index) {
             return [
                 'courseName' => $course,
-                'hasIt' => false,
+                'status' => 'none', // 'exact', 'related', 'none'
                 'institution' => '',
                 'year' => '',
                 'hours' => '',
-                'isRelated' => false,
                 'relatedCourseName' => '',
                 'relatedInstitution' => '',
                 'relatedYear' => '',
-                'relatedHours' => ''
+                'relatedHours' => '',
+                // Mantener por compatibilidad con datos antiguos
+                'hasIt' => false,
+                'isRelated' => false,
             ];
         })->values()->all();
 
@@ -207,6 +209,19 @@ class JobPostingController extends Controller
             ];
         })->values()->all();
 
+        // 💎 Obtener opciones de niveles educativos desde el enum
+        $educationLevels = \Modules\JobProfile\Enums\EducationLevelEnum::options();
+
+        // 💎 Obtener el nivel mínimo requerido por el perfil (si existe)
+        $minimumEducationLevel = null;
+        if (!empty($jobProfile->education_levels)) {
+            // Obtener el nivel mínimo de los requeridos
+            $requiredLevels = collect($jobProfile->education_levels)
+                ->map(fn($level) => \Modules\JobProfile\Enums\EducationLevelEnum::from($level))
+                ->sortBy(fn($enum) => $enum->level());
+            $minimumEducationLevel = $requiredLevels->first();
+        }
+
         return view('applicantportal::job-postings.apply', compact(
             'posting',
             'jobProfile',
@@ -215,7 +230,9 @@ class JobPostingController extends Controller
             'acceptedCareerIds',
             'acceptedCareerNames',
             'requiredCoursesComplianceInitial',
-            'knowledgeComplianceInitial'
+            'knowledgeComplianceInitial',
+            'educationLevels',
+            'minimumEducationLevel'
         ));
     }
 
@@ -224,20 +241,33 @@ class JobPostingController extends Controller
      */
     public function storeApplication(Request $request, string $postingId, string $profileId)
     {
+        // 1. Validar datos del request
+        $validated = $request->validate([
+            'action' => 'required|in:submit,draft',
+            'formData' => 'required|json',
+        ]);
+
         $user = Auth::user();
 
         try {
-            // 1. Validar fase actual
+            // 2. Parsear y validar datos del formulario
+            $formData = json_decode($validated['formData'], true);
+
+            if (!$formData) {
+                throw new \Exception('Los datos del formulario no son válidos');
+            }
+
+            // 3. Validar fase actual
             $posting = $this->jobPostingService->getJobPostingById($postingId);
             $currentPhase = $this->jobPostingService->getCurrentPhase($postingId);
 
-            if (!$currentPhase || !in_array($currentPhase->code ?? '', ['PHASE_03_REGISTRATION', 'REGISTRATION'])) {
+            if (!$currentPhase || !in_array($currentPhase->phase->code ?? '', ['PHASE_03_REGISTRATION', 'REGISTRATION'])) {
                 return redirect()
                     ->back()
-                    ->with('error', 'No está en fase de registro');
+                    ->with('error', 'Esta convocatoria no está en fase de registro');
             }
 
-            // 2. Validar que no haya postulado a este perfil
+            // 4. Validar que no haya postulado a este perfil
             $profile = \Modules\JobProfile\Entities\JobProfile::findOrFail($profileId);
             $existingApp = \Modules\Application\Entities\Application::where('applicant_id', $user->id)
                 ->whereHas('vacancy', fn($q) => $q->where('job_profile_id', $profileId))
@@ -246,80 +276,102 @@ class JobPostingController extends Controller
             if ($existingApp) {
                 return redirect()
                     ->back()
-                    ->with('error', 'Ya postulaste a este perfil');
+                    ->with('error', 'Ya has postulado a este perfil anteriormente');
             }
 
-            // 3. Obtener vacante disponible
+            // 5. Obtener vacante disponible
             $vacancy = $profile->vacancies()->where('status', 'available')->first();
             if (!$vacancy) {
                 return redirect()
                     ->back()
-                    ->with('error', 'No hay vacantes disponibles');
+                    ->with('error', 'No hay vacantes disponibles para este perfil');
             }
 
-            // 4. Determinar estado según acción
-            $status = $request->action === 'submit'
+            // 6. Determinar estado según acción
+            $status = $validated['action'] === 'submit'
                 ? \Modules\Application\Enums\ApplicationStatus::SUBMITTED
                 : \Modules\Application\Enums\ApplicationStatus::DRAFT;
 
-            // 5. Parsear datos del formulario
-            $formData = json_decode($request->formData, true);
+            // 7. Iniciar transacción de base de datos
+            return \DB::transaction(function () use ($user, $vacancy, $formData, $status, $request) {
+                // 8. Crear ApplicationDTO
+                $dto = new \Modules\Application\DTOs\ApplicationDTO(
+                    applicantId: $user->id,
+                    jobProfileVacancyId: $vacancy->id,
+                    personalData: new \Modules\Application\DTOs\PersonalDataDTO(
+                        fullName: $formData['personal']['fullName'] ?? ($user->first_name . ' ' . $user->last_name),
+                        dni: $formData['personal']['dni'] ?? $user->dni,
+                        birthDate: $formData['personal']['birthDate'] ?? $user->birth_date,
+                        address: $formData['personal']['address'] ?? $user->address,
+                        mobilePhone: $formData['personal']['phone'] ?? $user->phone,
+                        email: $formData['personal']['email'] ?? $user->email,
+                        phone: $formData['personal']['phone'] ?? $user->phone
+                    ),
+                    academics: $this->mapAcademics($formData['academics'] ?? []),
+                    experiences: $this->mapExperiences($formData['experiences'] ?? []),
+                    trainings: $this->mapTrainings($formData),
+                    knowledge: $this->mapKnowledge($formData),
+                    professionalRegistrations: $this->mapRegistrations($formData['registrations'] ?? []),
+                    specialConditions: $this->mapSpecialConditions($formData['specialConditions'] ?? []),
+                    termsAccepted: $formData['termsAccepted'] ?? false,
+                    ipAddress: $request->ip()
+                );
 
-            // 6. Crear ApplicationDTO
-            $dto = new \Modules\Application\DTOs\ApplicationDTO(
-                applicantId: $user->id,
-                jobProfileVacancyId: $vacancy->id,
-                personalData: new \Modules\Application\DTOs\PersonalDataDTO(
-                    fullName: $formData['personal']['fullName'] ?? ($user->first_name . ' ' . $user->last_name),
-                    dni: $formData['personal']['dni'] ?? $user->dni,
-                    birthDate: $formData['personal']['birthDate'] ?? $user->birth_date,
-                    address: $formData['personal']['address'] ?? $user->address,
-                    mobilePhone: $formData['personal']['phone'] ?? $user->phone,
-                    email: $formData['personal']['email'] ?? $user->email,
-                    phone: $formData['personal']['phone'] ?? $user->phone
-                ),
-                academics: $this->mapAcademics($formData['academics'] ?? []),
-                experiences: $this->mapExperiences($formData['experiences'] ?? []),
-                trainings: $this->mapTrainings($formData['trainings'] ?? []),
-                knowledge: $this->mapKnowledge($formData['knowledge'] ?? []),
-                professionalRegistrations: $this->mapRegistrations($formData['registrations'] ?? []),
-                specialConditions: $this->mapSpecialConditions($formData['specialConditions'] ?? []),
-                termsAccepted: $formData['termsAccepted'] ?? false,
-                ipAddress: $request->ip()
-            );
+                // 9. Crear postulación
+                $application = $this->applicationService->create($dto);
 
-            // 7. Crear postulación
-            $application = $this->applicationService->create($dto);
+                // 10. Actualizar estado si es necesario
+                if ($status === \Modules\Application\Enums\ApplicationStatus::DRAFT) {
+                    $application->update(['status' => $status]);
+                }
 
-            // 8. Actualizar estado si es necesario
-            if ($status === \Modules\Application\Enums\ApplicationStatus::DRAFT) {
-                $application->update(['status' => $status]);
-            }
+                // 11. Generar ficha de postulación PDF (solo si se envió, no si es borrador)
+                if ($status === \Modules\Application\Enums\ApplicationStatus::SUBMITTED) {
+                    // TODO: Implementar generación de PDF
+                    // app(DocumentService::class)->generateFromTemplate(...)
+                }
 
-            // 9. Generar ficha de postulación PDF (solo si se envió, no si es borrador)
-            if ($status === \Modules\Application\Enums\ApplicationStatus::SUBMITTED) {
-                // TODO: Implementar generación de PDF
-                // app(DocumentService::class)->generateFromTemplate(...)
-            }
+                // 12. Mensaje según acción
+                $message = $status === \Modules\Application\Enums\ApplicationStatus::SUBMITTED
+                    ? '¡Postulación enviada exitosamente!'
+                    : 'Borrador guardado. Puedes completar y enviar después.';
 
-            // 10. Mensaje según acción
-            $message = $status === \Modules\Application\Enums\ApplicationStatus::SUBMITTED
-                ? '¡Postulación enviada exitosamente!'
-                : 'Borrador guardado. Puedes completar y enviar después.';
+                return redirect()
+                    ->route('applicant.applications.show', $application->id)
+                    ->with('success', $message);
+            });
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Error de validación - devolver con errores específicos
+            return redirect()
+                ->back()
+                ->withErrors($e->errors())
+                ->withInput();
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            // Perfil o vacante no encontrada
+            \Log::error('Perfil o vacante no encontrada', [
+                'profile_id' => $profileId,
+                'error' => $e->getMessage()
+            ]);
 
             return redirect()
-                ->route('applicant.applications.show', $application->id)
-                ->with('success', $message);
+                ->route('applicant.job-postings.index')
+                ->with('error', 'El perfil solicitado no existe o no está disponible');
 
         } catch (\Exception $e) {
-            \Log::error('Error al crear postulación: ' . $e->getMessage(), [
+            // Error genérico
+            \Log::error('Error al crear postulación', [
+                'user_id' => $user->id ?? null,
+                'profile_id' => $profileId,
+                'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
 
             return redirect()
                 ->back()
                 ->withInput()
-                ->with('error', 'Error al enviar la postulación: ' . $e->getMessage());
+                ->with('error', 'Ocurrió un error al procesar tu postulación. Por favor, intenta nuevamente.');
         }
     }
 
@@ -348,45 +400,116 @@ class JobPostingController extends Controller
     private function mapExperiences(array $experiences): array
     {
         return array_map(function($exp) {
+            // Si isCurrent es true, usar fecha actual como endDate
+            $endDate = ($exp['isCurrent'] ?? false)
+                ? date('Y-m-d')
+                : ($exp['endDate'] ?? date('Y-m-d'));
+
             return new \Modules\Application\DTOs\ExperienceDTO(
                 organization: $exp['organization'] ?? '',
                 position: $exp['position'] ?? '',
-                startDate: $exp['startDate'] ?? null,
-                endDate: $exp['endDate'] ?? null,
-                isCurrent: $exp['isCurrent'] ?? false,
-                isPublicSector: $exp['isPublicSector'] ?? false,
+                startDate: $exp['startDate'] ?? date('Y-m-d'),
+                endDate: $endDate,
                 isSpecific: $exp['isSpecific'] ?? false,
-                description: $exp['description'] ?? ''
+                isPublicSector: $exp['isPublicSector'] ?? false
             );
         }, $experiences);
     }
 
     /**
-     * Mapear capacitaciones al formato DTO
+     * Mapear capacitaciones al formato DTO (MEJORADO con nuevo modelo)
      */
-    private function mapTrainings(array $trainings): array
+    private function mapTrainings(array $formData): array
     {
-        return array_map(function($training) {
-            return new \Modules\Application\DTOs\TrainingDTO(
-                courseName: $training['courseName'] ?? '',
-                institution: $training['institution'] ?? '',
-                hours: $training['hours'] ?? 0,
-                certificationDate: $training['certificationDate'] ?? null
-            );
-        }, $trainings);
+        $trainings = [];
+
+        // 1. Procesar capacitaciones requeridas que cumplió
+        if (isset($formData['requiredCoursesCompliance']) && is_array($formData['requiredCoursesCompliance'])) {
+            foreach ($formData['requiredCoursesCompliance'] as $course) {
+                // Solo incluir si tiene status 'exact' o 'related'
+                if (($course['status'] ?? 'none') === 'exact') {
+                    // Capacitación exacta
+                    $trainings[] = new \Modules\Application\DTOs\TrainingDTO(
+                        institution: $course['institution'] ?? '',
+                        courseName: $course['courseName'] ?? '',
+                        academicHours: (int)($course['hours'] ?? 0),
+                        startDate: $course['year'] ? $course['year'] . '-01-01' : null,
+                        endDate: $course['year'] ? $course['year'] . '-12-31' : null
+                    );
+                } elseif (($course['status'] ?? 'none') === 'related') {
+                    // Capacitación afín/relacionada (agregar nota en el nombre)
+                    $courseName = ($course['relatedCourseName'] ?? '') . ' (Afín a: ' . ($course['courseName'] ?? '') . ')';
+                    $trainings[] = new \Modules\Application\DTOs\TrainingDTO(
+                        institution: $course['relatedInstitution'] ?? '',
+                        courseName: $courseName,
+                        academicHours: (int)($course['relatedHours'] ?? 0),
+                        startDate: $course['relatedYear'] ? $course['relatedYear'] . '-01-01' : null,
+                        endDate: $course['relatedYear'] ? $course['relatedYear'] . '-12-31' : null
+                    );
+                }
+            }
+        }
+
+        // 2. Procesar capacitaciones adicionales
+        if (isset($formData['additionalTrainings']) && is_array($formData['additionalTrainings'])) {
+            foreach ($formData['additionalTrainings'] as $training) {
+                // Solo agregar si tiene nombre de curso
+                if (!empty($training['courseName'])) {
+                    // Convertir certificationDate (YYYY-MM) a rango de fechas
+                    $certDate = $training['certificationDate'] ?? null;
+                    $startDate = $certDate ? $certDate . '-01' : null;
+                    $endDate = $certDate ? $certDate . '-' . date('t', strtotime($certDate . '-01')) : null;
+
+                    $trainings[] = new \Modules\Application\DTOs\TrainingDTO(
+                        institution: $training['institution'] ?? '',
+                        courseName: $training['courseName'] ?? '',
+                        academicHours: (int)($training['hours'] ?? 0),
+                        startDate: $startDate,
+                        endDate: $endDate
+                    );
+                }
+            }
+        }
+
+        return $trainings;
     }
 
     /**
-     * Mapear conocimientos al formato DTO
+     * Mapear conocimientos al formato DTO (MEJORADO con nuevo modelo)
      */
-    private function mapKnowledge(array $knowledge): array
+    private function mapKnowledge(array $formData): array
     {
-        return array_map(function($k) {
-            return new \Modules\Application\DTOs\KnowledgeDTO(
-                area: $k['area'] ?? '',
-                level: $k['level'] ?? ''
-            );
-        }, $knowledge);
+        $knowledge = [];
+
+        // 1. Procesar conocimientos requeridos que cumple
+        if (isset($formData['knowledgeCompliance']) && is_array($formData['knowledgeCompliance'])) {
+            foreach ($formData['knowledgeCompliance'] as $k) {
+                // Solo incluir si marcó que lo tiene
+                if (($k['hasIt'] ?? false) === true) {
+                    $knowledge[] = new \Modules\Application\DTOs\KnowledgeDTO(
+                        knowledgeName: $k['area'] ?? '',
+                        proficiencyLevel: 'BASICO' // Por defecto, se puede expandir más adelante
+                    );
+                }
+            }
+        }
+
+        // 2. Procesar otros conocimientos (texto libre)
+        if (!empty($formData['otherKnowledge'])) {
+            // Dividir por comas o saltos de línea
+            $otherAreas = preg_split('/[,\n]+/', $formData['otherKnowledge']);
+            foreach ($otherAreas as $area) {
+                $area = trim($area);
+                if (!empty($area)) {
+                    $knowledge[] = new \Modules\Application\DTOs\KnowledgeDTO(
+                        knowledgeName: $area,
+                        proficiencyLevel: 'BASICO'
+                    );
+                }
+            }
+        }
+
+        return $knowledge;
     }
 
     /**

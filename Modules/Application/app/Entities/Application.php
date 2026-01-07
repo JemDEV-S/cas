@@ -44,6 +44,7 @@ class Application extends Model
     ];
 
     protected $casts = [
+        'status' => \Modules\Application\Enums\ApplicationStatus::class,
         'application_date' => 'datetime',
         'birth_date' => 'date',
         'terms_accepted' => 'boolean',
@@ -167,7 +168,7 @@ class Application extends Model
      */
     public function isEditable(): bool
     {
-        return in_array($this->status, ['PRESENTADA', 'EN_REVISION', 'SUBSANACION']);
+        return $this->status->isEditable();
     }
 
     /**

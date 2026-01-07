@@ -99,7 +99,11 @@ class ApplicationPolicy
         }
 
         // Solo puede desistir en ciertos estados
-        return in_array($application->status, ['PRESENTADA', 'EN_REVISION', 'APTO']);
+        return in_array($application->status, [
+            \Modules\Application\Enums\ApplicationStatus::SUBMITTED,
+            \Modules\Application\Enums\ApplicationStatus::IN_REVIEW,
+            \Modules\Application\Enums\ApplicationStatus::ELIGIBLE
+        ]);
     }
 
     /**

@@ -74,16 +74,17 @@
             <!-- Badge de estado -->
             <div class="flex flex-col items-end gap-3">
                 @php
-                    $statusColors = [
-                        'BORRADOR' => 'bg-yellow-100 text-yellow-800 border-yellow-300',
-                        'PRESENTADA' => 'bg-blue-100 text-blue-800 border-blue-300',
-                        'APTO' => 'bg-green-100 text-green-800 border-green-300',
-                        'NO_APTO' => 'bg-red-100 text-red-800 border-red-300',
-                        'EN_EVALUACION' => 'bg-purple-100 text-purple-800 border-purple-300',
-                        'APROBADA' => 'bg-green-100 text-green-800 border-green-300',
-                        'RECHAZADA' => 'bg-red-100 text-red-800 border-red-300',
+                    $color = $application->status->color();
+                    $statusColorClasses = [
+                        'yellow' => 'bg-yellow-100 text-yellow-800 border-yellow-300',
+                        'blue' => 'bg-blue-100 text-blue-800 border-blue-300',
+                        'green' => 'bg-green-100 text-green-800 border-green-300',
+                        'red' => 'bg-red-100 text-red-800 border-red-300',
+                        'purple' => 'bg-purple-100 text-purple-800 border-purple-300',
+                        'orange' => 'bg-orange-100 text-orange-800 border-orange-300',
+                        'gray' => 'bg-gray-100 text-gray-800 border-gray-300',
                     ];
-                    $statusColor = $statusColors[$application->status->value] ?? 'bg-gray-100 text-gray-800 border-gray-300';
+                    $statusColor = $statusColorClasses[$color] ?? 'bg-gray-100 text-gray-800 border-gray-300';
                 @endphp
 
                 <span class="px-4 py-2 rounded-xl font-bold text-sm border-2 {{ $statusColor }}">
@@ -94,7 +95,7 @@
     </div>
 
     <!-- Contenido según el estado -->
-    @if($application->status->value === 'BORRADOR')
+    @if($application->status === \Modules\Application\Enums\ApplicationStatus::DRAFT)
         <!-- Estado: BORRADOR -->
         <div class="bg-yellow-50 border-l-4 border-yellow-500 rounded-xl p-6 mb-6">
             <div class="flex items-start">
@@ -132,7 +133,7 @@
             </div>
         </div>
 
-    @elseif($application->status->value === 'PRESENTADA')
+    @elseif($application->status === \Modules\Application\Enums\ApplicationStatus::SUBMITTED)
         <!-- Estado: PRESENTADA -->
         <div class="bg-blue-50 border-l-4 border-blue-500 rounded-xl p-6 mb-6">
             <div class="flex items-start">
@@ -151,7 +152,7 @@
             </div>
         </div>
 
-    @elseif($application->status->value === 'APTO')
+    @elseif($application->status === \Modules\Application\Enums\ApplicationStatus::ELIGIBLE)
         <!-- Estado: APTO -->
         @if($jobPosting->results_published)
             <div class="bg-green-50 border-l-4 border-green-500 rounded-xl p-6 mb-6">
@@ -177,7 +178,7 @@
                                 <li>Los jurados revisarán tu documentación en la Fase 6</li>
                             </ol>
                         </div>
-                        @if($application->documents()->where('type', 'FICHA_POSTULACION')->exists())
+                        @if($application->documents()->where('document_type', 'DOC_APPLICATION_FORM')->exists())
                             <a href="{{ route('applicant.applications.download-pdf', $application->id) }}"
                                class="inline-flex items-center px-6 py-2 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 transition-all">
                                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -207,7 +208,7 @@
             </div>
         @endif
 
-    @elseif($application->status->value === 'NO_APTO')
+    @elseif($application->status === \Modules\Application\Enums\ApplicationStatus::NOT_ELIGIBLE)
         <!-- Estado: NO APTO -->
         @if($jobPosting->results_published)
             <div class="bg-red-50 border-l-4 border-red-500 rounded-xl p-6 mb-6">
@@ -252,7 +253,7 @@
             </div>
         @endif
 
-    @elseif($application->status->value === 'EN_EVALUACION')
+    @elseif($application->status === \Modules\Application\Enums\ApplicationStatus::IN_EVALUATION)
         <!-- Estado: EN_EVALUACION -->
         <div class="bg-purple-50 border-l-4 border-purple-500 rounded-xl p-6 mb-6">
             <div class="flex items-start">
@@ -274,7 +275,13 @@
     @endif
 
     <!-- Ficha de Postulación (si está enviada) -->
-    @if(in_array($application->status->value, ['PRESENTADA', 'APTO', 'NO_APTO', 'EN_EVALUACION', 'APROBADA']) && $application->documents()->where('type', 'FICHA_POSTULACION')->exists())
+    @if(in_array($application->status, [
+        \Modules\Application\Enums\ApplicationStatus::SUBMITTED,
+        \Modules\Application\Enums\ApplicationStatus::ELIGIBLE,
+        \Modules\Application\Enums\ApplicationStatus::NOT_ELIGIBLE,
+        \Modules\Application\Enums\ApplicationStatus::IN_EVALUATION,
+        \Modules\Application\Enums\ApplicationStatus::APPROVED
+    ]) && $application->documents()->where('document_type', 'DOC_APPLICATION_FORM')->exists())
         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
             <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                 <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -329,8 +336,10 @@
                         ['code' => 'PHASE_09_RESULTS', 'name' => 'Fase 9: Publicación de Resultados Finales', 'icon' => 'M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z'],
                     ];
 
-                    $currentPhaseCode = $currentPhase->code ?? '';
-                    $currentPhaseIndex = collect($phases)->search(fn($p) => $p['code'] === $currentPhaseCode);
+                    $currentPhaseCode = isset($currentPhase) ? $currentPhase->code : null;
+                    $currentPhaseIndex = $currentPhaseCode
+                        ? collect($phases)->search(fn($p) => $p['code'] === $currentPhaseCode)
+                        : false;
                 @endphp
 
                 @foreach($phases as $index => $phase)

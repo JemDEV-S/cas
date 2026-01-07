@@ -17,7 +17,7 @@ class ApplicationRepository implements ApplicationRepositoryInterface
     {
         return $this->model
             ->with([
-                'vacancy.jobProfileRequest',
+                'vacancy.jobProfile',
                 'applicant',
                 'academics',
                 'experiences',
@@ -33,7 +33,7 @@ class ApplicationRepository implements ApplicationRepositoryInterface
     {
         return $this->model
             ->with([
-                'vacancy.jobProfileRequest',
+                'vacancy.jobProfile',
                 'applicant',
                 'academics',
                 'experiences',
@@ -93,7 +93,7 @@ class ApplicationRepository implements ApplicationRepositoryInterface
     public function getByApplicant(string $applicantId): Collection
     {
         return $this->model
-            ->with(['vacancy.jobProfileRequest'])
+            ->with(['vacancy.jobProfile'])
             ->where('applicant_id', $applicantId)
             ->orderBy('application_date', 'desc')
             ->get();
@@ -149,7 +149,10 @@ class ApplicationRepository implements ApplicationRepositoryInterface
         return $this->model
             ->where('applicant_id', $applicantId)
             ->where('job_profile_vacancy_id', $vacancyId)
-            ->whereNotIn('status', ['DESISTIDA', 'RECHAZADA'])
+            ->whereNotIn('status', [
+                \Modules\Application\Enums\ApplicationStatus::WITHDRAWN,
+                \Modules\Application\Enums\ApplicationStatus::REJECTED
+            ])
             ->exists();
     }
 

@@ -30,9 +30,13 @@ class DashboardController extends Controller
 
         // Calculate statistics
         $stats = [
-            'active_applications' => $myApplications->whereIn('status', ['PRESENTADA', 'EN_REVISION', 'EN_EVALUACION'])->count(),
-            'approved_applications' => $myApplications->where('status', 'APROBADA')->count(),
-            'in_evaluation' => $myApplications->where('status', 'EN_EVALUACION')->count(),
+            'active_applications' => $myApplications->whereIn('status', [
+                \Modules\Application\Enums\ApplicationStatus::SUBMITTED,
+                \Modules\Application\Enums\ApplicationStatus::IN_REVIEW,
+                \Modules\Application\Enums\ApplicationStatus::IN_EVALUATION
+            ])->count(),
+            'approved_applications' => $myApplications->where('status', \Modules\Application\Enums\ApplicationStatus::APPROVED)->count(),
+            'in_evaluation' => $myApplications->where('status', \Modules\Application\Enums\ApplicationStatus::IN_EVALUATION)->count(),
             'available_postings' => $activePostings->count(),
         ];
 

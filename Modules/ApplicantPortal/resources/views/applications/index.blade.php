@@ -25,19 +25,19 @@
 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
         <p class="text-sm text-gray-600 mb-1">Total</p>
-        <p class="text-2xl font-bold text-gray-900">{{ $statusCounts['total'] ?? 0 }}</p>
+        <p class="text-2xl font-bold text-gray-900">{{ $statusCounts['all'] ?? 0 }}</p>
     </div>
     <div class="bg-white rounded-xl shadow-sm border border-green-100 p-4">
         <p class="text-sm text-gray-600 mb-1">Aprobadas</p>
-        <p class="text-2xl font-bold text-green-600">{{ $statusCounts['APROBADA'] ?? 0 }}</p>
+        <p class="text-2xl font-bold text-green-600">{{ $statusCounts['approved'] ?? 0 }}</p>
     </div>
     <div class="bg-white rounded-xl shadow-sm border border-blue-100 p-4">
         <p class="text-sm text-gray-600 mb-1">En Evaluación</p>
-        <p class="text-2xl font-bold text-blue-600">{{ $statusCounts['EN_EVALUACION'] ?? 0 }}</p>
+        <p class="text-2xl font-bold text-blue-600">{{ $statusCounts['in_evaluation'] ?? 0 }}</p>
     </div>
     <div class="bg-white rounded-xl shadow-sm border border-yellow-100 p-4">
         <p class="text-sm text-gray-600 mb-1">En Revisión</p>
-        <p class="text-2xl font-bold text-yellow-600">{{ $statusCounts['EN_REVISION'] ?? 0 }}</p>
+        <p class="text-2xl font-bold text-yellow-600">{{ $statusCounts['in_review'] ?? 0 }}</p>
     </div>
 </div>
 
@@ -98,12 +98,20 @@
                         <div class="flex-1">
                             <div class="flex items-start gap-4 mb-4">
                                 <!-- Estado visual -->
-                                <div class="flex-shrink-0 w-14 h-14 rounded-xl flex items-center justify-center
-                                    {{ $application->status == 'APROBADA' ? 'bg-gradient-to-br from-green-500 to-green-600' : '' }}
-                                    {{ $application->status == 'EN_EVALUACION' ? 'bg-gradient-to-br from-blue-500 to-blue-600' : '' }}
-                                    {{ $application->status == 'PRESENTADA' ? 'bg-gradient-to-br from-yellow-500 to-yellow-600' : '' }}
-                                    {{ $application->status == 'RECHAZADA' ? 'bg-gradient-to-br from-red-500 to-red-600' : '' }}
-                                    {{ !in_array($application->status, ['APROBADA', 'EN_EVALUACION', 'PRESENTADA', 'RECHAZADA']) ? 'bg-gradient-to-br from-gray-500 to-gray-600' : '' }}">
+                                @php
+                                    $iconColor = $application->status->color();
+                                    $iconGradients = [
+                                        'green' => 'bg-gradient-to-br from-green-500 to-green-600',
+                                        'blue' => 'bg-gradient-to-br from-blue-500 to-blue-600',
+                                        'yellow' => 'bg-gradient-to-br from-yellow-500 to-yellow-600',
+                                        'red' => 'bg-gradient-to-br from-red-500 to-red-600',
+                                        'purple' => 'bg-gradient-to-br from-purple-500 to-purple-600',
+                                        'orange' => 'bg-gradient-to-br from-orange-500 to-orange-600',
+                                        'gray' => 'bg-gradient-to-br from-gray-500 to-gray-600',
+                                    ];
+                                    $iconGradient = $iconGradients[$iconColor] ?? 'bg-gradient-to-br from-gray-500 to-gray-600';
+                                @endphp
+                                <div class="flex-shrink-0 w-14 h-14 rounded-xl flex items-center justify-center {{ $iconGradient }}">
                                     <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                     </svg>
@@ -114,9 +122,11 @@
                                     <div class="flex items-start justify-between mb-2">
                                         <div>
                                             <h3 class="text-lg font-bold text-gray-900 mb-1">
-                                                {{ $application->jobProfile->position_code->name }}
+                                                {{ $application->vacancy->jobProfile->profile_name }}
                                             </h3>
-                                            <p class="text-sm text-gray-600">{{ $application->jobPosting->title }}</p>
+                                            <p class="text-sm text-gray-600">
+                                                {{ $application->vacancy->jobProfile->positionCode->name ?? 'N/A' }}
+                                            </p>
                                         </div>
                                     </div>
 
@@ -124,15 +134,21 @@
                                         <span class="px-3 py-1 bg-gray-100 text-gray-700 text-xs font-bold rounded-full">
                                             {{ $application->code }}
                                         </span>
-                                        <span class="px-3 py-1 text-xs font-bold rounded-full
-                                            {{ $application->status == 'APROBADA' ? 'bg-green-100 text-green-800' : '' }}
-                                            {{ $application->status == 'EN_EVALUACION' ? 'bg-blue-100 text-blue-800' : '' }}
-                                            {{ $application->status == 'PRESENTADA' ? 'bg-yellow-100 text-yellow-800' : '' }}
-                                            {{ $application->status == 'RECHAZADA' ? 'bg-red-100 text-red-800' : '' }}
-                                            {{ $application->status == 'APTO' ? 'bg-green-100 text-green-800' : '' }}
-                                            {{ $application->status == 'NO_APTO' ? 'bg-red-100 text-red-800' : '' }}
-                                            {{ !in_array($application->status, ['APROBADA', 'EN_EVALUACION', 'PRESENTADA', 'RECHAZADA', 'APTO', 'NO_APTO']) ? 'bg-gray-100 text-gray-800' : '' }}">
-                                            {{ str_replace('_', ' ', $application->status) }}
+                                        @php
+                                            $color = $application->status->color();
+                                            $statusColorClasses = [
+                                                'yellow' => 'bg-yellow-100 text-yellow-800',
+                                                'blue' => 'bg-blue-100 text-blue-800',
+                                                'green' => 'bg-green-100 text-green-800',
+                                                'red' => 'bg-red-100 text-red-800',
+                                                'purple' => 'bg-purple-100 text-purple-800',
+                                                'orange' => 'bg-orange-100 text-orange-800',
+                                                'gray' => 'bg-gray-100 text-gray-800',
+                                            ];
+                                            $statusColor = $statusColorClasses[$color] ?? 'bg-gray-100 text-gray-800';
+                                        @endphp
+                                        <span class="px-3 py-1 text-xs font-bold rounded-full {{ $statusColor }}">
+                                            {{ $application->status->label() }}
                                         </span>
                                     </div>
 
@@ -163,7 +179,11 @@
                                class="px-4 py-2 gradient-municipal text-white font-semibold rounded-xl hover:shadow-lg transition-all duration-300 text-center text-sm">
                                 Ver Detalles
                             </a>
-                            @if(in_array($application->status, ['PRESENTADA', 'EN_REVISION']))
+                            @if(in_array($application->status, [
+                                \Modules\Application\Enums\ApplicationStatus::SUBMITTED,
+                                \Modules\Application\Enums\ApplicationStatus::IN_REVIEW,
+                                \Modules\Application\Enums\ApplicationStatus::ELIGIBLE
+                            ]))
                                 <form method="POST" action="{{ route('applicant.applications.withdraw', $application->id) }}"
                                       onsubmit="return confirm('¿Estás seguro de que deseas desistir de esta postulación?');">
                                     @csrf

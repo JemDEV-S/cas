@@ -56,7 +56,31 @@ class ApplicationController extends Controller
             abort(403, 'No tienes permiso para ver esta postulación.');
         }
 
-        return view('applicantportal::applications.show', compact('application'));
+        // Load necessary relationships
+        $application->load([
+            'vacancy.jobProfile.jobPosting.schedules.phase',
+            'academics',
+            'experiences',
+            'trainings',
+            'specialConditions',
+            'professionalRegistrations',
+            'knowledge',
+            'documents'
+        ]);
+
+        // Get related entities
+        $jobProfile = $application->vacancy->jobProfile;
+        $jobPosting = $jobProfile->jobPosting;
+
+        // Get current phase using the method instead of a relationship
+        $currentPhase = $jobPosting->getCurrentPhase();
+
+        return view('applicantportal::applications.show', compact(
+            'application',
+            'jobProfile',
+            'jobPosting',
+            'currentPhase'
+        ));
     }
 
     /**
