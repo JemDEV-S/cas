@@ -4,14 +4,17 @@ namespace Modules\Application\Events;
 
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
-use Modules\Application\Entities\Application;
+use Modules\JobPosting\Entities\JobPosting;
 
-class ApplicationEvaluated
+class BatchEvaluationCompleted
 {
     use Dispatchable, SerializesModels;
 
+    /**
+     * Create a new event instance.
+     */
     public function __construct(
-        public Application $application,
-        public ?array $evaluationResult = null
+        public JobPosting $posting,
+        public array $statistics
     ) {}
 }

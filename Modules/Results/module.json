@@ -1,0 +1,11 @@
+{
+    "name": "Results",
+    "alias": "results",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\Results\\Providers\\ResultsServiceProvider"
+    ],
+    "files": []
+}

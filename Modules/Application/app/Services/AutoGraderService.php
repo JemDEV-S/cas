@@ -88,6 +88,26 @@ class AutoGraderService
             }
         }
 
+        // 7. Validar Cursos Requeridos (si se especificaron)
+        if (!empty($jobProfile->required_courses) && is_array($jobProfile->required_courses)) {
+            $coursesResult = $this->validateRequiredCourses($application, $jobProfile);
+            $results['details']['required_courses'] = $coursesResult;
+            if (!$coursesResult['passed']) {
+                $results['is_eligible'] = false;
+                $results['reasons'][] = $coursesResult['reason'];
+            }
+        }
+
+        // 8. Validar Conocimientos Técnicos (si se especificaron)
+        if (!empty($jobProfile->knowledge_areas) && is_array($jobProfile->knowledge_areas)) {
+            $knowledgeResult = $this->validateTechnicalKnowledge($application, $jobProfile);
+            $results['details']['technical_knowledge'] = $knowledgeResult;
+            if (!$knowledgeResult['passed']) {
+                $results['is_eligible'] = false;
+                $results['reasons'][] = $knowledgeResult['reason'];
+            }
+        }
+
         return $results;
     }
 
@@ -98,21 +118,57 @@ class AutoGraderService
     {
         $evaluation = $this->evaluateEligibility($application);
 
-        $application->is_eligible = $evaluation['is_eligible'];
-        $application->eligibility_checked_by = $checkedBy;
-        $application->eligibility_checked_at = now();
+        // Usar transacción para asegurar consistencia
+        \DB::transaction(function () use ($application, $evaluation, $checkedBy) {
+            // Actualizar estado de la aplicación
+            $application->is_eligible = $evaluation['is_eligible'];
+            $application->eligibility_checked_by = $checkedBy;
+            $application->eligibility_checked_at = now();
 
-        if ($evaluation['is_eligible']) {
-            $application->status = ApplicationStatus::ELIGIBLE->value;
-            $application->ineligibility_reason = null;
-        } else {
-            $application->status = ApplicationStatus::NOT_ELIGIBLE->value;
-            $application->ineligibility_reason = implode("\n", $evaluation['reasons']);
-        }
+            if ($evaluation['is_eligible']) {
+                $application->status = ApplicationStatus::ELIGIBLE->value;
+                $application->ineligibility_reason = null;
+            } else {
+                $application->status = ApplicationStatus::NOT_ELIGIBLE->value;
+                $application->ineligibility_reason = implode("\n", $evaluation['reasons']);
+            }
 
-        $application->save();
+            $application->save();
 
-        return $application;
+            // Guardar evaluación detallada en la tabla de evaluaciones
+            $application->evaluations()->create([
+                'is_eligible' => $evaluation['is_eligible'],
+                'ineligibility_reasons' => $evaluation['is_eligible']
+                    ? null
+                    : implode("\n", $evaluation['reasons']),
+                'academics_evaluation' => $evaluation['details']['academics'] ?? null,
+                'general_experience_evaluation' => $evaluation['details']['general_experience'] ?? null,
+                'specific_experience_evaluation' => $evaluation['details']['specific_experience'] ?? null,
+                'professional_registry_evaluation' => $evaluation['details']['professional_registry'] ?? null,
+                'osce_certification_evaluation' => $evaluation['details']['osce_certification'] ?? null,
+                'driver_license_evaluation' => $evaluation['details']['driver_license'] ?? null,
+                'required_courses_evaluation' => $evaluation['details']['required_courses'] ?? null,
+                'technical_knowledge_evaluation' => $evaluation['details']['technical_knowledge'] ?? null,
+                'algorithm_version' => '1.0',
+                'evaluated_by' => $checkedBy,
+                'evaluated_at' => now(),
+            ]);
+
+            // Registrar en el historial
+            $application->history()->create([
+                'action' => 'eligibility_evaluated',
+                'performed_by' => $checkedBy,
+                'performed_at' => now(),
+                'details' => [
+                    'result' => $evaluation['is_eligible'] ? 'APTO' : 'NO_APTO',
+                    'reasons' => $evaluation['reasons'],
+                    'evaluation_details' => $evaluation['details'],
+                    'algorithm_version' => '1.0',
+                ],
+            ]);
+        });
+
+        return $application->fresh();
     }
 
     /**
@@ -351,6 +407,194 @@ class AutoGraderService
             'passed' => true,
             'reason' => 'Cuenta con licencia de conducir vigente',
         ];
+    }
+
+    /**
+     * Validar cursos requeridos
+     */
+    private function validateRequiredCourses(Application $application, $jobProfile): array
+    {
+        $requiredCourses = $jobProfile->required_courses ?? [];
+        $applicantTrainings = $application->trainings;
+
+        if (empty($requiredCourses)) {
+            return [
+                'passed' => true,
+                'reason' => 'No se requieren cursos específicos',
+                'required' => [],
+                'found' => [],
+            ];
+        }
+
+        if ($applicantTrainings->isEmpty()) {
+            return [
+                'passed' => false,
+                'reason' => sprintf(
+                    'No registró capacitaciones. Se requieren cursos en: %s',
+                    implode(', ', $requiredCourses)
+                ),
+                'required' => $requiredCourses,
+                'found' => [],
+            ];
+        }
+
+        // Normalizar nombres de cursos del postulante para búsqueda flexible
+        $applicantCourseNames = $applicantTrainings->map(function ($training) {
+            return strtolower(trim($training->course_name));
+        })->toArray();
+
+        // Verificar qué cursos requeridos coinciden
+        $foundCourses = [];
+        $missingCourses = [];
+
+        foreach ($requiredCourses as $requiredCourse) {
+            $requiredNormalized = strtolower(trim($requiredCourse));
+            $found = false;
+
+            // Buscar coincidencia parcial o completa
+            foreach ($applicantCourseNames as $applicantCourse) {
+                // Coincidencia si el curso requerido está contenido en el curso del postulante
+                // o viceversa (búsqueda flexible)
+                if (
+                    str_contains($applicantCourse, $requiredNormalized) ||
+                    str_contains($requiredNormalized, $applicantCourse)
+                ) {
+                    $found = true;
+                    $foundCourses[] = $requiredCourse;
+                    break;
+                }
+            }
+
+            if (!$found) {
+                $missingCourses[] = $requiredCourse;
+            }
+        }
+
+        // Se requiere que al menos haya completado alguno de los cursos (OR logic)
+        // Si quieres que todos sean requeridos (AND logic), cambia a: empty($missingCourses)
+        $passed = !empty($foundCourses);
+
+        return [
+            'passed' => $passed,
+            'reason' => $passed
+                ? sprintf('Cumple con capacitación requerida: %s', implode(', ', $foundCourses))
+                : sprintf('No cumple con capacitación requerida. Falta: %s', implode(', ', $missingCourses)),
+            'required' => $requiredCourses,
+            'found' => $foundCourses,
+            'missing' => $missingCourses,
+        ];
+    }
+
+    /**
+     * Validar conocimientos técnicos requeridos
+     */
+    private function validateTechnicalKnowledge(Application $application, $jobProfile): array
+    {
+        $requiredKnowledge = $jobProfile->knowledge_areas ?? [];
+        $applicantKnowledge = $application->knowledge;
+
+        if (empty($requiredKnowledge)) {
+            return [
+                'passed' => true,
+                'reason' => 'No se requieren conocimientos técnicos específicos',
+                'required' => [],
+                'found' => [],
+            ];
+        }
+
+        if ($applicantKnowledge->isEmpty()) {
+            return [
+                'passed' => false,
+                'reason' => sprintf(
+                    'No registró conocimientos técnicos. Se requieren: %s',
+                    implode(', ', $requiredKnowledge)
+                ),
+                'required' => $requiredKnowledge,
+                'found' => [],
+            ];
+        }
+
+        // Normalizar nombres de conocimientos del postulante
+        $applicantKnowledgeNames = $applicantKnowledge->map(function ($knowledge) {
+            return [
+                'name' => strtolower(trim($knowledge->knowledge_name)),
+                'level' => $knowledge->proficiency_level,
+            ];
+        })->toArray();
+
+        // Verificar qué conocimientos requeridos coinciden
+        $foundKnowledge = [];
+        $missingKnowledge = [];
+
+        foreach ($requiredKnowledge as $required) {
+            // El required puede ser un string simple o un array con nivel
+            if (is_array($required)) {
+                $requiredName = strtolower(trim($required['name'] ?? $required['knowledge'] ?? ''));
+                $requiredLevel = $required['level'] ?? null;
+            } else {
+                $requiredName = strtolower(trim($required));
+                $requiredLevel = null;
+            }
+
+            $found = false;
+
+            // Buscar coincidencia
+            foreach ($applicantKnowledgeNames as $applicantKnow) {
+                if (
+                    str_contains($applicantKnow['name'], $requiredName) ||
+                    str_contains($requiredName, $applicantKnow['name'])
+                ) {
+                    // Si se especifica nivel requerido, validar nivel de dominio
+                    if ($requiredLevel) {
+                        if ($this->compareProficiencyLevel($applicantKnow['level'], $requiredLevel) >= 0) {
+                            $found = true;
+                            $foundKnowledge[] = is_array($required) ? ($required['name'] ?? $required) : $required;
+                            break;
+                        }
+                    } else {
+                        $found = true;
+                        $foundKnowledge[] = is_array($required) ? ($required['name'] ?? $required) : $required;
+                        break;
+                    }
+                }
+            }
+
+            if (!$found) {
+                $missingKnowledge[] = is_array($required) ? ($required['name'] ?? $required) : $required;
+            }
+        }
+
+        // Se requiere que al menos tenga uno de los conocimientos (OR logic)
+        // Si quieres que todos sean requeridos (AND logic), cambia a: empty($missingKnowledge)
+        $passed = !empty($foundKnowledge);
+
+        return [
+            'passed' => $passed,
+            'reason' => $passed
+                ? sprintf('Cumple con conocimientos técnicos: %s', implode(', ', $foundKnowledge))
+                : sprintf('No cumple con conocimientos técnicos requeridos. Falta: %s', implode(', ', $missingKnowledge)),
+            'required' => $requiredKnowledge,
+            'found' => $foundKnowledge,
+            'missing' => $missingKnowledge,
+        ];
+    }
+
+    /**
+     * Comparar niveles de dominio de conocimientos
+     * Retorna: -1 (menor), 0 (igual), 1 (mayor)
+     */
+    private function compareProficiencyLevel(?string $applicantLevel, string $requiredLevel): int
+    {
+        $levels = [
+            'BASICO' => 1,
+            'INTERMEDIO' => 2,
+            'AVANZADO' => 3,
+        ];
+
+        $applicantValue = $levels[strtoupper($applicantLevel ?? '')] ?? 0;
+        $requiredValue = $levels[strtoupper($requiredLevel)] ?? 0;
+
+        return $applicantValue <=> $requiredValue;
     }
 
     /**

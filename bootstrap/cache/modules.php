@@ -10,9 +10,10 @@
     6 => 'Modules\\Evaluation\\Providers\\EvaluationServiceProvider',
     7 => 'Modules\\Jury\\Providers\\JuryServiceProvider',
     8 => 'Modules\\Organization\\Providers\\OrganizationServiceProvider',
-    9 => 'Modules\\User\\Providers\\UserServiceProvider',
-    10 => 'Modules\\JobPosting\\Providers\\JobPostingServiceProvider',
-    11 => 'Modules\\JobProfile\\Providers\\JobProfileServiceProvider',
+    9 => 'Modules\\Results\\Providers\\ResultsServiceProvider',
+    10 => 'Modules\\User\\Providers\\UserServiceProvider',
+    11 => 'Modules\\JobPosting\\Providers\\JobPostingServiceProvider',
+    12 => 'Modules\\JobProfile\\Providers\\JobProfileServiceProvider',
   ),
   'eager' => 
   array (
@@ -25,9 +26,10 @@
     6 => 'Modules\\Evaluation\\Providers\\EvaluationServiceProvider',
     7 => 'Modules\\Jury\\Providers\\JuryServiceProvider',
     8 => 'Modules\\Organization\\Providers\\OrganizationServiceProvider',
-    9 => 'Modules\\User\\Providers\\UserServiceProvider',
-    10 => 'Modules\\JobPosting\\Providers\\JobPostingServiceProvider',
-    11 => 'Modules\\JobProfile\\Providers\\JobProfileServiceProvider',
+    9 => 'Modules\\Results\\Providers\\ResultsServiceProvider',
+    10 => 'Modules\\User\\Providers\\UserServiceProvider',
+    11 => 'Modules\\JobPosting\\Providers\\JobPostingServiceProvider',
+    12 => 'Modules\\JobProfile\\Providers\\JobProfileServiceProvider',
   ),
   'deferred' => 
   array (

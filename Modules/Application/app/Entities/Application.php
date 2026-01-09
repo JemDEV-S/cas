@@ -164,6 +164,22 @@ class Application extends Model
     }
 
     /**
+     * Relación con evaluaciones automáticas
+     */
+    public function evaluations(): HasMany
+    {
+        return $this->hasMany(ApplicationEvaluation::class)->orderBy('evaluated_at', 'desc');
+    }
+
+    /**
+     * Obtener la última evaluación
+     */
+    public function latestEvaluation()
+    {
+        return $this->hasOne(ApplicationEvaluation::class)->latestOfMany('evaluated_at');
+    }
+
+    /**
      * Verificar si la postulación está en estado editable
      */
     public function isEditable(): bool

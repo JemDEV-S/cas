@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\Application\Providers;
+namespace Modules\Results\Providers;
 
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
@@ -8,13 +8,13 @@ use Nwidart\Modules\Traits\PathNamespace;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 
-class ApplicationServiceProvider extends ServiceProvider
+class ResultsServiceProvider extends ServiceProvider
 {
     use PathNamespace;
 
-    protected string $name = 'Application';
+    protected string $name = 'Results';
 
-    protected string $nameLower = 'application';
+    protected string $nameLower = 'results';
 
     /**
      * Boot the application events.
@@ -27,6 +27,20 @@ class ApplicationServiceProvider extends ServiceProvider
         $this->registerConfig();
         $this->registerViews();
         $this->loadMigrationsFrom(module_path($this->name, 'database/migrations'));
+        $this->registerPolicies();
+    }
+
+    /**
+     * Register policies.
+     */
+    protected function registerPolicies(): void
+    {
+        if (class_exists(\Illuminate\Support\Facades\Gate::class)) {
+            \Illuminate\Support\Facades\Gate::policy(
+                \Modules\Results\Entities\ResultPublication::class,
+                \Modules\Results\Policies\ResultPublicationPolicy::class
+            );
+        }
     }
 
     /**
@@ -36,25 +50,6 @@ class ApplicationServiceProvider extends ServiceProvider
     {
         $this->app->register(EventServiceProvider::class);
         $this->app->register(RouteServiceProvider::class);
-
-        // Registrar bindings de repositorios
-        $this->app->bind(
-            \Modules\Application\Repositories\Contracts\ApplicationRepositoryInterface::class,
-            \Modules\Application\Repositories\ApplicationRepository::class
-        );
-
-        // Registrar servicios como singletons
-        $this->app->singleton(
-            \Modules\Application\Services\EligibilityCalculatorService::class
-        );
-
-        $this->app->singleton(
-            \Modules\Application\Services\AutoGraderService::class
-        );
-
-        $this->app->singleton(
-            \Modules\Application\Services\ApplicationService::class
-        );
     }
 
     /**
@@ -62,9 +57,7 @@ class ApplicationServiceProvider extends ServiceProvider
      */
     protected function registerCommands(): void
     {
-        $this->commands([
-            \Modules\Application\Console\EvaluateApplicationsCommand::class,
-        ]);
+        // $this->commands([]);
     }
 
     /**

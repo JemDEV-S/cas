@@ -10,5 +10,6 @@
     "Evaluation": true,
     "Application": true,
     "Jury": true,
-    "ApplicantPortal": true
+    "ApplicantPortal": true,
+    "Results": true
 }

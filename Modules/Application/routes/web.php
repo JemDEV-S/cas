@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Application\Http\Controllers\ApplicationController;
+use Modules\Application\Http\Controllers\Admin\ApplicationEvaluationController;
 
 /*
  * Rutas del módulo Application
@@ -30,4 +31,29 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Route::delete('documents/{documentId}', [ApplicationDocumentController::class, 'destroy'])->name('documents.destroy');
         // Route::get('documents/{documentId}/download', [ApplicationDocumentController::class, 'download'])->name('documents.download');
     });
+});
+
+/*
+ * Rutas de administración - Evaluación automática
+ */
+Route::middleware(['auth', 'verified'])->prefix('admin/applications')->name('admin.applications.')->group(function () {
+    // Dashboard de evaluación por convocatoria
+    Route::get('evaluation/{posting}', [ApplicationEvaluationController::class, 'index'])
+        ->name('evaluation.index');
+
+    // Ejecutar evaluación automática masiva
+    Route::post('evaluation/{posting}/evaluate', [ApplicationEvaluationController::class, 'evaluate'])
+        ->name('evaluation.evaluate');
+
+    // Publicar resultados de elegibilidad
+    Route::post('evaluation/{posting}/publish', [ApplicationEvaluationController::class, 'publish'])
+        ->name('evaluation.publish');
+
+    // Override manual de resultado
+    Route::post('evaluation/{application}/override', [ApplicationEvaluationController::class, 'override'])
+        ->name('evaluation.override');
+
+    // Ver detalle de evaluación
+    Route::get('evaluation/{application}/detail', [ApplicationEvaluationController::class, 'show'])
+        ->name('evaluation.show');
 });
