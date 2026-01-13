@@ -17,7 +17,8 @@ class ApplicationRepository implements ApplicationRepositoryInterface
     {
         return $this->model
             ->with([
-                'vacancy.jobProfile',
+                'jobProfile',  // ← ACTUALIZADO: relación directa
+                'assignedVacancy',  // ← ACTUALIZADO: vacante asignada si existe
                 'applicant',
                 'academics',
                 'experiences',
@@ -33,7 +34,8 @@ class ApplicationRepository implements ApplicationRepositoryInterface
     {
         return $this->model
             ->with([
-                'vacancy.jobProfile',
+                'jobProfile',  // ← ACTUALIZADO
+                'assignedVacancy',  // ← ACTUALIZADO
                 'applicant',
                 'academics',
                 'experiences',
@@ -62,11 +64,27 @@ class ApplicationRepository implements ApplicationRepositoryInterface
         return $application->delete();
     }
 
+    /**
+     * Obtener postulaciones por perfil de trabajo
+     */
+    public function getByJobProfile(string $jobProfileId): Collection
+    {
+        return $this->model
+            ->with(['applicant', 'academics', 'experiences', 'assignedVacancy'])
+            ->where('job_profile_id', $jobProfileId)
+            ->orderBy('application_date', 'desc')
+            ->get();
+    }
+
+    /**
+     * @deprecated Use getByJobProfile() instead. Maintained for backwards compatibility.
+     */
     public function getByVacancy(string $vacancyId): Collection
     {
         return $this->model
             ->with(['applicant', 'academics', 'experiences'])
-            ->where('job_profile_vacancy_id', $vacancyId)
+            ->where('assigned_vacancy_id', $vacancyId)  // ← ACTUALIZADO
+            ->whereNotNull('assigned_vacancy_id')  // Solo ganadores con vacante asignada
             ->orderBy('application_date', 'desc')
             ->get();
     }
@@ -74,7 +92,7 @@ class ApplicationRepository implements ApplicationRepositoryInterface
     public function getByStatus(string $status): Collection
     {
         return $this->model
-            ->with(['vacancy', 'applicant'])
+            ->with(['jobProfile', 'assignedVacancy', 'applicant'])  // ← ACTUALIZADO
             ->where('status', $status)
             ->orderBy('application_date', 'desc')
             ->get();
@@ -93,7 +111,7 @@ class ApplicationRepository implements ApplicationRepositoryInterface
     public function getByApplicant(string $applicantId): Collection
     {
         return $this->model
-            ->with(['vacancy.jobProfile'])
+            ->with(['jobProfile', 'assignedVacancy'])  // ← ACTUALIZADO
             ->where('applicant_id', $applicantId)
             ->orderBy('application_date', 'desc')
             ->get();
@@ -101,16 +119,21 @@ class ApplicationRepository implements ApplicationRepositoryInterface
 
     public function paginate(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
-        $query = $this->model->with(['vacancy', 'applicant']);
+        $query = $this->model->with(['jobProfile', 'assignedVacancy', 'applicant']);  // ← ACTUALIZADO
 
         // Filtro por estado
         if (isset($filters['status'])) {
             $query->where('status', $filters['status']);
         }
 
-        // Filtro por vacante
+        // Filtro por perfil de trabajo
+        if (isset($filters['job_profile_id'])) {
+            $query->where('job_profile_id', $filters['job_profile_id']);
+        }
+
+        // Filtro por vacante asignada (backwards compatibility)
         if (isset($filters['vacancy_id'])) {
-            $query->where('job_profile_vacancy_id', $filters['vacancy_id']);
+            $query->where('assigned_vacancy_id', $filters['vacancy_id']);
         }
 
         // Filtro por DNI
@@ -144,11 +167,16 @@ class ApplicationRepository implements ApplicationRepositoryInterface
         return $query->paginate($perPage);
     }
 
-    public function hasApplied(string $applicantId, string $vacancyId): bool
+    /**
+     * Verificar si un postulante ya aplicó a un perfil de trabajo
+     * @param string $applicantId ID del postulante
+     * @param string $jobProfileId ID del perfil de trabajo
+     */
+    public function hasApplied(string $applicantId, string $jobProfileId): bool
     {
         return $this->model
             ->where('applicant_id', $applicantId)
-            ->where('job_profile_vacancy_id', $vacancyId)
+            ->where('job_profile_id', $jobProfileId)  // ← ACTUALIZADO
             ->whereNotIn('status', [
                 \Modules\Application\Enums\ApplicationStatus::WITHDRAWN,
                 \Modules\Application\Enums\ApplicationStatus::REJECTED
@@ -163,11 +191,28 @@ class ApplicationRepository implements ApplicationRepositoryInterface
             ->count();
     }
 
+    /**
+     * Obtener ranking de postulaciones por perfil de trabajo
+     */
+    public function getRankingByJobProfile(string $jobProfileId): Collection
+    {
+        return $this->model
+            ->with(['applicant', 'assignedVacancy'])
+            ->where('job_profile_id', $jobProfileId)
+            ->whereNotNull('final_score')
+            ->orderBy('final_ranking', 'asc')
+            ->orderBy('final_score', 'desc')
+            ->get();
+    }
+
+    /**
+     * @deprecated Use getRankingByJobProfile() instead
+     */
     public function getRankingByVacancy(string $vacancyId): Collection
     {
         return $this->model
             ->with(['applicant'])
-            ->where('job_profile_vacancy_id', $vacancyId)
+            ->where('assigned_vacancy_id', $vacancyId)  // ← ACTUALIZADO
             ->whereNotNull('final_score')
             ->orderBy('final_score', 'desc')
             ->orderBy('final_ranking', 'asc')

@@ -15,7 +15,8 @@ class Application extends Model
 
     protected $fillable = [
         'code',
-        'job_profile_vacancy_id',
+        'job_profile_id',        // ← NUEVO: relación directa con el perfil
+        'assigned_vacancy_id',   // ← RENOMBRADO (era job_profile_vacancy_id)
         'applicant_id',
         'status',
         'application_date',
@@ -60,11 +61,27 @@ class Application extends Model
     ];
 
     /**
-     * Relación con la vacante del perfil de trabajo
+     * Perfil al que postula (relación principal)
+     */
+    public function jobProfile(): BelongsTo
+    {
+        return $this->belongsTo(\Modules\JobProfile\Entities\JobProfile::class, 'job_profile_id');
+    }
+
+    /**
+     * Vacante asignada si ganó (puede ser NULL)
+     */
+    public function assignedVacancy(): BelongsTo
+    {
+        return $this->belongsTo(\Modules\JobProfile\Entities\JobProfileVacancy::class, 'assigned_vacancy_id');
+    }
+
+    /**
+     * @deprecated Use assignedVacancy() instead. Maintained for backwards compatibility.
      */
     public function vacancy(): BelongsTo
     {
-        return $this->belongsTo(\Modules\JobProfile\Entities\JobProfileVacancy::class, 'job_profile_vacancy_id');
+        return $this->assignedVacancy();
     }
 
     /**
@@ -229,5 +246,38 @@ class Application extends Model
         }
 
         return "APP-{$year}-{$newNumber}";
+    }
+
+    /**
+     * Verificar si ganó una vacante
+     */
+    public function hasWon(): bool
+    {
+        return !is_null($this->assigned_vacancy_id);
+    }
+
+    /**
+     * Verificar si está pendiente de asignación
+     */
+    public function isPendingAssignment(): bool
+    {
+        return $this->is_eligible && is_null($this->assigned_vacancy_id);
+    }
+
+    /**
+     * Scope: Solo ganadores
+     */
+    public function scopeWinners($query)
+    {
+        return $query->whereNotNull('assigned_vacancy_id');
+    }
+
+    /**
+     * Scope: Elegibles sin vacante asignada
+     */
+    public function scopePendingAssignment($query)
+    {
+        return $query->where('is_eligible', true)
+                     ->whereNull('assigned_vacancy_id');
     }
 }

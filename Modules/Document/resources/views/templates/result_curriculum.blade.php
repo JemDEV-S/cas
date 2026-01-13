@@ -197,7 +197,7 @@
                 <td>{{ $application->code }}</td>
                 <td>{{ $application->full_name }}</td>
                 <td>{{ $application->dni }}</td>
-                <td>{{ $application->vacancy->code }}</td>
+                <td>{{ $application->assignedVacancy?->code ?? $application->jobProfile->code }}</td>
                 <td class="text-center">
                     <strong>{{ number_format($application->curriculum_score, 2) }}</strong>
                 </td>

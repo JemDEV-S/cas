@@ -25,8 +25,8 @@ class AutoGraderService
      */
     public function evaluateEligibility(Application $application): array
     {
-        $vacancy = $application->vacancy;
-        $jobProfile = $vacancy->jobProfile;
+        // ← ACTUALIZADO: obtener jobProfile directamente
+        $jobProfile = $application->jobProfile;
 
         $results = [
             'is_eligible' => true,

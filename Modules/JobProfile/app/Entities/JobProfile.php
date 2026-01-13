@@ -167,6 +167,48 @@ class JobProfile extends BaseSoftDelete
     }
 
     /**
+     * Todas las postulaciones a este perfil
+     */
+    public function applications(): HasMany
+    {
+        return $this->hasMany(\Modules\Application\Entities\Application::class, 'job_profile_id');
+    }
+
+    /**
+     * Postulaciones ganadoras (con vacante asignada)
+     */
+    public function winners(): HasMany
+    {
+        return $this->applications()->winners();
+    }
+
+    /**
+     * Postulaciones elegibles pendientes de asignación
+     */
+    public function eligiblePending(): HasMany
+    {
+        return $this->applications()->pendingAssignment();
+    }
+
+    /**
+     * Obtener estadísticas de postulaciones
+     */
+    public function getApplicationStats(): array
+    {
+        $applications = $this->applications;
+
+        return [
+            'total' => $applications->count(),
+            'aptos' => $applications->where('is_eligible', true)->count(),
+            'no_aptos' => $applications->where('is_eligible', false)->count(),
+            'ganadores' => $applications->whereNotNull('assigned_vacancy_id')->count(),
+            'pendientes' => $applications->where('is_eligible', true)
+                                   ->whereNull('assigned_vacancy_id')
+                                   ->count(),
+        ];
+    }
+
+    /**
      * Obtener IDs de carreras aceptadas (incluyendo equivalencias)
      */
     public function getAcceptedCareerIds(bool $includeEquivalences = true): array

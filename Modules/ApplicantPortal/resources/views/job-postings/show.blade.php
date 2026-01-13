@@ -86,6 +86,7 @@
     get filteredProfiles() {
         return this.profiles.filter(profile => {
             const searchMatch = !this.search ||
+                profile.profile_name?.toLowerCase().includes(this.search.toLowerCase()) ||
                 profile.position_code?.name?.toLowerCase().includes(this.search.toLowerCase()) ||
                 profile.code?.toLowerCase().includes(this.search.toLowerCase()) ||
                 profile.requesting_unit?.name?.toLowerCase().includes(this.search.toLowerCase());
@@ -111,18 +112,18 @@
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <!-- Búsqueda por cargo/código/unidad -->
+            <!-- Búsqueda por perfil/cargo/código/unidad -->
             <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-2">
                     <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                     </svg>
-                    Buscar por cargo, código o unidad
+                    Buscar por perfil, cargo, código o unidad
                 </label>
                 <input
                     type="text"
                     x-model="search"
-                    placeholder="Ej: Analista, Asistente, Gerencia..."
+                    placeholder="Ej: Especialista en TI, Analista, Asistente, Gerencia..."
                     class="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-municipal-blue focus:border-transparent">
             </div>
         </div>
@@ -158,7 +159,8 @@
                         <!-- Header del perfil -->
                         <div class="flex items-start justify-between mb-4">
                             <div class="flex-1">
-                                <h3 class="text-xl font-bold text-gray-900 mb-2" x-text="profile.position_code?.name || 'Sin nombre'"></h3>
+                                <h3 class="text-xl font-bold text-gray-900 mb-2" x-text="profile.profile_name || 'Sin nombre'"></h3>
+                                <p class="text-sm text-gray-600 mb-2" x-text="profile.position_code ? `${profile.position_code.name} - ${profile.position_code.code}` : 'Sin cargo especificado'"></p>
                                 <span class="inline-block px-3 py-1 bg-gray-100 text-gray-700 text-sm font-semibold rounded-full" x-text="profile.code"></span>
                             </div>
                             <div class="text-right">

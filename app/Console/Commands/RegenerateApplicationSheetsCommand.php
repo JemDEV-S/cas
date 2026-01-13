@@ -49,7 +49,8 @@ class RegenerateApplicationSheetsCommand extends Command
         $query = Application::where('status', ApplicationStatus::SUBMITTED)
             ->with([
                 'applicant',
-                'vacancy.jobProfile.jobPosting',
+                'jobProfile.jobPosting',  // ← ACTUALIZADO: relación directa
+                'assignedVacancy',        // ← ACTUALIZADO: vacante asignada si existe
                 'academics.career',
                 'experiences',
                 'trainings',
@@ -150,7 +151,8 @@ class RegenerateApplicationSheetsCommand extends Command
      */
     private function prepareApplicationSheetData(Application $application): array
     {
-        $jobProfile = $application->vacancy->jobProfile;
+        // ← ACTUALIZADO: usar relación directa
+        $jobProfile = $application->jobProfile;
         $jobPosting = $jobProfile->jobPosting;
 
         // Calcular edad
@@ -172,7 +174,7 @@ class RegenerateApplicationSheetsCommand extends Command
             'job_posting_code' => $jobPosting->code ?? 'N/A',
             'job_profile_name' => $jobProfile->profile_name ?? 'N/A',
             'profile_code' => $jobProfile->code ?? 'N/A',
-            'vacancy_code' => $application->vacancy->code ?? 'N/A',
+            // ← REMOVIDO: vacancy_code (se asigna después de la evaluación)
 
             // Datos personales
             'full_name' => $application->full_name,

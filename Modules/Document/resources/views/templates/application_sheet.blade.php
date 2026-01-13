@@ -285,10 +285,6 @@
                 <div class="info-label">Código de Perfil:</div>
                 <div class="info-value">{{ $profile_code ?? 'N/A' }}</div>
             </div>
-            <div class="info-row">
-                <div class="info-label">Código de Vacante:</div>
-                <div class="info-value">{{ $vacancy_code ?? 'N/A' }}</div>
-            </div>
         </div>
     </div>
 

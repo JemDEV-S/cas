@@ -60,7 +60,8 @@ class ApplicationController extends Controller
 
         // Load necessary relationships
         $application->load([
-            'vacancy.jobProfile.jobPosting.schedules.phase',
+            'jobProfile.jobPosting.schedules.phase',  // ← ACTUALIZADO: relación directa
+            'assignedVacancy',  // ← ACTUALIZADO: vacante asignada si existe
             'academics',
             'experiences',
             'trainings',
@@ -71,7 +72,7 @@ class ApplicationController extends Controller
         ]);
 
         // Get related entities
-        $jobProfile = $application->vacancy->jobProfile;
+        $jobProfile = $application->jobProfile;  // ← ACTUALIZADO
         $jobPosting = $jobProfile->jobPosting;
 
         // Get current phase using the method instead of a relationship

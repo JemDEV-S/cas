@@ -5,7 +5,7 @@ namespace Modules\Application\DTOs;
 class ApplicationDTO
 {
     public function __construct(
-        public readonly string $jobProfileVacancyId,
+        public readonly string $jobProfileId,  // ← ACTUALIZADO: ahora es jobProfileId
         public readonly string $applicantId,
         public readonly PersonalDataDTO $personalData,
         public readonly array $academics,
@@ -22,7 +22,7 @@ class ApplicationDTO
     public static function fromArray(array $data): self
     {
         return new self(
-            jobProfileVacancyId: $data['job_profile_vacancy_id'],
+            jobProfileId: $data['job_profile_id'] ?? $data['job_profile_vacancy_id'] ?? null,  // Compatibilidad con ambos
             applicantId: $data['applicant_id'],
             personalData: PersonalDataDTO::fromArray($data['personal_data']),
             academics: array_map(
@@ -58,7 +58,7 @@ class ApplicationDTO
     public function toArray(): array
     {
         return [
-            'job_profile_vacancy_id' => $this->jobProfileVacancyId,
+            'job_profile_id' => $this->jobProfileId,
             'applicant_id' => $this->applicantId,
             'personal_data' => $this->personalData->toArray(),
             'academics' => array_map(fn($item) => $item->toArray(), $this->academics),

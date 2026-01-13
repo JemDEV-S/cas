@@ -58,14 +58,14 @@ class EvaluateApplicationsCommand extends Command
 
         // Obtener postulaciones a evaluar
         $query = Application::where('status', ApplicationStatus::SUBMITTED)
-            ->whereHas('vacancy.jobProfile.jobPosting', fn($q) => $q->where('id', $postingId));
+            ->whereHas('jobProfile.jobPosting', fn($q) => $q->where('id', $postingId));
 
         if (!$force) {
             $query->whereNull('eligibility_checked_at');
         }
 
         $applications = $query->with([
-            'vacancy.jobProfile',
+            'jobProfile',
             'academics',
             'experiences',
             'trainings',

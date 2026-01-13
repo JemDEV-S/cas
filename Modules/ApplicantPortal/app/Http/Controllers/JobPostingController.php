@@ -38,10 +38,10 @@ class JobPostingController extends Controller
         // Obtener postulaciones del usuario agrupadas por convocatoria
         $user = Auth::user();
         $userApplications = \Modules\Application\Entities\Application::where('applicant_id', $user->id)
-            ->with('vacancy.jobProfile.jobPosting')
+            ->with('jobProfile.jobPosting')  // ← ACTUALIZADO: relación directa
             ->get();
 
-        $appliedPostingIds = $userApplications->pluck('vacancy.jobProfile.job_posting_id')->unique()->toArray();
+        $appliedPostingIds = $userApplications->pluck('jobProfile.job_posting_id')->unique()->toArray();  // ← ACTUALIZADO
 
         // Agregar fase actual a cada convocatoria
         $postings->getCollection()->transform(function ($posting) {
@@ -106,11 +106,11 @@ class JobPostingController extends Controller
         // Verificar postulaciones del usuario por PERFIL
         $user = Auth::user();
         $userApplications = \Modules\Application\Entities\Application::where('applicant_id', $user->id)
-            ->whereHas('vacancy.jobProfile', fn($q) => $q->where('job_posting_id', $id))
-            ->with('vacancy.jobProfile')
+            ->whereHas('jobProfile', fn($q) => $q->where('job_posting_id', $id))
+            ->with('jobProfile')
             ->get();
 
-        $appliedProfileIds = $userApplications->pluck('vacancy.jobProfile.id')->toArray();
+        $appliedProfileIds = $userApplications->pluck('jobProfile.id')->toArray();
         $hasApplied = $userApplications->count() > 0;
 
         // Verificar si puede postular (fase de registro)
@@ -156,10 +156,9 @@ class JobPostingController extends Controller
         // Recargar el usuario con todos sus datos (incluyendo birth_date, address, phone)
         $user->refresh();
 
+        // ← ACTUALIZADO: verificar por job_profile_id directamente
         $existingApplication = \Modules\Application\Entities\Application::where('applicant_id', $user->id)
-            ->whereHas('vacancy', function($q) use ($profileId) {
-                $q->where('job_profile_id', $profileId);
-            })
+            ->where('job_profile_id', $profileId)
             ->first();
 
         if ($existingApplication) {
@@ -269,8 +268,10 @@ class JobPostingController extends Controller
 
             // 4. Validar que no haya postulado a este perfil
             $profile = \Modules\JobProfile\Entities\JobProfile::findOrFail($profileId);
+
+            // ← ACTUALIZADO: verificar por job_profile_id directamente
             $existingApp = \Modules\Application\Entities\Application::where('applicant_id', $user->id)
-                ->whereHas('vacancy', fn($q) => $q->where('job_profile_id', $profileId))
+                ->where('job_profile_id', $profileId)
                 ->first();
 
             if ($existingApp) {
@@ -279,9 +280,9 @@ class JobPostingController extends Controller
                     ->with('error', 'Ya has postulado a este perfil anteriormente');
             }
 
-            // 5. Obtener vacante disponible
-            $vacancy = $profile->vacancies()->where('status', 'available')->first();
-            if (!$vacancy) {
+            // 5. ← ACTUALIZADO: Ya no se asigna vacante al postular, solo se verifica que haya disponibles
+            $availableVacancies = $profile->vacancies()->where('status', 'available')->count();
+            if ($availableVacancies === 0) {
                 return redirect()
                     ->back()
                     ->with('error', 'No hay vacantes disponibles para este perfil');
@@ -293,11 +294,11 @@ class JobPostingController extends Controller
                 : \Modules\Application\Enums\ApplicationStatus::DRAFT;
 
             // 7. Iniciar transacción de base de datos
-            return \DB::transaction(function () use ($user, $vacancy, $formData, $status, $request) {
-                // 8. Crear ApplicationDTO
+            return \DB::transaction(function () use ($user, $profileId, $formData, $status, $request) {
+                // 8. ← ACTUALIZADO: Crear ApplicationDTO con job_profile_id
                 $dto = new \Modules\Application\DTOs\ApplicationDTO(
                     applicantId: $user->id,
-                    jobProfileVacancyId: $vacancy->id,
+                    jobProfileId: $profileId,  // ← ACTUALIZADO: ahora es jobProfileId directamente
                     personalData: new \Modules\Application\DTOs\PersonalDataDTO(
                         fullName: $formData['personal']['fullName'] ?? ($user->first_name . ' ' . $user->last_name),
                         dni: $formData['personal']['dni'] ?? $user->dni,
@@ -595,7 +596,7 @@ class JobPostingController extends Controller
             // Cargar todas las relaciones necesarias
             $application->load([
                 'applicant',
-                'vacancy.jobProfile.jobPosting',
+                'jobProfile.jobPosting',
                 'academics.career',
                 'experiences',
                 'trainings',
@@ -648,7 +649,7 @@ class JobPostingController extends Controller
      */
     private function prepareApplicationSheetData(\Modules\Application\Entities\Application $application): array
     {
-        $jobProfile = $application->vacancy->jobProfile;
+        $jobProfile = $application->jobProfile;
         $jobPosting = $jobProfile->jobPosting;
 
         // Calcular edad
@@ -670,7 +671,7 @@ class JobPostingController extends Controller
             'job_posting_code' => $jobPosting->code ?? 'N/A',
             'job_profile_name' => $jobProfile->profile_name ?? 'N/A',
             'profile_code' => $jobProfile->code ?? 'N/A',
-            'vacancy_code' => $application->vacancy->code ?? 'N/A',
+            // ← REMOVIDO: vacancy_code (se asigna después de la evaluación)
 
             // Datos personales
             'full_name' => $application->full_name,

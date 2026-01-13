@@ -253,7 +253,7 @@
                 <td>{{ $application->code }}</td>
                 <td>{{ $application->full_name }}</td>
                 <td>{{ $application->dni }}</td>
-                <td>{{ $application->vacancy->code }}</td>
+                <td>{{ $application->assignedVacancy?->code ?? $application->jobProfile->code }}</td>
                 <td><span class="result-apto">APTO</span></td>
             </tr>
             @endforeach
@@ -283,7 +283,7 @@
                 <td>{{ $application->code }}</td>
                 <td>{{ $application->full_name }}</td>
                 <td>{{ $application->dni }}</td>
-                <td>{{ $application->vacancy->code }}</td>
+                <td>{{ $application->jobProfile->code }}</td>
                 <td><span class="result-no-apto">NO APTO</span></td>
                 <td style="font-size: 8pt;">{{ Str::limit($application->ineligibility_reason, 50) }}</td>
             </tr>

@@ -122,10 +122,10 @@
                                     <div class="flex items-start justify-between mb-2">
                                         <div>
                                             <h3 class="text-lg font-bold text-gray-900 mb-1">
-                                                {{ $application->vacancy->jobProfile->profile_name }}
+                                                {{ $application->jobProfile->profile_name }}
                                             </h3>
                                             <p class="text-sm text-gray-600">
-                                                {{ $application->vacancy->jobProfile->positionCode->name ?? 'N/A' }}
+                                                {{ $application->jobProfile->positionCode->name ?? 'N/A' }}
                                             </p>
                                         </div>
                                     </div>

@@ -34,9 +34,9 @@ class ApplicationService
     public function create(ApplicationDTO $dto): Application
     {
         return DB::transaction(function () use ($dto) {
-            // 1. Verificar que no haya postulado antes a esta vacante
-            if ($this->repository->hasApplied($dto->applicantId, $dto->jobProfileVacancyId)) {
-                throw new \Exception('Ya existe una postulación activa para esta vacante');
+            // 1. Verificar que no haya postulado antes a este perfil
+            if ($this->repository->hasApplied($dto->applicantId, $dto->jobProfileId)) {
+                throw new \Exception('Ya existe una postulación activa para este perfil');
             }
 
             // 2. Generar código único
@@ -45,7 +45,8 @@ class ApplicationService
             // 3. Crear la postulación principal
             $application = $this->repository->create([
                 'code' => $code,
-                'job_profile_vacancy_id' => $dto->jobProfileVacancyId,
+                'job_profile_id' => $dto->jobProfileId,        // ← ACTUALIZADO
+                'assigned_vacancy_id' => null,                  // ← NUEVO: sin vacante asignada inicialmente
                 'applicant_id' => $dto->applicantId,
                 'status' => 'PRESENTADA',
                 'application_date' => now(),

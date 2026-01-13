@@ -1,4 +1,4 @@
-@extends('application::layouts.master')
+@extends('layouts.app')
 
 @section('title', 'Historial de Cambios')
 

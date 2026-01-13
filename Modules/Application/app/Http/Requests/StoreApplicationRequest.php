@@ -22,7 +22,7 @@ class StoreApplicationRequest extends FormRequest
     {
         return [
             // Datos principales
-            'job_profile_vacancy_id' => ['required', 'uuid', 'exists:job_profile_vacancies,id'],
+            'job_profile_id' => ['required', 'uuid', 'exists:job_profiles,id'],  // ← ACTUALIZADO
             'terms_accepted' => ['required', 'accepted'],
 
             // Datos personales
@@ -93,8 +93,8 @@ class StoreApplicationRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'job_profile_vacancy_id.required' => 'Debe seleccionar una vacante para postular',
-            'job_profile_vacancy_id.exists' => 'La vacante seleccionada no existe o no está disponible',
+            'job_profile_id.required' => 'Debe seleccionar un perfil de trabajo para postular',  // ← ACTUALIZADO
+            'job_profile_id.exists' => 'El perfil de trabajo seleccionado no existe o no está disponible',  // ← ACTUALIZADO
             'terms_accepted.accepted' => 'Debe aceptar los términos y condiciones',
             'personal_data.dni.regex' => 'El DNI debe contener exactamente 8 dígitos',
             'academics.min' => 'Debe registrar al menos una formación académica',
