@@ -62,6 +62,9 @@ Route::prefix('portal')->middleware(['auth', 'role:applicant'])->name('applicant
         // Descargar documento de postulación
         Route::get('/{id}/documentos/{documentId}', [ApplicationController::class, 'downloadDocument'])
             ->name('download-document');
+        // Enviar postulación
+        Route::post('/{id}/enviar', [ApplicationController::class, 'submit'])
+            ->name('submit');
     });
 
     // ========================================

@@ -4,7 +4,12 @@ namespace Modules\Evaluation\Providers;
 
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 use Modules\Evaluation\Entities\{Evaluation, EvaluatorAssignment, EvaluationCriterion};
-use Modules\Evaluation\Policies\{EvaluationPolicy, EvaluatorAssignmentPolicy, EvaluationCriterionPolicy};
+use Modules\Evaluation\Policies\{
+    EvaluationPolicy,
+    EvaluatorAssignmentPolicy,
+    EvaluationCriterionPolicy,
+    AutomaticEvaluationPolicy
+};
 
 class AuthServiceProvider extends ServiceProvider
 {

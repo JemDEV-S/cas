@@ -107,6 +107,35 @@ class DocumentTemplatesSeeder extends Seeder
             ]
         );
 
+        // Template de Ficha de Postulación
+        DocumentTemplate::updateOrCreate(
+            ['code' => 'TPL_APPLICATION_SHEET'],
+            [
+                'name' => 'Ficha de Postulación',
+                'description' => 'Template oficial para ficha de postulación del candidato',
+                'category' => 'postulacion',
+                'content' => file_get_contents(__DIR__ . '/../../resources/views/templates/application_sheet.blade.php'),
+                'variables' => [
+                    'application_code', 'application_date', 'job_posting_title', 'job_posting_code',
+                    'job_profile_name', 'profile_code', 'vacancy_code',
+                    'full_name', 'dni', 'birth_date', 'age', 'email', 'phone', 'mobile_phone', 'address',
+                    'academics', 'experiences', 'general_experiences', 'specific_experiences',
+                    'trainings', 'knowledge', 'professional_registrations', 'special_conditions',
+                    'ip_address', 'generation_date', 'generation_time',
+                ],
+                'signature_required' => false,
+                'paper_size' => 'A4',
+                'orientation' => 'portrait',
+                'margins' => [
+                    'top' => 20,
+                    'right' => 15,
+                    'bottom' => 20,
+                    'left' => 15,
+                ],
+                'status' => 'active',
+            ]
+        );
+
         $this->command->info('Templates de documentos creados exitosamente.');
     }
 }

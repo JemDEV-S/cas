@@ -5,7 +5,7 @@ namespace Modules\JobProfile\Entities;
 use Modules\Core\Entities\BaseSoftDelete;
 use Modules\Core\Traits\HasUuid;
 use Modules\Core\Traits\HasMetadata;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\{BelongsTo, HasMany};
 use Modules\JobProfile\Enums\VacancyStatusEnum;
 
 class JobProfileVacancy extends BaseSoftDelete
@@ -49,6 +49,11 @@ class JobProfileVacancy extends BaseSoftDelete
     public function assignedApplication(): BelongsTo
     {
         return $this->belongsTo(\Modules\Application\Entities\Application::class, 'assigned_application_id');
+    }
+
+    public function applications(): HasMany
+    {
+        return $this->hasMany(\Modules\Application\Entities\Application::class, 'job_profile_vacancy_id');
     }
 
     // Scopes

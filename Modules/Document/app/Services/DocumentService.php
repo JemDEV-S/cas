@@ -94,6 +94,22 @@ class DocumentService
         $pdf->setOption('isRemoteEnabled', false);
         $pdf->setOption('defaultFont', 'Arial');
 
+        // IMPORTANTE: Configurar márgenes del template si existen
+        // DomPDF usa puntos (72 puntos = 1 pulgada = 25.4mm)
+        if ($template->margins) {
+            $margins = $template->margins;
+            // Convertir mm a puntos: 1mm = 2.83465 puntos
+            $top = ($margins['top'] ?? 15) * 2.83465;
+            $right = ($margins['right'] ?? 15) * 2.83465;
+            $bottom = ($margins['bottom'] ?? 15) * 2.83465;
+            $left = ($margins['left'] ?? 15) * 2.83465;
+
+            $pdf->setOption('margin_top', $top);
+            $pdf->setOption('margin_right', $right);
+            $pdf->setOption('margin_bottom', $bottom);
+            $pdf->setOption('margin_left', $left);
+        }
+
         // Generar nombre de archivo
         $filename = $this->generatePdfFilename($document);
         $path = "documents/{$document->id}/{$filename}";

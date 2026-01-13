@@ -4,7 +4,8 @@ use Illuminate\Support\Facades\Route;
 use Modules\Evaluation\Http\Controllers\{
     EvaluationController,
     EvaluatorAssignmentController,
-    EvaluationCriterionController
+    EvaluationCriterionController,
+    AutomaticEvaluationController
 };
 
 /*
@@ -77,5 +78,33 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('{id}/edit', [EvaluationCriterionController::class, 'edit'])->name('edit');
             Route::put('{id}', [EvaluationCriterionController::class, 'update'])->name('update');
             Route::delete('{id}', [EvaluationCriterionController::class, 'destroy'])->name('destroy');
+        });
+
+    // ========================================
+    // AUTOMATIC EVALUATIONS - Evaluaciones Automáticas (Fase 4)
+    // ========================================
+    Route::prefix('automatic-evaluations')
+        ->name('evaluation.automatic.')
+        ->group(function () {
+
+            // Listado de convocatorias para evaluación automática
+            Route::get('/', [AutomaticEvaluationController::class, 'index'])
+                ->name('index')
+                ->can('viewAny', \Modules\Evaluation\Policies\AutomaticEvaluationPolicy::class);
+
+            // Ver detalles de convocatoria
+            Route::get('{id}', [AutomaticEvaluationController::class, 'show'])
+                ->name('show')
+                ->can('viewAny', \Modules\Evaluation\Policies\AutomaticEvaluationPolicy::class);
+
+            // Ejecutar evaluación automática
+            Route::post('{id}/execute', [AutomaticEvaluationController::class, 'execute'])
+                ->name('execute')
+                ->can('execute', \Modules\Evaluation\Policies\AutomaticEvaluationPolicy::class);
+
+            // Ver detalles de evaluación de una postulación
+            Route::get('application/{id}', [AutomaticEvaluationController::class, 'viewApplicationEvaluation'])
+                ->name('application')
+                ->can('viewAny', \Modules\Evaluation\Policies\AutomaticEvaluationPolicy::class);
         });
 });

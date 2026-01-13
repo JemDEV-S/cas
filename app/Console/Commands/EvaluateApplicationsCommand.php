@@ -18,7 +18,8 @@ class EvaluateApplicationsCommand extends Command
     protected $signature = 'applications:evaluate
                             {posting_id : ID de la convocatoria}
                             {--dry-run : Simular sin guardar cambios}
-                            {--force : Forzar evaluación incluso si ya fueron evaluadas}';
+                            {--force : Forzar evaluación incluso si ya fueron evaluadas}
+                            {--evaluator= : UUID del usuario evaluador (por defecto: primer admin)}';
 
     /**
      * The console command description.
@@ -43,6 +44,7 @@ class EvaluateApplicationsCommand extends Command
         $postingId = $this->argument('posting_id');
         $dryRun = $this->option('dry-run');
         $force = $this->option('force');
+        $evaluatorId = $this->option('evaluator');
 
         // Validar que la convocatoria existe
         $posting = JobPosting::find($postingId);
@@ -95,26 +97,31 @@ class EvaluateApplicationsCommand extends Command
 
         foreach ($applications as $application) {
             try {
-                // Evaluar eligibilidad
-                $result = $this->autoGrader->evaluateEligibility($application);
-
                 if (!$dryRun) {
-                    // Guardar resultado
-                    $application->update([
-                        'is_eligible' => $result['is_eligible'],
-                        'status' => $result['is_eligible']
-                            ? ApplicationStatus::ELIGIBLE
-                            : ApplicationStatus::NOT_ELIGIBLE,
-                        'ineligibility_reason' => implode("\n", $result['reasons'] ?? []),
-                        'eligibility_checked_at' => now(),
-                        'eligibility_checked_by' => null, // Sistema automático
-                    ]);
-                }
+                    // Usar nuevo método integrado con módulo Evaluation
+                    // Determinar el evaluador: opción --evaluator, usuario autenticado, o primer admin
+                    $evaluatedBy = $evaluatorId ?? auth()->id() ?? \App\Models\User::role('admin')->first()->id;
 
-                if ($result['is_eligible']) {
-                    $stats['eligible']++;
+                    $evaluation = $this->autoGrader->applyAutoGradingWithEvaluationModule(
+                        $application,
+                        $evaluatedBy
+                    );
+
+                    // Contar resultados
+                    if ($evaluation->isCompleted() && $application->is_eligible) {
+                        $stats['eligible']++;
+                    } else {
+                        $stats['not_eligible']++;
+                    }
                 } else {
-                    $stats['not_eligible']++;
+                    // En modo dry-run, solo evaluar sin guardar
+                    $result = $this->autoGrader->evaluateEligibility($application);
+
+                    if ($result['is_eligible']) {
+                        $stats['eligible']++;
+                    } else {
+                        $stats['not_eligible']++;
+                    }
                 }
 
             } catch (\Exception $e) {

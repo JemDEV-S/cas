@@ -303,7 +303,7 @@ class ApplicationService
             });
         }
 
-        return $query->latest()->get();
+        return $query->latest()->paginate(10);
     }
 
     /**
@@ -352,5 +352,31 @@ class ApplicationService
         }
 
         return $this->withdraw($application, $reason);
+    }
+
+    public function submitApplication(string $id)
+    {
+        return DB::transaction(function () use ($id) {
+            $application = $this->getApplicationById($id);
+
+            if (!$application) {
+                throw new \Exception("Postulacion no encontrada por ID: {$id}");
+            }
+            $currentStatus = $application->status;
+
+            if (!$currentStatus->canTransitionTo(\Modules\Application\Enums\ApplicationStatus::SUBMITTED)) {
+                throw new \Exception(
+                    "No se puede enviar la postulación. Estado actual: {$currentStatus->label()}"
+                );
+            }
+
+            $application->status = \Modules\Application\Enums\ApplicationStatus::SUBMITTED;
+            $application->save();
+
+            // Aquí podrías disparar eventos si es necesario
+            // event(new ApplicationSubmitted($application));
+
+            return $application;
+        });
     }
 }

@@ -26,7 +26,7 @@ class AutoGraderService
     public function evaluateEligibility(Application $application): array
     {
         $vacancy = $application->vacancy;
-        $jobProfile = $vacancy->jobProfileRequest;
+        $jobProfile = $vacancy->jobProfile;
 
         $results = [
             'is_eligible' => true,
@@ -59,7 +59,7 @@ class AutoGraderService
         }
 
         // 4. Validar Colegiatura (si es requerida)
-        if ($jobProfile->requires_professional_registry) {
+        if ($jobProfile?->colegiatura_required) {
             $registryResult = $this->validateProfessionalRegistry($application, $jobProfile);
             $results['details']['professional_registry'] = $registryResult;
             if (!$registryResult['passed']) {
@@ -69,24 +69,24 @@ class AutoGraderService
         }
 
         // 5. Validar Certificación OSCE (si es requerida)
-        if ($jobProfile->requires_osce_certification) {
-            $osceResult = $this->validateOsceCertification($application);
-            $results['details']['osce_certification'] = $osceResult;
-            if (!$osceResult['passed']) {
-                $results['is_eligible'] = false;
-                $results['reasons'][] = $osceResult['reason'];
-            }
-        }
+        // if ($jobProfile->requires_osce_certification) {
+        //     $osceResult = $this->validateOsceCertification($application);
+        //     $results['details']['osce_certification'] = $osceResult;
+        //     if (!$osceResult['passed']) {
+        //         $results['is_eligible'] = false;
+        //         $results['reasons'][] = $osceResult['reason'];
+        //     }
+        // }
 
         // 6. Validar Licencia de Conducir (si es requerida)
-        if ($jobProfile->requires_driver_license) {
-            $licenseResult = $this->validateDriverLicense($application);
-            $results['details']['driver_license'] = $licenseResult;
-            if (!$licenseResult['passed']) {
-                $results['is_eligible'] = false;
-                $results['reasons'][] = $licenseResult['reason'];
-            }
-        }
+        // if ($jobProfile->requires_driver_license) {
+        //     $licenseResult = $this->validateDriverLicense($application);
+        //     $results['details']['driver_license'] = $licenseResult;
+        //     if (!$licenseResult['passed']) {
+        //         $results['is_eligible'] = false;
+        //         $results['reasons'][] = $licenseResult['reason'];
+        //     }
+        // }
 
         // 7. Validar Cursos Requeridos (si se especificaron)
         if (!empty($jobProfile->required_courses) && is_array($jobProfile->required_courses)) {
@@ -188,7 +188,7 @@ class AutoGraderService
         // 1. Validar nivel educativo requerido (soporte para education_levels array)
         $requiredLevels = !empty($jobProfile->education_levels)
             ? $jobProfile->education_levels
-            : [$jobProfile->education_level];
+            : [];
 
         $hasRequiredLevel = false;
         foreach ($requiredLevels as $requiredLevel) {
@@ -287,7 +287,14 @@ class AutoGraderService
         ])->toArray();
 
         $result = $this->eligibilityCalculator->calculateGeneralExperience($experiences);
-        $requiredYears = $jobProfile->general_experience_years ?? 0;
+
+        // Convertir ExperienceDuration a decimal si es un objeto
+        $requiredYears = $jobProfile->general_experience_years;
+        if (is_object($requiredYears) && method_exists($requiredYears, 'toDecimal')) {
+            $requiredYears = $requiredYears->toDecimal();
+        } else {
+            $requiredYears = $requiredYears ?? 0;
+        }
 
         if ($result['decimal_years'] < $requiredYears) {
             return [
@@ -318,7 +325,14 @@ class AutoGraderService
         ])->toArray();
 
         $result = $this->eligibilityCalculator->calculateSpecificExperience($experiences);
-        $requiredYears = $jobProfile->specific_experience_years ?? 0;
+
+        // Convertir ExperienceDuration a decimal si es un objeto
+        $requiredYears = $jobProfile->specific_experience_years;
+        if (is_object($requiredYears) && method_exists($requiredYears, 'toDecimal')) {
+            $requiredYears = $requiredYears->toDecimal();
+        } else {
+            $requiredYears = $requiredYears ?? 0;
+        }
 
         if ($result['decimal_years'] < $requiredYears) {
             return [
@@ -605,16 +619,170 @@ class AutoGraderService
     {
         $levels = [
             'SECUNDARIA' => 1,
+            'secundaria' => 1,
             'TECNICO' => 2,
+            'tecnico' => 2,
+            'titulo_tecnico' => 2,
+            'TITULO_TECNICO' => 2,
             'BACHILLER' => 3,
+            'bachiller' => 3,
             'TITULO' => 4,
+            'titulo' => 4,
+            'titulo_profesional' => 4,
+            'TITULO_PROFESIONAL' => 4,
             'MAESTRIA' => 5,
+            'maestria' => 5,
             'DOCTORADO' => 6,
+            'doctorado' => 6,
         ];
 
         $applicantValue = $levels[$applicantLevel] ?? 0;
         $requiredValue = $levels[$requiredLevel] ?? 0;
 
         return $applicantValue <=> $requiredValue;
+    }
+
+    /**
+     * Aplicar evaluación automática integrando con el módulo de Evaluation
+     *
+     * Este método:
+     * 1. Ejecuta la evaluación de elegibilidad (evaluateEligibility)
+     * 2. Crea una Evaluation en el módulo Evaluation con la Fase 4
+     * 3. Guarda cada criterio como EvaluationDetail
+     * 4. Actualiza la Application con el resultado
+     * 5. Mantiene compatibilidad guardando también en ApplicationEvaluation
+     *
+     * @param Application $application Postulación a evaluar
+     * @param string $evaluatedBy UUID del usuario que ejecuta la evaluación
+     * @return \Modules\Evaluation\Entities\Evaluation
+     */
+    public function applyAutoGradingWithEvaluationModule(Application $application, string $evaluatedBy): \Modules\Evaluation\Entities\Evaluation
+    {
+        \DB::beginTransaction();
+        try {
+            // 1. Ejecutar evaluación de elegibilidad (lógica existente)
+            $result = $this->evaluateEligibility($application);
+
+            // 2. Obtener la Fase 4 - Publicación de postulantes APTOS
+            $phase4 = \Modules\JobPosting\Entities\ProcessPhase::where('code', 'PHASE_04_ELIGIBLE_PUB')->firstOrFail();
+
+            // 3. Obtener job_posting de la vacancy (usamos el UUID)
+            $jobPosting = $application->vacancy->jobProfile->jobPosting;
+
+            // 4. Crear Evaluation en el módulo de Evaluation
+            $evaluationService = app(\Modules\Evaluation\Services\EvaluationService::class);
+
+            $evaluation = $evaluationService->createEvaluation([
+                'application_id' => $application->uuid, // UUID de la application
+                'evaluator_id' => $evaluatedBy, // UUID del evaluador
+                'phase_id' => $phase4->id, // process_phases no tiene uuid, usar id
+                'job_posting_id' => $jobPosting->uuid, // UUID del job posting
+                'is_anonymous' => false,
+                'is_collaborative' => false,
+                'general_comments' => $result['is_eligible']
+                    ? 'El postulante cumple con todos los requisitos mínimos de elegibilidad evaluados automáticamente por el sistema.'
+                    : 'El postulante NO cumple con los siguientes requisitos: ' . implode('; ', $result['reasons']),
+                'internal_notes' => 'Evaluación automática ejecutada por AutoGraderService v1.0',
+            ]);
+
+            // 5. Mapeo de criterios de elegibilidad a códigos de EvaluationCriterion
+            $criteriaMapping = [
+                'ELIGIBILITY_ACADEMIC' => $result['details']['academics'] ?? null,
+                'ELIGIBILITY_GENERAL_EXPERIENCE' => $result['details']['general_experience'] ?? null,
+                'ELIGIBILITY_SPECIFIC_EXPERIENCE' => $result['details']['specific_experience'] ?? null,
+                'ELIGIBILITY_PROFESSIONAL_REGISTRY' => $result['details']['professional_registry'] ?? null,
+                'ELIGIBILITY_OSCE_CERTIFICATION' => $result['details']['osce_certification'] ?? null,
+                'ELIGIBILITY_DRIVER_LICENSE' => $result['details']['driver_license'] ?? null,
+                'ELIGIBILITY_REQUIRED_COURSES' => $result['details']['required_courses'] ?? null,
+                'ELIGIBILITY_TECHNICAL_KNOWLEDGE' => $result['details']['technical_knowledge'] ?? null,
+            ];
+
+            // 6. Guardar detalles de cada criterio evaluado
+            foreach ($criteriaMapping as $code => $detail) {
+                if ($detail === null) {
+                    continue; // Criterio no aplicable para este cargo
+                }
+
+                // Obtener el criterio
+                $criterion = \Modules\Evaluation\Entities\EvaluationCriterion::where('code', $code)
+                    ->where('phase_id', $phase4->id)
+                    ->first();
+
+                if (!$criterion) {
+                    continue; // Criterio no existe, saltarlo
+                }
+
+                // Guardar detalle de evaluación
+                $evaluationService->saveEvaluationDetail($evaluation, [
+                    'criterion_id' => $criterion->id,
+                    'score' => $detail['passed'] ? 1 : 0, // 0 = No cumple, 1 = Cumple
+                    'comments' => $detail['reason'] ?? 'Criterio evaluado automáticamente',
+                    'evidence' => null,
+                    'metadata' => [
+                        'required' => $detail['required'] ?? null,
+                        'achieved' => $detail['achieved'] ?? null,
+                        'full_detail' => $detail,
+                    ],
+                ]);
+            }
+
+            // 7. Enviar evaluación (marcar como SUBMITTED)
+            $evaluationService->submitEvaluation($evaluation);
+
+            // 8. Actualizar Application (mantener compatibilidad)
+            $application->update([
+                'is_eligible' => $result['is_eligible'],
+                'status' => $result['is_eligible']
+                    ? ApplicationStatus::ELIGIBLE
+                    : ApplicationStatus::NOT_ELIGIBLE,
+                'ineligibility_reason' => implode("\n", $result['reasons'] ?? []),
+                'eligibility_checked_at' => now(),
+                'eligibility_checked_by' => $evaluatedBy,
+            ]);
+
+            // 9. También guardar en ApplicationEvaluation (mantener compatibilidad con sistema existente)
+            \Modules\Application\Entities\ApplicationEvaluation::create([
+                'application_id' => $application->id,
+                'is_eligible' => $result['is_eligible'],
+                'ineligibility_reasons' => implode("\n", $result['reasons'] ?? []),
+                'academics_evaluation' => $result['details']['academics'] ?? null,
+                'general_experience_evaluation' => $result['details']['general_experience'] ?? null,
+                'specific_experience_evaluation' => $result['details']['specific_experience'] ?? null,
+                'professional_registry_evaluation' => $result['details']['professional_registry'] ?? null,
+                'osce_certification_evaluation' => $result['details']['osce_certification'] ?? null,
+                'driver_license_evaluation' => $result['details']['driver_license'] ?? null,
+                'required_courses_evaluation' => $result['details']['required_courses'] ?? null,
+                'technical_knowledge_evaluation' => $result['details']['technical_knowledge'] ?? null,
+                'algorithm_version' => '1.0',
+                'evaluated_by' => $evaluatedBy,
+                'evaluated_at' => now(),
+            ]);
+
+            // 10. Registrar en historial de application (mantener compatibilidad)
+            \Modules\Application\Entities\ApplicationHistory::create([
+                'application_id' => $application->id,
+                'action' => $result['is_eligible'] ? 'MARKED_AS_ELIGIBLE' : 'MARKED_AS_NOT_ELIGIBLE',
+                'description' => $result['is_eligible']
+                    ? 'Postulación marcada como APTO por evaluación automática'
+                    : 'Postulación marcada como NO APTO por evaluación automática: ' . implode(', ', $result['reasons']),
+                'performed_by' => $evaluatedBy,
+                'metadata' => [
+                    'evaluation_id' => $evaluation->id,
+                    'phase_id' => $phase4->id,
+                    'auto_grading' => true,
+                ],
+            ]);
+
+            \DB::commit();
+
+            // Refrescar evaluation para obtener scores actualizados
+            $evaluation->refresh();
+
+            return $evaluation;
+
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            throw $e;
+        }
     }
 }

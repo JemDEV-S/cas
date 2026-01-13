@@ -41,11 +41,19 @@ class EligibilityCalculatorService
 
     /**
      * Calcular experiencia general
+     *
+     * IMPORTANTE: La experiencia general incluye TODAS las experiencias laborales.
+     * Si una experiencia está marcada como "específica", cuenta tanto para
+     * experiencia general como para experiencia específica.
+     *
+     * Ejemplo con 1 experiencia de 2 años marcada como específica:
+     * - Experiencia General: 2 años ✓
+     * - Experiencia Específica: 2 años ✓
      */
     public function calculateGeneralExperience(array $experiences): array
     {
-        $generalExperiences = array_filter($experiences, fn($exp) => !($exp['is_specific'] ?? false));
-        return $this->calculateTotalExperience($generalExperiences);
+        // Toda experiencia cuenta como experiencia general
+        return $this->calculateTotalExperience($experiences);
     }
 
     /**

@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Modules\Application\Services\ApplicationService;
 use Modules\Application\Entities\Application;
+use Illuminate\Http\RedirectResponse;
+
 
 class ApplicationController extends Controller
 {
@@ -123,5 +125,21 @@ class ApplicationController extends Controller
         }
 
         return $this->applicationService->downloadDocument($documentId);
+    }
+
+    public function submit(string $id): RedirectResponse
+    {
+        try {
+            $application = $this->applicationService->submitApplication($id);
+
+            return redirect()
+                ->back()
+                ->with('success', 'Postulacion enviada correctamente');
+
+        } catch (\Exception $e) {
+            return redirect()
+                ->back()
+                ->with('error', $e->getMessage());
+        }
     }
 }

@@ -164,11 +164,19 @@ class Application extends Model
     }
 
     /**
+     * Relación polimórfica con documentos generados
+     */
+    public function generatedDocuments()
+    {
+        return $this->morphMany(\Modules\Document\Entities\GeneratedDocument::class, 'documentable');
+    }
+
+    /**
      * Relación con evaluaciones automáticas
      */
     public function evaluations(): HasMany
     {
-        return $this->hasMany(ApplicationEvaluation::class)->orderBy('evaluated_at', 'desc');
+        return $this->hasMany(\Modules\Evaluation\Entities\Evaluation::class)->orderBy('submitted_at', 'desc');
     }
 
     /**
