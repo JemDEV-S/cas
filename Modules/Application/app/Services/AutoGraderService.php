@@ -667,16 +667,16 @@ class AutoGraderService
             $phase4 = \Modules\JobPosting\Entities\ProcessPhase::where('code', 'PHASE_04_ELIGIBLE_PUB')->firstOrFail();
 
             // 3. Obtener job_posting de la vacancy (usamos el UUID)
-            $jobPosting = $application->vacancy->jobProfile->jobPosting;
+            $jobPosting = $application->jobProfile->jobPosting;
 
             // 4. Crear Evaluation en el módulo de Evaluation
             $evaluationService = app(\Modules\Evaluation\Services\EvaluationService::class);
 
             $evaluation = $evaluationService->createEvaluation([
-                'application_id' => $application->uuid, // UUID de la application
+                'application_id' => $application->id, // UUID de la application
                 'evaluator_id' => $evaluatedBy, // UUID del evaluador
                 'phase_id' => $phase4->id, // process_phases no tiene uuid, usar id
-                'job_posting_id' => $jobPosting->uuid, // UUID del job posting
+                'job_posting_id' => $jobPosting->id, // UUID del job posting
                 'is_anonymous' => false,
                 'is_collaborative' => false,
                 'general_comments' => $result['is_eligible']
@@ -758,19 +758,24 @@ class AutoGraderService
                 'evaluated_at' => now(),
             ]);
 
-            // 10. Registrar en historial de application (mantener compatibilidad)
+            // 10. Registrar en historial de application
             \Modules\Application\Entities\ApplicationHistory::create([
                 'application_id' => $application->id,
-                'action' => $result['is_eligible'] ? 'MARKED_AS_ELIGIBLE' : 'MARKED_AS_NOT_ELIGIBLE',
+                'event_type' => 'EVALUATED',
                 'description' => $result['is_eligible']
                     ? 'Postulación marcada como APTO por evaluación automática'
                     : 'Postulación marcada como NO APTO por evaluación automática: ' . implode(', ', $result['reasons']),
                 'performed_by' => $evaluatedBy,
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
                 'metadata' => [
                     'evaluation_id' => $evaluation->id,
                     'phase_id' => $phase4->id,
                     'auto_grading' => true,
+                    'is_eligible' => $result['is_eligible'],
+                    'reasons' => $result['reasons'] ?? [],
                 ],
+                'performed_at' => now(),
             ]);
 
             \DB::commit();

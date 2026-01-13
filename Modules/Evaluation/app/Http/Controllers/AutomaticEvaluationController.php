@@ -25,7 +25,7 @@ class AutomaticEvaluationController extends Controller
 
         // Obtener convocatorias activas con postulaciones presentadas
         $jobPostings = JobPosting::query()
-            ->with(['jobProfiles.vacancies.applications' => function ($query) {
+            ->with(['jobProfiles.applications' => function ($query) {
                 $query->whereIn('status', [
                     ApplicationStatus::SUBMITTED,
                     ApplicationStatus::ELIGIBLE,
@@ -33,7 +33,7 @@ class AutomaticEvaluationController extends Controller
                 ]);
             }])
             ->published()
-            ->whereHas('jobProfiles.vacancies.applications', function ($query) {
+            ->whereHas('jobProfiles.applications', function ($query) {
                 $query->where('status', ApplicationStatus::SUBMITTED);
             })
             ->orderBy('created_at', 'desc')

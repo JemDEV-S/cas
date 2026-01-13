@@ -27,9 +27,12 @@ class EvaluationService
             ]);
 
             // Registrar en historial
+            // Si no hay usuario autenticado (ej: comando de consola), usar el evaluator_id
+            $userId = auth()->id() ?? $data['evaluator_id'];
+
             EvaluationHistory::logChange(
                 $evaluation->id,
-                auth()->id(),
+                $userId,
                 'CREATED',
                 'Evaluación creada y asignada'
             );
@@ -57,9 +60,12 @@ class EvaluationService
             ]);
 
             // Registrar en historial
+            // Si no hay usuario autenticado, usar el evaluator_id
+            $userId = auth()->id() ?? $evaluation->evaluator_id;
+
             EvaluationHistory::logChange(
                 $evaluation->id,
-                auth()->id(),
+                $userId,
                 'UPDATED',
                 'Evaluación actualizada',
                 $oldValues,
@@ -96,9 +102,12 @@ class EvaluationService
                 ]);
 
                 // Registrar cambio
+                // Si no hay usuario autenticado, usar el evaluator_id
+                $userId = auth()->id() ?? $evaluation->evaluator_id;
+
                 EvaluationHistory::logChange(
                     $evaluation->id,
-                    auth()->id(),
+                    $userId,
                     'CRITERION_CHANGED',
                     "Criterio actualizado",
                     ['score' => $oldScore],
@@ -139,19 +148,25 @@ class EvaluationService
             $evaluation->submit();
             $evaluation->updateScores();
 
-            // Marcar asignación como completada
-            if ($assignment = $evaluation->evaluator->assignments()
-                ->where('application_id', $evaluation->application_id)
-                ->where('phase_id', $evaluation->phase_id)
-                ->first()
-            ) {
-                $assignment->markAsCompleted();
+            // Marcar asignación como completada (si existe el evaluador y tiene asignaciones)
+            if ($evaluation->evaluator) {
+                $assignment = $evaluation->evaluator->assignments()
+                    ->where('application_id', $evaluation->application_id)
+                    ->where('phase_id', $evaluation->phase_id)
+                    ->first();
+
+                if ($assignment) {
+                    $assignment->markAsCompleted();
+                }
             }
 
             // Registrar en historial
+            // Si no hay usuario autenticado, usar el evaluator_id
+            $userId = auth()->id() ?? $evaluation->evaluator_id;
+
             EvaluationHistory::logChange(
                 $evaluation->id,
-                auth()->id(),
+                $userId,
                 'SUBMITTED',
                 'Evaluación enviada y finalizada'
             );
@@ -205,9 +220,12 @@ class EvaluationService
             $evaluation->updateScores();
 
             // Registrar en historial
+            // Si no hay usuario autenticado, usar el modified_by o evaluator_id
+            $userId = auth()->id() ?? $evaluation->modified_by ?? $evaluation->evaluator_id;
+
             EvaluationHistory::logChange(
                 $evaluation->id,
-                auth()->id(),
+                $userId,
                 'MODIFIED',
                 'Evaluación modificada después de envío',
                 $oldValues,
@@ -241,9 +259,12 @@ class EvaluationService
     {
         return DB::transaction(function () use ($evaluation) {
             // Registrar en historial antes de eliminar
+            // Si no hay usuario autenticado, usar el evaluator_id
+            $userId = auth()->id() ?? $evaluation->evaluator_id;
+
             EvaluationHistory::logChange(
                 $evaluation->id,
-                auth()->id(),
+                $userId,
                 'CANCELLED',
                 'Evaluación eliminada'
             );

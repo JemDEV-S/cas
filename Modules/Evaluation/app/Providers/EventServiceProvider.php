@@ -15,9 +15,9 @@ class EventServiceProvider extends ServiceProvider
         'Modules\Evaluation\Events\EvaluationAssigned' => [
             'Modules\Evaluation\Listeners\NotifyEvaluatorAssigned',
         ],
-        'Modules\Evaluation\Events\EvaluationSubmitted' => [
-            'Modules\Evaluation\Listeners\NotifyEvaluationSubmitted',
-        ],
+        // 'Modules\Evaluation\Events\EvaluationSubmitted' => [
+        //     'Modules\Evaluation\Listeners\NotifyEvaluationSubmitted',
+        // ],
         'Modules\Evaluation\Events\EvaluationModified' => [
             'Modules\Evaluation\Listeners\LogEvaluationModified',
         ],

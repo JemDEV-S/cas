@@ -88,7 +88,7 @@ class EvaluationHistory extends Model
      */
     public static function logChange(
         int $evaluationId,
-        int $userId,
+        string $userId,
         string $actionType,
         string $description = null,
         array $oldValues = null,

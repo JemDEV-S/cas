@@ -1,21 +1,21 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+<div class="w-full px-4 py-6">
+    <div class="flex justify-between items-center mb-6">
         <div>
-            <h2 class="mb-1">Publicaciones de Resultados</h2>
-            <p class="text-muted mb-0">Gestión de resultados con firma digital</p>
+            <h2 class="text-2xl font-semibold mb-1">Publicaciones de Resultados</h2>
+            <p class="text-gray-500 text-sm">Gestión de resultados con firma digital</p>
         </div>
     </div>
 
     {{-- Filtros --}}
-    <div class="card mb-4">
-        <div class="card-body">
-            <form method="GET" class="row g-3">
-                <div class="col-md-4">
-                    <label class="form-label">Fase</label>
-                    <select name="phase" class="form-select">
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+        <div class="p-6">
+            <form method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Fase</label>
+                    <select name="phase" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                         <option value="">Todas las fases</option>
                         <option value="PHASE_04" {{ request('phase') === 'PHASE_04' ? 'selected' : '' }}>
                             Fase 4 - Elegibilidad
@@ -28,9 +28,9 @@
                         </option>
                     </select>
                 </div>
-                <div class="col-md-4">
-                    <label class="form-label">Estado</label>
-                    <select name="status" class="form-select">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Estado</label>
+                    <select name="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                         <option value="">Todos los estados</option>
                         <option value="draft" {{ request('status') === 'draft' ? 'selected' : '' }}>Borrador</option>
                         <option value="pending_signature" {{ request('status') === 'pending_signature' ? 'selected' : '' }}>
@@ -40,11 +40,11 @@
                         <option value="unpublished" {{ request('status') === 'unpublished' ? 'selected' : '' }}>Despublicado</option>
                     </select>
                 </div>
-                <div class="col-md-4 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary me-2">
+                <div class="flex items-end gap-2">
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                         <i class="fas fa-filter"></i> Filtrar
                     </button>
-                    <a href="{{ route('admin.results.index') }}" class="btn btn-outline-secondary">
+                    <a href="{{ route('admin.results.index') }}" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
                         <i class="fas fa-times"></i> Limpiar
                     </a>
                 </div>
@@ -53,91 +53,94 @@
     </div>
 
     {{-- Lista de publicaciones --}}
-    <div class="card">
-        <div class="card-body">
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div class="p-6">
             @if($publications->isEmpty())
-                <div class="text-center py-5">
-                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-                    <p class="text-muted">No hay publicaciones de resultados</p>
+                <div class="text-center py-12">
+                    <i class="fas fa-inbox text-5xl text-gray-400 mb-4"></i>
+                    <p class="text-gray-500">No hay publicaciones de resultados</p>
                 </div>
             @else
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle">
-                        <thead class="table-light">
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50">
                             <tr>
-                                <th>Convocatoria</th>
-                                <th>Fase</th>
-                                <th>Estado</th>
-                                <th>Total Postulantes</th>
-                                <th>Firmas</th>
-                                <th>Publicado</th>
-                                <th>Acciones</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Convocatoria</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fase</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Postulantes</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Firmas</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Publicado</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody class="bg-white divide-y divide-gray-200">
                             @foreach($publications as $publication)
-                            <tr>
-                                <td>
-                                    <div class="fw-bold">{{ $publication->jobPosting->code ?? 'N/A' }}</div>
-                                    <small class="text-muted">{{ Str::limit($publication->title, 50) }}</small>
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <td class="px-6 py-4">
+                                    <div class="font-semibold text-gray-900">{{ $publication->jobPosting->code ?? 'N/A' }}</div>
+                                    <small class="text-gray-500">{{ Str::limit($publication->title, 50) }}</small>
                                 </td>
-                                <td>
-                                    <span class="badge bg-info">
+                                <td class="px-6 py-4">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                         {{ $publication->phase->label() }}
                                     </span>
                                 </td>
-                                <td>
-                                    <span class="badge bg-{{ $publication->status->color() }}">
+                                <td class="px-6 py-4">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                        @if($publication->status->color() === 'success') bg-green-100 text-green-800
+                                        @elseif($publication->status->color() === 'warning') bg-yellow-100 text-yellow-800
+                                        @elseif($publication->status->color() === 'danger') bg-red-100 text-red-800
+                                        @else bg-gray-100 text-gray-800
+                                        @endif">
                                         {{ $publication->status->label() }}
                                     </span>
                                 </td>
-                                <td>
-                                    <div>{{ $publication->total_applicants }}</div>
+                                <td class="px-6 py-4">
+                                    <div class="text-gray-900">{{ $publication->total_applicants }}</div>
                                     @if($publication->phase->value === 'PHASE_04')
-                                        <small class="text-success">
+                                        <small class="text-green-600">
                                             <i class="fas fa-check-circle"></i> {{ $publication->total_eligible }} APTOS
                                         </small>
-                                        <small class="text-danger ms-2">
+                                        <small class="text-red-600 ml-2">
                                             <i class="fas fa-times-circle"></i> {{ $publication->total_not_eligible }} NO APTOS
                                         </small>
                                     @endif
                                 </td>
-                                <td>
+                                <td class="px-6 py-4">
                                     @php
                                         $progress = $publication->getSignatureProgress();
                                     @endphp
-                                    <div class="d-flex align-items-center">
-                                        <div class="progress flex-grow-1 me-2" style="height: 8px; width: 80px;">
-                                            <div class="progress-bar" role="progressbar"
-                                                 style="width: {{ $progress['percentage'] }}%"
-                                                 aria-valuenow="{{ $progress['percentage'] }}"
-                                                 aria-valuemin="0" aria-valuemax="100">
+                                    <div class="flex items-center">
+                                        <div class="flex-grow mr-2 bg-gray-200 rounded-full h-2 w-20">
+                                            <div class="bg-blue-600 h-2 rounded-full"
+                                                 style="width: {{ $progress['percentage'] }}%">
                                             </div>
                                         </div>
-                                        <small class="text-muted">
+                                        <small class="text-gray-500 text-xs">
                                             {{ $progress['completed'] }}/{{ $progress['total'] }}
                                         </small>
                                     </div>
                                 </td>
-                                <td>
+                                <td class="px-6 py-4">
                                     @if($publication->published_at)
-                                        <div>{{ $publication->published_at->format('d/m/Y') }}</div>
-                                        <small class="text-muted">{{ $publication->published_at->format('H:i') }}</small>
+                                        <div class="text-gray-900">{{ $publication->published_at->format('d/m/Y') }}</div>
+                                        <small class="text-gray-500">{{ $publication->published_at->format('H:i') }}</small>
                                     @else
-                                        <span class="text-muted">-</span>
+                                        <span class="text-gray-400">-</span>
                                     @endif
                                 </td>
-                                <td>
-                                    <div class="btn-group" role="group">
+                                <td class="px-6 py-4">
+                                    <div class="flex gap-2">
                                         <a href="{{ route('admin.results.show', $publication) }}"
-                                           class="btn btn-sm btn-outline-primary"
+                                           class="p-2 text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
                                            title="Ver detalle">
                                             <i class="fas fa-eye"></i>
                                         </a>
 
                                         @if($publication->document && $publication->document->signed_pdf_path)
                                             <a href="{{ route('admin.results.download-pdf', $publication) }}"
-                                               class="btn btn-sm btn-outline-success"
+                                               class="p-2 text-green-600 border border-green-600 rounded-lg hover:bg-green-50 transition-colors"
                                                title="Descargar PDF">
                                                 <i class="fas fa-file-pdf"></i>
                                             </a>
@@ -145,7 +148,7 @@
 
                                         @if($publication->excel_path)
                                             <a href="{{ route('admin.results.download-excel', $publication) }}"
-                                               class="btn btn-sm btn-outline-success"
+                                               class="p-2 text-green-600 border border-green-600 rounded-lg hover:bg-green-50 transition-colors"
                                                title="Descargar Excel">
                                                 <i class="fas fa-file-excel"></i>
                                             </a>
@@ -159,7 +162,7 @@
                 </div>
 
                 {{-- Paginación --}}
-                <div class="mt-3">
+                <div class="mt-6">
                     {{ $publications->links() }}
                 </div>
             @endif
