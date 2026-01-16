@@ -153,7 +153,7 @@
                     </div>
                 </div>
                 <div class="mt-8 pt-6 border-t border-gray-200 text-center">
-                    <p class="text-sm text-gray-500">© 2024 Municipalidad Distrital de San Jerónimo - Oficina de Tecnologías de la Información. Todos los derechos reservados.</p>
+                    <p class="text-sm text-gray-500">© 2026 Municipalidad Distrital de San Jerónimo - Oficina de Tecnologías de la Información. Todos los derechos reservados.</p>
                 </div>
             </div>
         </footer>

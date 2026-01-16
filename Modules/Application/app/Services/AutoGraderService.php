@@ -99,14 +99,14 @@ class AutoGraderService
         }
 
         // 8. Validar Conocimientos Técnicos (si se especificaron)
-        if (!empty($jobProfile->knowledge_areas) && is_array($jobProfile->knowledge_areas)) {
-            $knowledgeResult = $this->validateTechnicalKnowledge($application, $jobProfile);
-            $results['details']['technical_knowledge'] = $knowledgeResult;
-            if (!$knowledgeResult['passed']) {
-                $results['is_eligible'] = false;
-                $results['reasons'][] = $knowledgeResult['reason'];
-            }
-        }
+        // if (!empty($jobProfile->knowledge_areas) && is_array($jobProfile->knowledge_areas)) {
+        //     $knowledgeResult = $this->validateTechnicalKnowledge($application, $jobProfile);
+        //     $results['details']['technical_knowledge'] = $knowledgeResult;
+        //     if (!$knowledgeResult['passed']) {
+        //         $results['is_eligible'] = false;
+        //         $results['reasons'][] = $knowledgeResult['reason'];
+        //     }
+        // }
 
         return $results;
     }

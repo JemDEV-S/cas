@@ -438,4 +438,15 @@
     </div>
 
 </div>
+
+@if(session('auto_download_pdf'))
+<script>
+    // Descargar automáticamente la ficha de postulación después de enviar
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(function() {
+            window.location.href = "{{ route('applicant.applications.download-pdf', $application->id) }}";
+        }, 1000); // Esperar 1 segundo para que el usuario vea el mensaje de éxito
+    });
+</script>
+@endif
 @endsection

@@ -7,7 +7,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Modules\Application\Services\ApplicationService;
 use Modules\Application\Entities\Application;
+use Modules\Document\Services\DocumentService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Storage;
 
 
 class ApplicationController extends Controller
@@ -133,14 +135,274 @@ class ApplicationController extends Controller
         try {
             $application = $this->applicationService->submitApplication($id);
 
+            // Generar ficha de postulación PDF
+            $this->generateApplicationSheet($application);
+
             return redirect()
                 ->back()
-                ->with('success', 'Postulacion enviada correctamente');
+                ->with('success', 'Postulación enviada correctamente')
+                ->with('auto_download_pdf', true);
 
         } catch (\Exception $e) {
             return redirect()
                 ->back()
                 ->with('error', $e->getMessage());
         }
+    }
+
+    /**
+     * Generar ficha de postulación en PDF
+     */
+    private function generateApplicationSheet(\Modules\Application\Entities\Application $application): void
+    {
+        try {
+            // Cargar todas las relaciones necesarias
+            $application->load([
+                'applicant',
+                'jobProfile.jobPosting',
+                'academics.career',
+                'experiences',
+                'trainings',
+                'knowledge',
+                'professionalRegistrations',
+                'specialConditions'
+            ]);
+
+            // Obtener el template
+            $template = \Modules\Document\Entities\DocumentTemplate::where('code', 'TPL_APPLICATION_SHEET')
+                ->where('status', 'active')
+                ->first();
+
+            if (!$template) {
+                \Log::warning('Template TPL_APPLICATION_SHEET no encontrado', [
+                    'application_id' => $application->id,
+                ]);
+                return;
+            }
+
+            // Preparar datos para el documento
+            $data = $this->prepareApplicationSheetData($application);
+
+            // Generar el documento usando el servicio
+            $documentService = app(\Modules\Document\Services\DocumentService::class);
+            $document = $documentService->generateFromTemplate(
+                $template,
+                $application,
+                $data,
+                $application->applicant_id
+            );
+
+            \Log::info('Ficha de postulación generada exitosamente', [
+                'application_id' => $application->id,
+                'document_id' => $document->id,
+                'document_code' => $document->code,
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error al generar ficha de postulación', [
+                'application_id' => $application->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+        }
+    }
+
+    /**
+     * Preparar datos de la postulación para el template
+     */
+    private function prepareApplicationSheetData(\Modules\Application\Entities\Application $application): array
+    {
+        $jobProfile = $application->jobProfile;
+        $jobPosting = $jobProfile->jobPosting;
+
+        // Calcular edad
+        $age = null;
+        if ($application->birth_date) {
+            $birthDate = \Carbon\Carbon::parse($application->birth_date);
+            $age = $birthDate->age;
+        }
+
+        return [
+            'title' => 'Ficha de Postulación - ' . $application->code,
+
+            // Datos de la postulación
+            'application_code' => $application->code,
+            'application_date' => $application->application_date?->format('d/m/Y'),
+
+            // Datos de la convocatoria y perfil
+            'job_posting_title' => $jobPosting->title ?? 'N/A',
+            'job_posting_code' => $jobPosting->code ?? 'N/A',
+            'job_profile_name' => $jobProfile->profile_name ?? 'N/A',
+            'profile_code' => $jobProfile->code ?? 'N/A',
+
+            // Datos personales
+            'full_name' => $application->full_name,
+            'dni' => $application->dni,
+            'birth_date' => $application->birth_date?->format('d/m/Y'),
+            'age' => $age,
+            'email' => $application->email,
+            'phone' => $application->phone,
+            'mobile_phone' => $application->mobile_phone,
+            'address' => $application->address,
+
+            // Formación académica
+            'academics' => $application->academics->map(function ($academic) {
+                $degreeTypeLabel = $academic->degree_type;
+                try {
+                    if ($academic->degree_type) {
+                        $enum = \Modules\JobProfile\Enums\EducationLevelEnum::from($academic->degree_type);
+                        $degreeTypeLabel = $enum->label();
+                    }
+                } catch (\ValueError $e) {
+                    $degreeTypeLabel = $academic->degree_type;
+                }
+
+                return [
+                    'institution_name' => $academic->institution_name,
+                    'degree_type' => $academic->degree_type,
+                    'degree_type_label' => $degreeTypeLabel,
+                    'career_field' => $academic->career?->name ?? $academic->career_field,
+                    'degree_title' => $academic->degree_title,
+                    'issue_date' => $academic->issue_date?->format('Y'),
+                    'is_related_career' => $academic->is_related_career,
+                    'related_career_name' => $academic->related_career_name,
+                ];
+            })->toArray(),
+
+            // Experiencia laboral
+            'experiences' => $application->experiences->map(function ($experience) {
+                return [
+                    'organization' => $experience->organization,
+                    'position' => $experience->position,
+                    'start_date' => $experience->start_date?->format('d/m/Y'),
+                    'end_date' => $experience->end_date?->format('d/m/Y'),
+                    'duration_days' => $experience->duration_days,
+                    'is_specific' => $experience->is_specific,
+                    'is_public_sector' => $experience->is_public_sector,
+                ];
+            })->toArray(),
+
+            // Calcular totales de experiencia
+            'total_general_experience' => $this->calculateExperienceSummary(
+                $application->experiences->where('is_specific', false)
+            ),
+            'total_specific_experience' => $this->calculateExperienceSummary(
+                $application->experiences->where('is_specific', true)
+            ),
+
+            // Capacitaciones
+            'trainings' => $application->trainings->map(function ($training) {
+                return [
+                    'institution' => $training->institution,
+                    'course_name' => $training->course_name,
+                    'academic_hours' => $training->academic_hours,
+                    'start_date' => $training->start_date?->format('Y-m-d'),
+                ];
+            })->toArray(),
+
+            // Conocimientos
+            'knowledge' => $application->knowledge->map(function ($k) {
+                return [
+                    'knowledge_name' => $k->knowledge_name,
+                    'proficiency_level' => $k->proficiency_level,
+                ];
+            })->toArray(),
+
+            // Registros profesionales
+            'professional_registrations' => $application->professionalRegistrations->map(function ($reg) {
+                return [
+                    'type' => $reg->registration_type,
+                    'number' => $reg->registration_number,
+                    'institution' => $reg->issuing_entity,
+                    'category' => null,
+                    'expiry_date' => $reg->expiry_date?->format('d/m/Y'),
+                ];
+            })->toArray(),
+
+            // Condiciones especiales
+            'special_conditions' => $application->specialConditions->map(function ($condition) {
+                return [
+                    'type' => $condition->type,
+                    'bonus_percentage' => $condition->bonus_percentage,
+                ];
+            })->toArray(),
+
+            // Información adicional
+            'ip_address' => $application->ip_address,
+            'generation_date' => now()->format('d/m/Y'),
+            'generation_time' => now()->format('H:i:s'),
+        ];
+    }
+
+    /**
+     * Calcular resumen de experiencia (total en años, meses y días)
+     */
+    private function calculateExperienceSummary($experiences): array
+    {
+        $totalDays = $experiences->sum('duration_days');
+
+        if ($totalDays <= 0) {
+            return [
+                'total_days' => 0,
+                'years' => 0,
+                'months' => 0,
+                'days' => 0,
+                'formatted' => '0 días',
+            ];
+        }
+
+        $years = floor($totalDays / 365);
+        $months = floor(($totalDays % 365) / 30);
+        $days = $totalDays % 30;
+
+        $parts = [];
+        if ($years > 0) $parts[] = "{$years} año" . ($years > 1 ? 's' : '');
+        if ($months > 0) $parts[] = "{$months} mes" . ($months > 1 ? 'es' : '');
+        if ($days > 0) $parts[] = "{$days} día" . ($days > 1 ? 's' : '');
+
+        return [
+            'total_days' => $totalDays,
+            'years' => $years,
+            'months' => $months,
+            'days' => $days,
+            'formatted' => implode(', ', $parts) ?: '0 días',
+        ];
+    }
+
+    /**
+     * Download application sheet PDF.
+     */
+    public function downloadPdf(string $id)
+    {
+        $user = Auth::user();
+        $application = $this->applicationService->getApplicationById($id);
+
+        // Check if user owns this application
+        if ($application->applicant_id !== $user->id) {
+            abort(403, 'No tienes permiso para descargar este documento.');
+        }
+
+        // Find the application sheet document
+        $document = $application->documents()
+            ->whereHas('template', fn($q) => $q->where('code', 'TPL_APPLICATION_SHEET'))
+            ->first();
+
+        if (!$document) {
+            return redirect()
+                ->back()
+                ->with('error', 'No se encontró la ficha de postulación.');
+        }
+
+        // Check if PDF exists
+        if (!$document->pdf_path || !Storage::disk('private')->exists($document->pdf_path)) {
+            return redirect()
+                ->back()
+                ->with('error', 'El archivo PDF no existe.');
+        }
+
+        return Storage::disk('private')->download(
+            $document->pdf_path,
+            'Ficha_Postulacion_' . $application->code . '.pdf'
+        );
     }
 }

@@ -336,9 +336,16 @@ class JobPostingController extends Controller
                     ? '¡Postulación enviada exitosamente!'
                     : 'Borrador guardado. Puedes completar y enviar después.';
 
-                return redirect()
+                // 13. Si se envió la postulación, incluir flag para descarga automática del PDF
+                $redirect = redirect()
                     ->route('applicant.applications.show', $application->id)
                     ->with('success', $message);
+
+                if ($status === \Modules\Application\Enums\ApplicationStatus::SUBMITTED) {
+                    $redirect->with('auto_download_pdf', true);
+                }
+
+                return $redirect;
             });
 
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -381,15 +388,22 @@ class JobPostingController extends Controller
     private function mapAcademics(array $academics): array
     {
         return array_map(function($academic) {
+            // Convertir strings vacíos a null para evitar violación de FK
+            $careerId = $academic['careerId'] ?? null;
+            $careerId = $careerId === '' ? null : $careerId;
+
+            $relatedCareerName = $academic['relatedCareerName'] ?? null;
+            $relatedCareerName = $relatedCareerName === '' ? null : $relatedCareerName;
+
             return new \Modules\Application\DTOs\AcademicDTO(
                 institutionName: $academic['institution'] ?? '',
                 degreeType: $academic['degreeType'] ?? '',
                 degreeTitle: $academic['degreeTitle'] ?? ($academic['careerField'] ?? ''),
                 issueDate: $academic['year'] ?? date('Y'),
-                careerField: $academic['careerField'] ?? '', // Mantener por compatibilidad
-                careerId: $academic['careerId'] ?? null, // 💎 ID de la carrera del catálogo
-                isRelatedCareer: $academic['isRelatedCareer'] ?? false, // 💎 NUEVO: Es carrera afín
-                relatedCareerName: $academic['relatedCareerName'] ?? null, // 💎 NUEVO: Nombre de carrera afín
+                careerField: $academic['careerField'] ?? '',
+                careerId: $careerId,
+                isRelatedCareer: $academic['isRelatedCareer'] ?? false,
+                relatedCareerName: $relatedCareerName,
             );
         }, $academics);
     }
@@ -399,6 +413,12 @@ class JobPostingController extends Controller
      */
     private function mapExperiences(array $experiences): array
     {
+        // Filtrar experiencias vacías (campos agregados pero no completados)
+        $experiences = array_filter($experiences, function($exp) {
+            return !empty(trim($exp['organization'] ?? ''))
+                || !empty(trim($exp['position'] ?? ''));
+        });
+
         return array_map(function($exp) {
             // Si isCurrent es true, usar fecha actual como endDate
             $endDate = ($exp['isCurrent'] ?? false)
