@@ -1111,27 +1111,56 @@
             <p class="text-gray-600 mb-6">Completa según aplique a tu profesión y al perfil solicitado.</p>
 
             <div class="space-y-6">
-                <!-- Colegiatura -->
+                <!-- Colegiatura y Habilitación Profesional -->
                 @if($jobProfile->colegiatura_required)
                     <div class="border border-gray-200 rounded-xl p-6">
-                        <h3 class="font-bold text-gray-900 mb-4">Colegiatura *</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <h3 class="font-bold text-gray-900 mb-4">Colegiatura y Habilitación Profesional *</h3>
+
+                        <!-- Checkbox de Habilitación -->
+                        <div class="mb-4 p-4 bg-blue-50 rounded-xl border border-blue-200">
+                            <label class="flex items-start cursor-pointer">
+                                <input type="checkbox"
+                                       x-model="formData.registrations.colegiatura.habilitado"
+                                       @change="autoSave"
+                                       class="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                <div class="ml-3">
+                                    <span class="font-semibold text-gray-900">Cuento con habilitación profesional vigente</span>
+                                    <p class="text-sm text-gray-600 mt-1">Declaro que me encuentro colegiado(a) y habilitado(a) para ejercer la profesión</p>
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- Campos de Colegiatura (se habilitan con el checkbox) -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4"
+                             :class="{ 'opacity-50': !formData.registrations.colegiatura.habilitado }">
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">Colegio Profesional</label>
                                 <input type="text"
                                        x-model="formData.registrations.colegiatura.college"
                                        @input="autoSave"
-                                       required
-                                       class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500">
+                                       :disabled="!formData.registrations.colegiatura.habilitado"
+                                       :required="formData.registrations.colegiatura.habilitado"
+                                       placeholder="Ej: Colegio de Ingenieros del Perú"
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed">
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">Número de Colegiatura</label>
                                 <input type="text"
                                        x-model="formData.registrations.colegiatura.number"
                                        @input="autoSave"
-                                       required
-                                       class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500">
+                                       :disabled="!formData.registrations.colegiatura.habilitado"
+                                       :required="formData.registrations.colegiatura.habilitado"
+                                       placeholder="Ej: 123456"
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed">
                             </div>
+                        </div>
+
+                        <!-- Mensaje informativo cuando no está habilitado -->
+                        <div x-show="!formData.registrations.colegiatura.habilitado" class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <p class="text-sm text-yellow-700">
+                                <i class="fas fa-exclamation-triangle mr-2"></i>
+                                Este perfil requiere contar con colegiatura y habilitación profesional vigente. Si no la tienes, tu postulación podría no ser considerada.
+                            </p>
                         </div>
                     </div>
                 @endif
@@ -1404,6 +1433,8 @@
                            class="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                     <span class="ml-3 text-sm text-gray-700">
                         Declaro bajo juramento que toda la información proporcionada es verdadera y puede ser verificada mediante documentos sustentatorios en la siguiente fase del proceso. Soy consciente de que cualquier información falsa puede resultar en la descalificación inmediata del proceso de selección.
+
+                        Asimismo, si lo declarado no se ajusta a la verdad, me sujeto a lo establecido en el artículo 438 del Código Penal, así como a las responsabilidades administrativas, civiles y/o penales que correspondan, de conformidad con el marco legal vigente.
                     </span>
                 </label>
 
@@ -1529,6 +1560,7 @@ function applicationWizard() {
             otherKnowledge: '',
             registrations: {
                 colegiatura: {
+                    habilitado: false,
                     college: '',
                     number: ''
                 },

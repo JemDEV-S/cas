@@ -11,5 +11,6 @@
     "Application": true,
     "Jury": true,
     "ApplicantPortal": true,
-    "Results": true
+    "Results": true,
+    "Notification": true
 }

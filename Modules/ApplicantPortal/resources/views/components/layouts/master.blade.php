@@ -139,12 +139,12 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                     <div>
                         <h3 class="text-sm font-bold text-gray-900 mb-3">Municipalidad Distrital de San Jerónimo</h3>
-                        <p class="text-sm text-gray-600">Trabajando por el desarrollo de nuestra comunidad</p>
+                        <p class="text-sm text-gray-600">Trabajando juntos por el desarrollo</p>
                     </div>
                     <div>
                         <h3 class="text-sm font-bold text-gray-900 mb-3">Contacto</h3>
-                        <p class="text-sm text-gray-600">📞 (084) 123-4567</p>
-                        <p class="text-sm text-gray-600">✉️ recursos.humanos@munisanjeronimo.gob.pe</p>
+                        <p class="text-sm text-gray-600">📞 971581917</p>
+                        <p class="text-sm text-gray-600">✉️ oti.@munisanjeronimo.gob.pe</p>
                     </div>
                     <div>
                         <h3 class="text-sm font-bold text-gray-900 mb-3">Horario de Atención</h3>
@@ -153,7 +153,7 @@
                     </div>
                 </div>
                 <div class="mt-8 pt-6 border-t border-gray-200 text-center">
-                    <p class="text-sm text-gray-500">© 2024 Municipalidad Distrital de San Jerónimo. Todos los derechos reservados.</p>
+                    <p class="text-sm text-gray-500">© 2024 Municipalidad Distrital de San Jerónimo - Oficina de Tecnologías de la Información. Todos los derechos reservados.</p>
                 </div>
             </div>
         </footer>

@@ -525,7 +525,9 @@
 
     <!-- DISCLAIMER IMPORTANTE -->
     <div class="disclaimer">
-        LA VALORACIÓN DE LOS MÉRITOS Y ANTECEDENTES, SE REALIZARÁN CONTRA LA INFORMACIÓN CONTENIDA EN LOS CERTIFICADOS, CONSTANCIAS Y/O TODA LA DOCUMENTACIÓN PRESENTADA DE ACUERDO A LO ESTABLECIDO EN LAS BASES.
+        Declaro bajo juramento que toda la información proporcionada es verdadera y puede ser verificada mediante documentos sustentatorios en la siguiente fase del proceso. Soy consciente de que cualquier información falsa puede resultar en la descalificación inmediata del proceso de selección.
+
+        Asimismo, si lo declarado no se ajusta a la verdad, me sujeto a lo establecido en el artículo 438 del Código Penal, así como a las responsabilidades administrativas, civiles y/o penales que correspondan, de conformidad con el marco legal vigente.    
     </div>
 
     <div class="footer">

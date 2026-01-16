@@ -12,7 +12,9 @@ enum EducationLevelEnum: string
     case EGRESADO_UNIVERSITARIO = 'egresado_universitario';
     case BACHILLER = 'bachiller';
     case TITULO_PROFESIONAL = 'titulo_profesional';
-    case POSTGRADO = 'postgrado';
+    case ESTUDIOS_MAESTRIA = 'estudios_maestria';
+    case EGRESADO_MAESTRIA = 'egresado_maestria';
+    case GRADO_MAGISTER = 'grado_magister';
 
     public function label(): string
     {
@@ -25,7 +27,9 @@ enum EducationLevelEnum: string
             self::EGRESADO_UNIVERSITARIO => 'Egresado Universitario',
             self::BACHILLER => 'Grado de Bachiller',
             self::TITULO_PROFESIONAL => 'Título Profesional',
-            self::POSTGRADO => 'Postgrado (Maestría/Doctorado)',
+            self::ESTUDIOS_MAESTRIA => 'Estudios de Maestría',
+            self::EGRESADO_MAESTRIA => 'Egresado de Maestría',
+            self::GRADO_MAGISTER => 'Grado de Magíster',
         };
     }
 
@@ -40,7 +44,9 @@ enum EducationLevelEnum: string
             self::EGRESADO_UNIVERSITARIO => 'Egresado universitario',
             self::BACHILLER => 'Grado académico de bachiller',
             self::TITULO_PROFESIONAL => 'Título profesional universitario',
-            self::POSTGRADO => 'Maestría, Doctorado o Especialización',
+            self::ESTUDIOS_MAESTRIA => 'Cursando estudios de maestría',
+            self::EGRESADO_MAESTRIA => 'Egresado de programa de maestría',
+            self::GRADO_MAGISTER => 'Grado académico de magíster',
         };
     }
 
@@ -55,7 +61,9 @@ enum EducationLevelEnum: string
             self::EGRESADO_UNIVERSITARIO => 6,
             self::BACHILLER => 7,
             self::TITULO_PROFESIONAL => 8,
-            self::POSTGRADO => 9,
+            self::ESTUDIOS_MAESTRIA => 9,
+            self::EGRESADO_MAESTRIA => 10,
+            self::GRADO_MAGISTER => 11,
         };
     }
 
@@ -95,7 +103,9 @@ enum EducationLevelEnum: string
             self::EGRESADO_UNIVERSITARIO,
             self::BACHILLER,
             self::TITULO_PROFESIONAL => 'universitario',
-            self::POSTGRADO => 'postgrado',
+            self::ESTUDIOS_MAESTRIA,
+            self::EGRESADO_MAESTRIA,
+            self::GRADO_MAGISTER => 'postgrado',
         };
     }
 
