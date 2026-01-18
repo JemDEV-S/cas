@@ -47,10 +47,9 @@ class ReniecApiClient
                     'Content-Type' => 'application/json',
                 ]);
 
-            // TEMPORAL: Deshabilitar verificación SSL (solo usar si hay problemas con certificados en el servidor)
-            // TODO: Configurar certificados SSL correctamente en el servidor
-            // IMPORTANTE: Habilitar verificación SSL en producción cuando los certificados estén configurados
-            if (config('app.env') === 'local' || env('RENIEC_DISABLE_SSL_VERIFY', false)) {
+            // Deshabilitar verificación SSL si está configurado (útil si hay problemas con certificados en el servidor)
+            // ADVERTENCIA: Solo usar si es necesario. Reducir seguridad.
+            if (env('RENIEC_DISABLE_SSL_VERIFY', false)) {
                 $httpClient = $httpClient->withoutVerifying();
             }
 
