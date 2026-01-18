@@ -129,6 +129,7 @@
 
     <!-- Formulario -->
     <form method="POST"
+          id="application-form"
           action="{{ route('applicant.job-postings.apply.store', [$posting->id, $jobProfile->id]) }}"
           @submit.prevent="submitApplication"
           class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
@@ -2004,7 +2005,7 @@ function applicationWizard() {
                 return training.courseName && training.institution && training.hours && training.certificationDate;
             });
 
-            const form = document.querySelector('form');
+            const form = document.getElementById('application-form');
 
             // Limpiar campos hidden previos (por si se intenta enviar múltiples veces)
             const oldActionField = form.querySelector('input[name="action"]');
