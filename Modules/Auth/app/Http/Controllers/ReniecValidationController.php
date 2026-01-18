@@ -111,4 +111,63 @@ class ReniecValidationController extends Controller
                 : 'Servicio de RENIEC no configurado o deshabilitado',
         ]);
     }
+
+    /**
+     * Diagnóstico del servicio RENIEC
+     *
+     * GET /api/auth/reniec/diagnostico
+     *
+     * @return JsonResponse
+     */
+    public function diagnostico(): JsonResponse
+    {
+        $diagnostico = [
+            'timestamp' => now()->toDateTimeString(),
+            'configuracion' => [
+                'RENIEC_ENABLED' => config('reniec.enabled'),
+                'RENIEC_API_URL' => config('reniec.api.url'),
+                'RENIEC_API_TOKEN_CONFIGURADO' => !empty(config('reniec.api.token')),
+                'RENIEC_API_TOKEN_LENGTH' => strlen(config('reniec.api.token') ?? ''),
+                'RENIEC_API_TIMEOUT' => config('reniec.api.timeout'),
+                'RENIEC_DISABLE_SSL_VERIFY' => env('RENIEC_DISABLE_SSL_VERIFY', false),
+                'APP_ENV' => config('app.env'),
+            ],
+            'php' => [
+                'version' => PHP_VERSION,
+                'curl_enabled' => function_exists('curl_version'),
+                'curl_version' => function_exists('curl_version') ? curl_version()['version'] : 'N/A',
+                'openssl_enabled' => extension_loaded('openssl'),
+            ],
+            'test_conexion' => null,
+        ];
+
+        // Test de conexión básico
+        try {
+            $testUrl = config('reniec.api.url') . '/dni/complete';
+            $client = \Illuminate\Support\Facades\Http::timeout(5);
+
+            if (env('RENIEC_DISABLE_SSL_VERIFY', false)) {
+                $client = $client->withoutVerifying();
+            }
+
+            $response = $client->get($testUrl, [
+                'document' => '00000000',
+                'key' => config('reniec.api.token'),
+            ]);
+
+            $diagnostico['test_conexion'] = [
+                'status' => 'success',
+                'http_code' => $response->status(),
+                'response_preview' => substr($response->body(), 0, 200),
+            ];
+        } catch (\Exception $e) {
+            $diagnostico['test_conexion'] = [
+                'status' => 'error',
+                'error_message' => $e->getMessage(),
+                'error_class' => get_class($e),
+            ];
+        }
+
+        return response()->json($diagnostico);
+    }
 }

@@ -7,6 +7,7 @@ use Modules\Auth\DTOs\ReniecValidationResultDTO;
 use Modules\Auth\Exceptions\ReniecServiceUnavailableException;
 use Modules\Auth\Exceptions\ReniecValidationException;
 use Modules\Auth\Exceptions\ReniecNotFoundException;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Servicio principal de RENIEC
@@ -82,10 +83,25 @@ class ReniecService
             return ReniecValidationResultDTO::success($personData);
 
         } catch (ReniecNotFoundException $e) {
+            Log::warning('RENIEC Service: DNI no encontrado', [
+                'dni' => substr($dni, -4),
+                'error' => $e->getMessage()
+            ]);
             return ReniecValidationResultDTO::failure($e->getMessage());
         } catch (ReniecValidationException $e) {
+            Log::warning('RENIEC Service: Error de validación', [
+                'dni' => substr($dni, -4),
+                'error' => $e->getMessage()
+            ]);
             return ReniecValidationResultDTO::failure($e->getMessage());
         } catch (\Exception $e) {
+            Log::error('RENIEC Service: Error no controlado en validateWithCheckDigit', [
+                'dni' => substr($dni, -4),
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return ReniecValidationResultDTO::failure(
                 'Error al validar DNI. Por favor, intente nuevamente.'
             );

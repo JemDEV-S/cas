@@ -26,6 +26,10 @@ Route::prefix('auth')->name('auth.')->group(function () {
     // Estado del servicio RENIEC
     Route::get('/reniec/status', [ReniecValidationController::class, 'checkStatus'])
         ->name('reniec.status');
+
+    // Diagnóstico del servicio RENIEC
+    Route::get('/reniec/diagnostico', [ReniecValidationController::class, 'diagnostico'])
+        ->name('reniec.diagnostico');
 });
 
 // Rutas protegidas (con autenticación)
