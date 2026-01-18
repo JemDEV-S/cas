@@ -113,6 +113,12 @@ class JobPostingController extends Controller
         $appliedProfileIds = $userApplications->pluck('jobProfile.id')->toArray();
         $hasApplied = $userApplications->count() > 0;
 
+        // 🔒 NUEVA VALIDACIÓN: Verificar si ya tiene una postulación ENVIADA en esta convocatoria
+        $hasSubmittedApplication = \Modules\Application\Entities\Application::where('applicant_id', $user->id)
+            ->where('status', \Modules\Application\Enums\ApplicationStatus::SUBMITTED)
+            ->whereHas('jobProfile', fn($q) => $q->where('job_posting_id', $id))
+            ->exists();
+
         // Verificar si puede postular (fase de registro)
         $canApply = $currentPhase && in_array($currentPhase->phase?->code ?? '', ['PHASE_03_REGISTRATION', 'REGISTRATION']);
 
@@ -123,7 +129,8 @@ class JobPostingController extends Controller
             'userApplications',
             'appliedProfileIds',
             'currentPhase',
-            'canApply'
+            'canApply',
+            'hasSubmittedApplication'
         ));
     }
 
@@ -165,6 +172,20 @@ class JobPostingController extends Controller
             return redirect()
                 ->route('applicant.applications.show', $existingApplication->id)
                 ->with('info', 'Ya has postulado a este perfil. Puedes editar tu postulación si está en estado Borrador.');
+        }
+
+        // 🔒 NUEVA VALIDACIÓN: Verificar si ya postuló a OTRO perfil en ESTA convocatoria
+        $existingApplicationInPosting = \Modules\Application\Entities\Application::where('applicant_id', $user->id)
+            ->where('status', \Modules\Application\Enums\ApplicationStatus::SUBMITTED)
+            ->whereHas('jobProfile', function($q) use ($postingId) {
+                $q->where('job_posting_id', $postingId);
+            })
+            ->first();
+
+        if ($existingApplicationInPosting) {
+            return redirect()
+                ->route('applicant.job-postings.show', $postingId)
+                ->with('error', 'Ya has postulado a un perfil en esta convocatoria. Solo puedes postular a un perfil por convocatoria.');
         }
 
         // 💎 Cargar catálogo de carreras ACTIVAS, agrupadas y ordenadas
@@ -278,6 +299,20 @@ class JobPostingController extends Controller
                 return redirect()
                     ->back()
                     ->with('error', 'Ya has postulado a este perfil anteriormente');
+            }
+
+            // 🔒 NUEVA VALIDACIÓN: Verificar si ya postuló a OTRO perfil en ESTA convocatoria
+            $existingAppInPosting = \Modules\Application\Entities\Application::where('applicant_id', $user->id)
+                ->where('status', \Modules\Application\Enums\ApplicationStatus::SUBMITTED)
+                ->whereHas('jobProfile', function($q) use ($postingId) {
+                    $q->where('job_posting_id', $postingId);
+                })
+                ->first();
+
+            if ($existingAppInPosting) {
+                return redirect()
+                    ->route('applicant.job-postings.show', $postingId)
+                    ->with('error', 'Ya has postulado a un perfil en esta convocatoria. Solo puedes postular a un perfil por convocatoria.');
             }
 
             // 5. ← ACTUALIZADO: Ya no se asigna vacante al postular, solo se verifica que haya disponibles
