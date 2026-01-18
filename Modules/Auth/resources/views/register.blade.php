@@ -776,8 +776,8 @@
                     validationMessage.classList.add('hidden');
 
                     try {
-                        // Llamar a la API
-                        const response = await fetch('/api/auth/validate-dni', {
+                        // Llamar a la API usando la ruta de Laravel
+                        const response = await fetch('{{ route('api.auth.validate-dni') }}', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
