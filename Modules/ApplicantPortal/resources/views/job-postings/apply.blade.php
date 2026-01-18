@@ -374,13 +374,16 @@
                         </div>
 
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">Carrera Profesional *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                Carrera Profesional
+                                <span x-show="!academic.isRelatedCareer" class="text-red-500">*</span>
+                            </label>
                             <select
                                 :name="`academics[${index}][careerId]`"
                                 x-model="academic.careerId"
-                                @change="checkCareerMatch(index); autoSave()"
+                                @change="if (academic.careerId) { academic.isRelatedCareer = false; academic.relatedCareerName = ''; } checkCareerMatch(index); autoSave()"
                                 class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
-                                required
+                                :required="!academic.isRelatedCareer"
                             >
                                 <option value="">Seleccione una carrera</option>
                                 @foreach($academicCareers as $categoryGroup => $careers)
@@ -431,7 +434,7 @@
                                     <input
                                         type="checkbox"
                                         x-model="academic.isRelatedCareer"
-                                        @change="autoSave"
+                                        @change="if (academic.isRelatedCareer) { academic.careerId = ''; } autoSave()"
                                         class="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                                     >
                                     <span class="ml-3 flex-1">

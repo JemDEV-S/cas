@@ -328,53 +328,46 @@
     <div class="section">
         <div class="section-title">4. Experiencia Laboral</div>
 
-        @if(!empty($experiences) && count($experiences) > 0)
-            <!-- Experiencia General -->
-            @php
-                $generalExps = array_filter($experiences, fn($exp) => empty($exp['is_specific']) || $exp['is_specific'] === false);
-                $specificExps = array_filter($experiences, fn($exp) => !empty($exp['is_specific']) && $exp['is_specific'] === true);
-            @endphp
+        @if(!empty($general_experiences) && count($general_experiences) > 0)
+            <!-- Experiencia General (incluye todas las experiencias) -->
+            <div class="section-subtitle">4.1 Experiencia General</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 25%;">Organización</th>
+                        <th style="width: 25%;">Cargo</th>
+                        <th style="width: 18%;">Fecha Inicio</th>
+                        <th style="width: 18%;">Fecha Fin</th>
+                        <th style="width: 14%;">Tipo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($general_experiences as $exp)
+                    <tr>
+                        <td>{{ strtoupper($exp['organization'] ?? 'N/A') }}</td>
+                        <td>{{ strtoupper($exp['position'] ?? 'N/A') }}</td>
+                        <td class="text-center">{{ $exp['start_date'] ?? $exp['startDate'] ?? 'N/A' }}</td>
+                        <td class="text-center">{{ $exp['end_date'] ?? $exp['endDate'] ?? 'N/A' }}</td>
+                        <td class="text-center">
+                            @if(!empty($exp['is_public_sector']) || !empty($exp['isPublicSector']))
+                                <span class="badge badge-public">PÚBLICO</span>
+                            @else
+                                <span class="badge badge-private">PRIVADO</span>
+                            @endif
+                        </td>
+                    </tr>
+                    @endforeach
+                    @if(!empty($total_general_experience) && !empty($total_general_experience['formatted']))
+                    <tr style="background-color: #ecf0f1; font-weight: bold;">
+                        <td colspan="4" class="text-right">TOTAL EXPERIENCIA GENERAL:</td>
+                        <td class="text-center">{{ strtoupper($total_general_experience['formatted']) }}</td>
+                    </tr>
+                    @endif
+                </tbody>
+            </table>
 
-            @if(count($generalExps) > 0)
-                <div class="section-subtitle">4.1 Experiencia General</div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th style="width: 25%;">Organización</th>
-                            <th style="width: 25%;">Cargo</th>
-                            <th style="width: 18%;">Fecha Inicio</th>
-                            <th style="width: 18%;">Fecha Fin</th>
-                            <th style="width: 14%;">Tipo</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($generalExps as $exp)
-                        <tr>
-                            <td>{{ strtoupper($exp['organization'] ?? 'N/A') }}</td>
-                            <td>{{ strtoupper($exp['position'] ?? 'N/A') }}</td>
-                            <td class="text-center">{{ $exp['start_date'] ?? $exp['startDate'] ?? 'N/A' }}</td>
-                            <td class="text-center">{{ $exp['end_date'] ?? $exp['endDate'] ?? 'N/A' }}</td>
-                            <td class="text-center">
-                                @if(!empty($exp['is_public_sector']) || !empty($exp['isPublicSector']))
-                                    <span class="badge badge-public">PÚBLICO</span>
-                                @else
-                                    <span class="badge badge-private">PRIVADO</span>
-                                @endif
-                            </td>
-                        </tr>
-                        @endforeach
-                        @if(!empty($total_general_experience) && !empty($total_general_experience['formatted']))
-                        <tr style="background-color: #ecf0f1; font-weight: bold;">
-                            <td colspan="4" class="text-right">TOTAL EXPERIENCIA GENERAL:</td>
-                            <td class="text-center">{{ strtoupper($total_general_experience['formatted']) }}</td>
-                        </tr>
-                        @endif
-                    </tbody>
-                </table>
-            @endif
-
-            <!-- Experiencia Específica -->
-            @if(count($specificExps) > 0)
+            <!-- Experiencia Específica (solo las específicas) -->
+            @if(!empty($specific_experiences) && count($specific_experiences) > 0)
                 <div class="section-subtitle">4.2 Experiencia Específica</div>
                 <table>
                     <thead>
@@ -387,7 +380,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach($specificExps as $exp)
+                        @foreach($specific_experiences as $exp)
                         <tr>
                             <td>{{ strtoupper($exp['organization'] ?? 'N/A') }}</td>
                             <td>{{ strtoupper($exp['position'] ?? 'N/A') }}</td>

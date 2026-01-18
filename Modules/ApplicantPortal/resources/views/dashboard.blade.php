@@ -16,7 +16,7 @@
                 <rect width="100" height="100" fill="url(#andean-pattern)"/>
             </svg>
         </div>
-        
+
         <div class="relative px-6 py-8 sm:px-12 sm:py-10">
             <div class="flex flex-col lg:flex-row items-center justify-between gap-6">
                 <!-- Contenido principal -->
@@ -26,7 +26,7 @@
                             <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
                         </svg>
                         <h1 class="text-3xl sm:text-4xl font-bold">
-                            ¡Bienvenido/a, {{ auth()->user()->getFullNameAttribute() ?? 'Usuario' }}! 
+                            ¡Bienvenido/a, {{ auth()->user()->getFullNameAttribute() ?? 'Usuario' }}!
                         </h1>
                     </div>
                     <p class="text-white/90 text-lg mb-4">
@@ -48,13 +48,13 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Mascota - Vicuñita Jerónimo -->
                 <div class="flex-shrink-0">
                     <div class="relative">
                         <!-- Círculo decorativo -->
                         <div class="absolute -inset-4 bg-white/10 rounded-full blur-2xl"></div>
-                        
+
                         <!-- Mascota SVG -->
                         <div class="relative float-animation">
                             <svg class="w-40 h-40 sm:w-48 sm:h-48" viewBox="0 0 200 200" fill="none">
@@ -90,7 +90,7 @@
                                 </g>
                             </svg>
                         </div>
-                        
+
                         <!-- Burbuja de diálogo -->
                         <div class="absolute -right-8 top-0 hidden lg:block">
                             <div class="bg-white rounded-2xl shadow-xl p-4 w-48 relative">
@@ -312,9 +312,9 @@
                 </div>
                 <h2 class="text-lg font-bold text-gray-900">Acciones Rápidas</h2>
             </div>
-            
+
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <button class="group relative overflow-hidden gradient-municipal text-white rounded-xl p-6 hover:shadow-2xl transition-all duration-300 hover:scale-105">
+                <a href="{{ route('applicant.job-postings.index') }}" class="group relative overflow-hidden gradient-municipal text-white rounded-xl p-6 hover:shadow-2xl transition-all duration-300 hover:scale-105 block">
                     <div class="relative z-10 flex flex-col items-center text-center">
                         <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -325,9 +325,9 @@
                         <span class="text-xs text-white/80 mt-1">Aplica a convocatorias</span>
                     </div>
                     <div class="absolute inset-0 bg-gradient-to-r from-white/0 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                </button>
+                </a>
 
-                <button class="group relative overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-gray-200 text-gray-700 rounded-xl p-6 hover:border-municipal-blue hover:shadow-lg transition-all duration-300">
+                {{-- <button class="group relative overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-gray-200 text-gray-700 rounded-xl p-6 hover:border-municipal-blue hover:shadow-lg transition-all duration-300">
                     <div class="relative z-10 flex flex-col items-center text-center">
                         <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-3 shadow-sm group-hover:scale-110 transition-transform">
                             <svg class="w-6 h-6 text-municipal-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -361,18 +361,17 @@
                         <span class="font-bold text-base">Mis Citas</span>
                         <span class="text-xs text-purple-700 mt-1">Entrevistas y pruebas</span>
                     </div>
-                </button>
+                </button> --}}
             </div>
         </div>
     </div>
 
     <!-- Columna derecha - 1/3 -->
-    <div class="space-y-6">
-        <!-- Tarjeta de oportunidades con mascota -->
+    {{-- <div class="space-y-6">
         <div class="relative gradient-municipal rounded-2xl shadow-xl overflow-hidden">
             <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
             <div class="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12"></div>
-            
+
             <div class="relative p-6 text-white">
                 <div class="flex items-start justify-between mb-4">
                     <div>
@@ -386,7 +385,7 @@
                         </svg>
                     </div>
                 </div>
-                
+
                 <div class="space-y-2 mb-5">
                     <div class="flex items-center gap-2 text-sm">
                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -401,7 +400,7 @@
                         <span>5 para técnicos</span>
                     </div>
                 </div>
-                
+
                 <button class="w-full bg-white text-municipal-blue font-bold py-3 rounded-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 flex items-center justify-center gap-2">
                     <span>Explorar Convocatorias</span>
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -409,7 +408,7 @@
                     </svg>
                 </button>
             </div>
-        </div>
+        </div> --}}
 
 
 
@@ -423,7 +422,7 @@
                 </div>
                 <h2 class="text-lg font-bold text-gray-900">Fechas Importantes</h2>
             </div>
-            
+
             <div class="space-y-3"> -->
                 <!-- Fecha 1 - Urgente -->
                 <!-- <div class="group p-4 bg-gradient-to-r from-red-50 to-pink-50 rounded-xl border-2 border-red-200 hover:shadow-lg transition-all duration-300">
@@ -479,7 +478,7 @@
         </div> -->
 
         <!-- Centro de ayuda con Jerónimo -->
-        <div class="bg-gradient-to-br from-purple-50 via-pink-50 to-purple-50 rounded-2xl shadow-sm border-2 border-purple-200 p-6">
+        {{-- <div class="bg-gradient-to-br from-purple-50 via-pink-50 to-purple-50 rounded-2xl shadow-sm border-2 border-purple-200 p-6">
             <div class="flex items-start gap-4 mb-4">
                 <!-- Mini Jerónimo -->
                 <div class="flex-shrink-0">
@@ -493,13 +492,13 @@
                         <ellipse cx="47" cy="22" rx="3" ry="8" fill="#F0C84F" transform="rotate(15 47 22)"/>
                     </svg>
                 </div>
-                
+
                 <div class="flex-1">
                     <h2 class="text-base font-bold text-gray-900 mb-2">¿Necesitas ayuda, amigo/a?</h2>
                     <p class="text-sm text-gray-600 mb-4">Jerónimo está aquí para guiarte en tu postulación</p>
                 </div>
             </div>
-            
+
             <div class="space-y-2">
                 <button class="w-full text-left px-4 py-3 bg-white rounded-xl text-sm font-semibold text-gray-700 hover:bg-purple-100 hover:text-purple-900 transition-all duration-200 flex items-center justify-between group shadow-sm">
                     <div class="flex items-center gap-2">
@@ -512,7 +511,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                     </svg>
                 </button>
-                
+
                 <button class="w-full text-left px-4 py-3 bg-white rounded-xl text-sm font-semibold text-gray-700 hover:bg-purple-100 hover:text-purple-900 transition-all duration-200 flex items-center justify-between group shadow-sm">
                     <div class="flex items-center gap-2">
                         <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -524,7 +523,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                     </svg>
                 </button>
-                
+
                 <button class="w-full text-left px-4 py-3 bg-white rounded-xl text-sm font-semibold text-gray-700 hover:bg-purple-100 hover:text-purple-900 transition-all duration-200 flex items-center justify-between group shadow-sm">
                     <div class="flex items-center gap-2">
                         <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -535,7 +534,7 @@
                     <svg class="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                     </svg>
-                </button>
+                </button> --}}
             </div>
         </div>
     </div>

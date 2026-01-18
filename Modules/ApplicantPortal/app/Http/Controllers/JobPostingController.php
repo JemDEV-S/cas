@@ -395,11 +395,15 @@ class JobPostingController extends Controller
             $relatedCareerName = $academic['relatedCareerName'] ?? null;
             $relatedCareerName = $relatedCareerName === '' ? null : $relatedCareerName;
 
+            // Convertir año a fecha completa (primer día del año)
+            $year = $academic['year'] ?? date('Y');
+            $issueDate = $year . '-01-01';
+
             return new \Modules\Application\DTOs\AcademicDTO(
                 institutionName: $academic['institution'] ?? '',
                 degreeType: $academic['degreeType'] ?? '',
                 degreeTitle: $academic['degreeTitle'] ?? ($academic['careerField'] ?? ''),
-                issueDate: $academic['year'] ?? date('Y'),
+                issueDate: $issueDate,
                 careerField: $academic['careerField'] ?? '',
                 careerId: $careerId,
                 isRelatedCareer: $academic['isRelatedCareer'] ?? false,
@@ -729,8 +733,8 @@ class JobPostingController extends Controller
                 ];
             })->toArray(),
 
-            // Experiencia laboral
-            'experiences' => $application->experiences->map(function ($experience) {
+            // Experiencia laboral general (incluye TODAS las experiencias)
+            'general_experiences' => $application->experiences->map(function ($experience) {
                 return [
                     'organization' => $experience->organization,
                     'position' => $experience->position,
@@ -742,9 +746,22 @@ class JobPostingController extends Controller
                 ];
             })->toArray(),
 
+            // Experiencia laboral específica (solo las específicas)
+            'specific_experiences' => $application->experiences->where('is_specific', true)->map(function ($experience) {
+                return [
+                    'organization' => $experience->organization,
+                    'position' => $experience->position,
+                    'start_date' => $experience->start_date?->format('d/m/Y'),
+                    'end_date' => $experience->end_date?->format('d/m/Y'),
+                    'duration_days' => $experience->duration_days,
+                    'is_specific' => $experience->is_specific,
+                    'is_public_sector' => $experience->is_public_sector,
+                ];
+            })->values()->toArray(),
+
             // Calcular totales de experiencia
             'total_general_experience' => $this->calculateExperienceSummary(
-                $application->experiences->where('is_specific', false)
+                $application->experiences // TODAS las experiencias
             ),
             'total_specific_experience' => $this->calculateExperienceSummary(
                 $application->experiences->where('is_specific', true)
