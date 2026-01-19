@@ -109,19 +109,27 @@
         <!-- Steps indicators -->
         <div class="flex justify-between mt-4">
             <template x-for="step in 8" :key="step">
-                <div class="flex flex-col items-center">
-                    <div class="step-indicator w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all"
+                <div class="flex flex-col items-center cursor-pointer" @click="currentStep = step">
+                    <div class="step-indicator w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all relative"
                          :class="{
-                             'bg-gradient-to-r from-blue-500 to-blue-600 text-white active': currentStep === step,
-                             'completed text-white': currentStep > step,
-                             'bg-gray-200 text-gray-500': currentStep < step
+                             'bg-gradient-to-r from-blue-500 to-blue-600 text-white active': currentStep === step && !stepHasErrors(step),
+                             'bg-gradient-to-r from-red-500 to-red-600 text-white': currentStep === step && stepHasErrors(step),
+                             'completed text-white': currentStep > step && !stepHasErrors(step),
+                             'bg-red-500 text-white': currentStep > step && stepHasErrors(step),
+                             'bg-gray-200 text-gray-500': currentStep < step && !stepHasErrors(step),
+                             'bg-red-200 text-red-700': currentStep < step && stepHasErrors(step)
                          }">
-                        <span x-show="currentStep >= step" x-text="step"></span>
-                        <svg x-show="currentStep > step" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                        </svg>
+                        <span x-show="!stepHasErrors(step)" x-text="step"></span>
+                        <span x-show="stepHasErrors(step)" class="text-xs">!</span>
+                        <!-- Indicador de error -->
+                        <span x-show="stepHasErrors(step)"
+                              class="absolute -top-1 -right-1 w-4 h-4 bg-red-600 rounded-full text-white text-xs flex items-center justify-center border-2 border-white">
+                            <span x-text="validateStep(step).length"></span>
+                        </span>
                     </div>
-                    <div class="text-xs mt-1 text-gray-500 hidden md:block" x-text="getStepName(step)"></div>
+                    <div class="text-xs mt-1 hidden md:block"
+                         :class="stepHasErrors(step) ? 'text-red-600 font-semibold' : 'text-gray-500'"
+                         x-text="getStepName(step)"></div>
                 </div>
             </template>
         </div>
@@ -1326,16 +1334,208 @@
                 </div>
             </div>
 
+            <!-- ============================================ -->
+            <!-- RESUMEN DE ERRORES DE VALIDACIÓN -->
+            <!-- ============================================ -->
+            <div x-show="getTotalErrorCount() > 0" class="mb-6">
+                <div class="bg-red-50 border-2 border-red-300 rounded-xl p-6">
+                    <div class="flex items-start gap-4 mb-4">
+                        <div class="flex-shrink-0">
+                            <svg class="w-8 h-8 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="text-lg font-bold text-red-900 mb-1">
+                                ⚠️ Hay campos con errores o incompletos
+                            </h3>
+                            <p class="text-sm text-red-700">
+                                Se encontraron <strong x-text="getTotalErrorCount()"></strong> campo(s) que necesitan ser corregidos antes de enviar tu postulación.
+                                Haz clic en "Ir al paso" para corregir cada error.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Errores agrupados por paso -->
+                    <div class="space-y-4">
+                        <!-- Paso 1: Datos Personales -->
+                        <template x-if="stepHasErrors(1)">
+                            <div class="bg-white border border-red-200 rounded-lg p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="font-semibold text-red-800 flex items-center">
+                                        <span class="w-6 h-6 rounded-full bg-red-100 text-red-700 text-xs flex items-center justify-center mr-2">1</span>
+                                        Datos Personales
+                                    </h4>
+                                    <button type="button" @click="currentStep = 1" class="text-red-600 text-sm font-medium hover:underline">
+                                        Ir al paso →
+                                    </button>
+                                </div>
+                                <ul class="space-y-1">
+                                    <template x-for="error in validateStep(1)" :key="error.field">
+                                        <li class="flex items-start text-sm text-red-700">
+                                            <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                            </svg>
+                                            <span><strong x-text="error.field"></strong>: <span x-text="error.message"></span></span>
+                                        </li>
+                                    </template>
+                                </ul>
+                            </div>
+                        </template>
+
+                        <!-- Paso 2: Formación Académica -->
+                        <template x-if="stepHasErrors(2)">
+                            <div class="bg-white border border-red-200 rounded-lg p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="font-semibold text-red-800 flex items-center">
+                                        <span class="w-6 h-6 rounded-full bg-red-100 text-red-700 text-xs flex items-center justify-center mr-2">2</span>
+                                        Formación Académica
+                                    </h4>
+                                    <button type="button" @click="currentStep = 2" class="text-red-600 text-sm font-medium hover:underline">
+                                        Ir al paso →
+                                    </button>
+                                </div>
+                                <ul class="space-y-1">
+                                    <template x-for="error in validateStep(2)" :key="error.field">
+                                        <li class="flex items-start text-sm text-red-700">
+                                            <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                            </svg>
+                                            <span><strong x-text="error.field"></strong>: <span x-text="error.message"></span></span>
+                                        </li>
+                                    </template>
+                                </ul>
+                            </div>
+                        </template>
+
+                        <!-- Paso 3: Experiencia Laboral -->
+                        <template x-if="stepHasErrors(3)">
+                            <div class="bg-white border border-red-200 rounded-lg p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="font-semibold text-red-800 flex items-center">
+                                        <span class="w-6 h-6 rounded-full bg-red-100 text-red-700 text-xs flex items-center justify-center mr-2">3</span>
+                                        Experiencia Laboral
+                                    </h4>
+                                    <button type="button" @click="currentStep = 3" class="text-red-600 text-sm font-medium hover:underline">
+                                        Ir al paso →
+                                    </button>
+                                </div>
+                                <ul class="space-y-1">
+                                    <template x-for="error in validateStep(3)" :key="error.field">
+                                        <li class="flex items-start text-sm text-red-700">
+                                            <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                            </svg>
+                                            <span><strong x-text="error.field"></strong>: <span x-text="error.message"></span></span>
+                                        </li>
+                                    </template>
+                                </ul>
+                            </div>
+                        </template>
+
+                        <!-- Paso 4: Capacitaciones -->
+                        <template x-if="stepHasErrors(4)">
+                            <div class="bg-white border border-red-200 rounded-lg p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="font-semibold text-red-800 flex items-center">
+                                        <span class="w-6 h-6 rounded-full bg-red-100 text-red-700 text-xs flex items-center justify-center mr-2">4</span>
+                                        Capacitaciones
+                                    </h4>
+                                    <button type="button" @click="currentStep = 4" class="text-red-600 text-sm font-medium hover:underline">
+                                        Ir al paso →
+                                    </button>
+                                </div>
+                                <ul class="space-y-1">
+                                    <template x-for="error in validateStep(4)" :key="error.field">
+                                        <li class="flex items-start text-sm text-red-700">
+                                            <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                            </svg>
+                                            <span><strong x-text="error.field"></strong>: <span x-text="error.message"></span></span>
+                                        </li>
+                                    </template>
+                                </ul>
+                            </div>
+                        </template>
+
+                        <!-- Paso 6: Registros Profesionales -->
+                        <template x-if="stepHasErrors(6)">
+                            <div class="bg-white border border-red-200 rounded-lg p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="font-semibold text-red-800 flex items-center">
+                                        <span class="w-6 h-6 rounded-full bg-red-100 text-red-700 text-xs flex items-center justify-center mr-2">6</span>
+                                        Registros Profesionales
+                                    </h4>
+                                    <button type="button" @click="currentStep = 6" class="text-red-600 text-sm font-medium hover:underline">
+                                        Ir al paso →
+                                    </button>
+                                </div>
+                                <ul class="space-y-1">
+                                    <template x-for="error in validateStep(6)" :key="error.field">
+                                        <li class="flex items-start text-sm text-red-700">
+                                            <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                            </svg>
+                                            <span><strong x-text="error.field"></strong>: <span x-text="error.message"></span></span>
+                                        </li>
+                                    </template>
+                                </ul>
+                            </div>
+                        </template>
+
+                        <!-- Paso 8: Declaraciones -->
+                        <template x-if="stepHasErrors(8)">
+                            <div class="bg-white border border-red-200 rounded-lg p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="font-semibold text-red-800 flex items-center">
+                                        <span class="w-6 h-6 rounded-full bg-red-100 text-red-700 text-xs flex items-center justify-center mr-2">8</span>
+                                        Declaraciones
+                                    </h4>
+                                </div>
+                                <ul class="space-y-1">
+                                    <template x-for="error in validateStep(8)" :key="error.field">
+                                        <li class="flex items-start text-sm text-red-700">
+                                            <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                            </svg>
+                                            <span><strong x-text="error.field"></strong>: <span x-text="error.message"></span></span>
+                                        </li>
+                                    </template>
+                                </ul>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mensaje cuando no hay errores -->
+            <div x-show="getTotalErrorCount() === 0" class="mb-6">
+                <div class="bg-green-50 border-2 border-green-300 rounded-xl p-4">
+                    <div class="flex items-center gap-3">
+                        <svg class="w-6 h-6 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                        </svg>
+                        <p class="text-green-800 font-medium">
+                            ✓ Todos los campos obligatorios están completos y con formato válido
+                        </p>
+                    </div>
+                </div>
+            </div>
+
             <!-- Resumen de datos -->
             <div class="space-y-4 mb-6">
                 <!-- Datos Personales -->
-                <div class="border-2 border-gray-200 rounded-xl p-5 bg-white hover:shadow-md transition-shadow">
+                <div class="border-2 rounded-xl p-5 bg-white hover:shadow-md transition-shadow"
+                     :class="stepHasErrors(1) ? 'border-red-300' : 'border-gray-200'">
                     <div class="flex items-center justify-between mb-2">
                         <h4 class="font-bold text-gray-900 flex items-center">
-                            <svg class="w-5 h-5 mr-2 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                            <svg class="w-5 h-5 mr-2" :class="stepHasErrors(1) ? 'text-red-600' : 'text-blue-600'" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
                             </svg>
                             Datos Personales
+                            <span x-show="stepHasErrors(1)" class="ml-2 text-xs text-red-600 font-normal">
+                                (<span x-text="validateStep(1).length"></span> error(es))
+                            </span>
                         </h4>
                         <button type="button" @click="currentStep = 1" class="text-blue-600 text-sm hover:underline">Editar</button>
                     </div>
@@ -1344,13 +1544,17 @@
                 </div>
 
                 <!-- Formación Académica -->
-                <div class="border-2 border-gray-200 rounded-xl p-5 bg-white hover:shadow-md transition-shadow">
+                <div class="border-2 rounded-xl p-5 bg-white hover:shadow-md transition-shadow"
+                     :class="stepHasErrors(2) ? 'border-red-300' : 'border-gray-200'">
                     <div class="flex items-center justify-between mb-2">
                         <h4 class="font-bold text-gray-900 flex items-center">
-                            <svg class="w-5 h-5 mr-2 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                            <svg class="w-5 h-5 mr-2" :class="stepHasErrors(2) ? 'text-red-600' : 'text-blue-600'" fill="currentColor" viewBox="0 0 20 20">
                                 <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z"/>
                             </svg>
                             Formación Académica
+                            <span x-show="stepHasErrors(2)" class="ml-2 text-xs text-red-600 font-normal">
+                                (<span x-text="validateStep(2).length"></span> error(es))
+                            </span>
                         </h4>
                         <button type="button" @click="currentStep = 2" class="text-blue-600 text-sm hover:underline">Editar</button>
                     </div>
@@ -1365,14 +1569,18 @@
                 </div>
 
                 <!-- Experiencia Laboral -->
-                <div class="border-2 border-gray-200 rounded-xl p-5 bg-white hover:shadow-md transition-shadow">
+                <div class="border-2 rounded-xl p-5 bg-white hover:shadow-md transition-shadow"
+                     :class="stepHasErrors(3) ? 'border-red-300' : 'border-gray-200'">
                     <div class="flex items-center justify-between mb-2">
                         <h4 class="font-bold text-gray-900 flex items-center">
-                            <svg class="w-5 h-5 mr-2 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                            <svg class="w-5 h-5 mr-2" :class="stepHasErrors(3) ? 'text-red-600' : 'text-blue-600'" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clip-rule="evenodd"/>
                                 <path d="M2 13.692V16a2 2 0 002 2h12a2 2 0 002-2v-2.308A24.974 24.974 0 0110 15c-2.796 0-5.487-.46-8-1.308z"/>
                             </svg>
                             Experiencia Laboral
+                            <span x-show="stepHasErrors(3)" class="ml-2 text-xs text-red-600 font-normal">
+                                (<span x-text="validateStep(3).length"></span> error(es))
+                            </span>
                         </h4>
                         <button type="button" @click="currentStep = 3" class="text-blue-600 text-sm hover:underline">Editar</button>
                     </div>
@@ -1392,14 +1600,18 @@
                 </div>
 
                 <!-- Capacitaciones -->
-                <div class="border-2 border-gray-200 rounded-xl p-5 bg-white hover:shadow-md transition-shadow">
+                <div class="border-2 rounded-xl p-5 bg-white hover:shadow-md transition-shadow"
+                     :class="stepHasErrors(4) ? 'border-red-300' : 'border-gray-200'">
                     <div class="flex items-center justify-between mb-2">
                         <h4 class="font-bold text-gray-900 flex items-center">
-                            <svg class="w-5 h-5 mr-2 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                            <svg class="w-5 h-5 mr-2" :class="stepHasErrors(4) ? 'text-red-600' : 'text-blue-600'" fill="currentColor" viewBox="0 0 20 20">
                                 <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
                                 <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm9.707 5.707a1 1 0 00-1.414-1.414L9 12.586l-1.293-1.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                             </svg>
                             Capacitaciones
+                            <span x-show="stepHasErrors(4)" class="ml-2 text-xs text-red-600 font-normal">
+                                (<span x-text="validateStep(4).length"></span> error(es))
+                            </span>
                         </h4>
                         <button type="button" @click="currentStep = 4" class="text-blue-600 text-sm hover:underline">Editar</button>
                     </div>
@@ -1496,12 +1708,13 @@
 
                 <button type="submit"
                         x-show="currentStep === 8"
-                        :disabled="!formData.termsAccepted || !formData.declarationAccepted"
+                        :disabled="!formData.termsAccepted || !formData.declarationAccepted || getTotalErrorCount() > 0"
                         class="px-6 py-3 gradient-municipal text-white font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                     <svg class="w-5 h-5 inline mr-2" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                     </svg>
-                    Enviar Postulación
+                    <span x-show="getTotalErrorCount() === 0">Enviar Postulación</span>
+                    <span x-show="getTotalErrorCount() > 0">Corregir Errores (<span x-text="getTotalErrorCount()"></span>)</span>
                 </button>
             </div>
         </div>
@@ -1520,6 +1733,52 @@ function applicationWizard() {
         educationLevels: @json($educationLevels),
         minimumEducationLevel: @json($minimumEducationLevel ? $minimumEducationLevel->value : null),
         minimumEducationLevelValue: @json($minimumEducationLevel ? $minimumEducationLevel->level() : 0),
+
+        // ============================================
+        // SISTEMA DE VALIDACIÓN
+        // ============================================
+        validationErrors: [],
+        touchedFields: {},
+
+        // Reglas de validación por campo
+        validationRules: {
+            // Datos personales (PersonalDataDTO)
+            'personal.fullName': { required: true, label: 'Nombre Completo' },
+            'personal.dni': { required: true, pattern: /^[0-9]{8}$/, label: 'DNI', message: 'El DNI debe tener exactamente 8 dígitos' },
+            'personal.birthDate': { required: true, type: 'date', label: 'Fecha de Nacimiento' },
+            'personal.address': { required: true, minLength: 10, label: 'Dirección', message: 'La dirección debe tener al menos 10 caracteres' },
+            'personal.phone': { required: true, pattern: /^[0-9\-\s]{7,15}$/, label: 'Teléfono', message: 'Ingrese un número de teléfono válido' },
+            'personal.email': { required: true, type: 'email', label: 'Email', message: 'Ingrese un email válido' },
+
+            // Formación académica (AcademicDTO)
+            'academic.degreeType': { required: true, label: 'Grado Académico' },
+            'academic.institution': { required: true, minLength: 3, label: 'Institución Educativa', message: 'El nombre de la institución es muy corto' },
+            'academic.careerId': { required: false, label: 'Carrera Profesional' }, // Requerido solo si no es carrera afín
+            'academic.relatedCareerName': { required: false, minLength: 5, label: 'Nombre de Carrera Afín', message: 'El nombre de la carrera debe tener al menos 5 caracteres' },
+            'academic.year': { required: true, type: 'year', min: 1950, label: 'Año de Graduación', message: 'Ingrese un año válido' },
+
+            // Experiencia laboral (ExperienceDTO)
+            'experience.organization': { required: true, minLength: 3, label: 'Empresa/Organización', message: 'El nombre de la organización es muy corto' },
+            'experience.position': { required: true, minLength: 3, label: 'Cargo/Puesto', message: 'El nombre del cargo es muy corto' },
+            'experience.startDate': { required: true, type: 'date', label: 'Fecha de Inicio' },
+            'experience.endDate': { required: false, type: 'date', label: 'Fecha de Fin' }, // Requerido solo si no es trabajo actual
+
+            // Capacitaciones (TrainingDTO)
+            'training.courseName': { required: true, minLength: 5, label: 'Nombre del Curso', message: 'El nombre del curso es muy corto' },
+            'training.institution': { required: true, minLength: 3, label: 'Institución', message: 'El nombre de la institución es muy corto' },
+            'training.hours': { required: true, type: 'number', min: 1, label: 'Horas', message: 'Las horas deben ser mayor a 0' },
+            'training.certificationDate': { required: true, type: 'month', label: 'Fecha de Certificación' },
+
+            // Registros profesionales (ProfessionalRegistrationDTO)
+            'registration.colegiatura.college': { required: false, minLength: 5, label: 'Colegio Profesional' },
+            'registration.colegiatura.number': { required: false, minLength: 3, label: 'Número de Colegiatura' },
+
+            // Capacitaciones requeridas
+            'requiredCourse.institution': { required: true, minLength: 3, label: 'Institución', message: 'El nombre de la institución es muy corto' },
+            'requiredCourse.year': { required: true, type: 'year', min: 1990, label: 'Año', message: 'Ingrese un año válido' },
+            'requiredCourse.hours': { required: true, type: 'number', min: 1, label: 'Horas', message: 'Las horas deben ser mayor a 0' },
+            'requiredCourse.relatedCourseName': { required: true, minLength: 5, label: 'Nombre de Capacitación Afín', message: 'El nombre debe tener al menos 5 caracteres' },
+        },
 
         formData: {
             personal: {
@@ -1628,6 +1887,371 @@ function applicationWizard() {
                 8: 'Confirmación'
             };
             return names[step] || '';
+        },
+
+        // ============================================
+        // FUNCIONES DE VALIDACIÓN
+        // ============================================
+
+        // Marcar campo como tocado (para mostrar errores solo después de interacción)
+        markTouched(fieldKey) {
+            this.touchedFields[fieldKey] = true;
+        },
+
+        // Validar un valor según las reglas
+        validateValue(value, rules) {
+            const errors = [];
+
+            // Validar requerido
+            if (rules.required && (!value || (typeof value === 'string' && value.trim() === ''))) {
+                errors.push(rules.message || `${rules.label} es requerido`);
+                return errors;
+            }
+
+            // Si no hay valor y no es requerido, no validar más
+            if (!value || (typeof value === 'string' && value.trim() === '')) {
+                return errors;
+            }
+
+            // Validar patrón (regex)
+            if (rules.pattern && !rules.pattern.test(value)) {
+                errors.push(rules.message || `${rules.label} tiene un formato inválido`);
+            }
+
+            // Validar tipo email
+            if (rules.type === 'email') {
+                const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailPattern.test(value)) {
+                    errors.push(rules.message || 'Ingrese un email válido');
+                }
+            }
+
+            // Validar tipo fecha
+            if (rules.type === 'date') {
+                const date = new Date(value);
+                if (isNaN(date.getTime())) {
+                    errors.push(rules.message || 'Ingrese una fecha válida');
+                }
+            }
+
+            // Validar tipo mes (YYYY-MM)
+            if (rules.type === 'month') {
+                const monthPattern = /^\d{4}-(0[1-9]|1[0-2])$/;
+                if (!monthPattern.test(value)) {
+                    errors.push(rules.message || 'Ingrese un mes válido (YYYY-MM)');
+                }
+            }
+
+            // Validar tipo año
+            if (rules.type === 'year') {
+                const year = parseInt(value);
+                const currentYear = new Date().getFullYear();
+                if (isNaN(year) || year < (rules.min || 1900) || year > currentYear) {
+                    errors.push(rules.message || `Ingrese un año válido entre ${rules.min || 1900} y ${currentYear}`);
+                }
+            }
+
+            // Validar tipo número
+            if (rules.type === 'number') {
+                const num = parseFloat(value);
+                if (isNaN(num)) {
+                    errors.push(rules.message || 'Ingrese un número válido');
+                } else if (rules.min !== undefined && num < rules.min) {
+                    errors.push(rules.message || `El valor debe ser al menos ${rules.min}`);
+                } else if (rules.max !== undefined && num > rules.max) {
+                    errors.push(rules.message || `El valor debe ser máximo ${rules.max}`);
+                }
+            }
+
+            // Validar longitud mínima
+            if (rules.minLength && value.length < rules.minLength) {
+                errors.push(rules.message || `${rules.label} debe tener al menos ${rules.minLength} caracteres`);
+            }
+
+            // Validar longitud máxima
+            if (rules.maxLength && value.length > rules.maxLength) {
+                errors.push(rules.message || `${rules.label} debe tener máximo ${rules.maxLength} caracteres`);
+            }
+
+            return errors;
+        },
+
+        // Obtener error de un campo específico
+        getFieldError(fieldKey, value, customRules = null) {
+            const rules = customRules || this.validationRules[fieldKey];
+            if (!rules) return '';
+
+            const errors = this.validateValue(value, rules);
+            return errors.length > 0 ? errors[0] : '';
+        },
+
+        // Verificar si un campo tiene error
+        hasFieldError(fieldKey, value, customRules = null) {
+            return this.getFieldError(fieldKey, value, customRules) !== '';
+        },
+
+        // Verificar si el campo fue tocado y tiene error
+        showFieldError(fieldKey, value, customRules = null) {
+            return this.touchedFields[fieldKey] && this.hasFieldError(fieldKey, value, customRules);
+        },
+
+        // Obtener clase CSS para el input según estado de validación
+        getInputClass(fieldKey, value, customRules = null, baseClass = '') {
+            if (!this.touchedFields[fieldKey]) {
+                return baseClass + ' border-gray-300 focus:ring-blue-500 focus:border-blue-500';
+            }
+
+            if (this.hasFieldError(fieldKey, value, customRules)) {
+                return baseClass + ' border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50';
+            }
+
+            return baseClass + ' border-green-500 focus:ring-green-500 focus:border-green-500 bg-green-50';
+        },
+
+        // Validar todos los campos de un paso
+        validateStep(stepNumber) {
+            const errors = [];
+
+            switch (stepNumber) {
+                case 1: // Datos personales
+                    errors.push(...this.validatePersonalData());
+                    break;
+                case 2: // Formación académica
+                    errors.push(...this.validateAcademics());
+                    break;
+                case 3: // Experiencia laboral
+                    errors.push(...this.validateExperiences());
+                    break;
+                case 4: // Capacitaciones
+                    errors.push(...this.validateTrainings());
+                    break;
+                case 6: // Registros profesionales
+                    errors.push(...this.validateRegistrations());
+                    break;
+                case 8: // Declaraciones
+                    errors.push(...this.validateDeclarations());
+                    break;
+            }
+
+            return errors;
+        },
+
+        // Validar datos personales
+        validatePersonalData() {
+            const errors = [];
+            const p = this.formData.personal;
+
+            if (!p.fullName || p.fullName.trim() === '') {
+                errors.push({ step: 1, field: 'Nombre Completo', message: 'El nombre completo es requerido' });
+            }
+            if (!p.dni || !/^[0-9]{8}$/.test(p.dni)) {
+                errors.push({ step: 1, field: 'DNI', message: 'El DNI debe tener exactamente 8 dígitos' });
+            }
+            if (!p.birthDate) {
+                errors.push({ step: 1, field: 'Fecha de Nacimiento', message: 'La fecha de nacimiento es requerida' });
+            }
+            if (!p.address || p.address.length < 10) {
+                errors.push({ step: 1, field: 'Dirección', message: 'La dirección debe tener al menos 10 caracteres' });
+            }
+            if (!p.phone || !/^[0-9\-\s]{7,15}$/.test(p.phone)) {
+                errors.push({ step: 1, field: 'Teléfono', message: 'Ingrese un número de teléfono válido (7-15 dígitos)' });
+            }
+            if (!p.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.email)) {
+                errors.push({ step: 1, field: 'Email', message: 'Ingrese un email válido' });
+            }
+
+            return errors;
+        },
+
+        // Validar formación académica
+        validateAcademics() {
+            const errors = [];
+            const currentYear = new Date().getFullYear();
+
+            this.formData.academics.forEach((academic, index) => {
+                const prefix = `Título/Grado ${index + 1}`;
+
+                if (!academic.degreeType) {
+                    errors.push({ step: 2, field: `${prefix} - Grado Académico`, message: 'Seleccione un grado académico' });
+                }
+                if (!academic.institution || academic.institution.length < 3) {
+                    errors.push({ step: 2, field: `${prefix} - Institución`, message: 'Ingrese el nombre de la institución (mín. 3 caracteres)' });
+                }
+
+                // Carrera: requerida si no es carrera afín
+                if (!academic.isRelatedCareer && !academic.careerId) {
+                    errors.push({ step: 2, field: `${prefix} - Carrera Profesional`, message: 'Seleccione una carrera o marque "carrera afín"' });
+                }
+
+                // Si es carrera afín, el nombre es requerido
+                if (academic.isRelatedCareer && (!academic.relatedCareerName || academic.relatedCareerName.length < 5)) {
+                    errors.push({ step: 2, field: `${prefix} - Nombre de Carrera Afín`, message: 'Ingrese el nombre de su carrera (mín. 5 caracteres)' });
+                }
+
+                if (!academic.year || academic.year < 1950 || academic.year > currentYear) {
+                    errors.push({ step: 2, field: `${prefix} - Año de Graduación`, message: `Ingrese un año válido (1950-${currentYear})` });
+                }
+            });
+
+            return errors;
+        },
+
+        // Validar experiencia laboral
+        validateExperiences() {
+            const errors = [];
+
+            this.formData.experiences.forEach((exp, index) => {
+                const prefix = `Experiencia ${index + 1}`;
+
+                if (!exp.organization || exp.organization.length < 3) {
+                    errors.push({ step: 3, field: `${prefix} - Empresa/Organización`, message: 'Ingrese el nombre de la organización (mín. 3 caracteres)' });
+                }
+                if (!exp.position || exp.position.length < 3) {
+                    errors.push({ step: 3, field: `${prefix} - Cargo/Puesto`, message: 'Ingrese el nombre del cargo (mín. 3 caracteres)' });
+                }
+                if (!exp.startDate) {
+                    errors.push({ step: 3, field: `${prefix} - Fecha de Inicio`, message: 'Seleccione la fecha de inicio' });
+                }
+
+                // Fecha de fin requerida si no es trabajo actual
+                if (!exp.isCurrent && !exp.endDate) {
+                    errors.push({ step: 3, field: `${prefix} - Fecha de Fin`, message: 'Seleccione la fecha de fin o marque "Trabajo actual"' });
+                }
+
+                // Validar que fecha de fin sea posterior a fecha de inicio
+                if (exp.startDate && exp.endDate && new Date(exp.endDate) < new Date(exp.startDate)) {
+                    errors.push({ step: 3, field: `${prefix} - Fechas`, message: 'La fecha de fin debe ser posterior a la fecha de inicio' });
+                }
+            });
+
+            return errors;
+        },
+
+        // Validar capacitaciones
+        validateTrainings() {
+            const errors = [];
+            const currentYear = new Date().getFullYear();
+
+            // Validar capacitaciones requeridas
+            this.formData.requiredCoursesCompliance.forEach((course, index) => {
+                const courseName = @json($jobProfile->required_courses ?? [])[index] || `Capacitación requerida ${index + 1}`;
+
+                if (course.status === 'exact') {
+                    // Si marcó que tiene la capacitación exacta, validar campos
+                    if (!course.institution || course.institution.length < 3) {
+                        errors.push({ step: 4, field: `${courseName} - Institución`, message: 'Ingrese la institución (mín. 3 caracteres)' });
+                    }
+                    if (!course.year || course.year < 1990 || course.year > currentYear) {
+                        errors.push({ step: 4, field: `${courseName} - Año`, message: `Ingrese un año válido (1990-${currentYear})` });
+                    }
+                    if (!course.hours || course.hours < 1) {
+                        errors.push({ step: 4, field: `${courseName} - Horas`, message: 'Las horas deben ser mayor a 0' });
+                    }
+                } else if (course.status === 'related') {
+                    // Si marcó capacitación afín, validar sus campos
+                    if (!course.relatedCourseName || course.relatedCourseName.length < 5) {
+                        errors.push({ step: 4, field: `${courseName} - Nombre de capacitación afín`, message: 'Ingrese el nombre de su capacitación (mín. 5 caracteres)' });
+                    }
+                    if (!course.relatedInstitution || course.relatedInstitution.length < 3) {
+                        errors.push({ step: 4, field: `${courseName} - Institución (afín)`, message: 'Ingrese la institución (mín. 3 caracteres)' });
+                    }
+                    if (!course.relatedYear || course.relatedYear < 1990 || course.relatedYear > currentYear) {
+                        errors.push({ step: 4, field: `${courseName} - Año (afín)`, message: `Ingrese un año válido (1990-${currentYear})` });
+                    }
+                    if (!course.relatedHours || course.relatedHours < 1) {
+                        errors.push({ step: 4, field: `${courseName} - Horas (afín)`, message: 'Las horas deben ser mayor a 0' });
+                    }
+                }
+                // Si status es 'none' o vacío, no requiere campos adicionales
+            });
+
+            // Validar capacitaciones adicionales (solo si tienen datos parciales)
+            this.formData.additionalTrainings.forEach((training, index) => {
+                const prefix = `Capacitación adicional ${index + 1}`;
+                const hasAnyField = training.courseName || training.institution || training.hours || training.certificationDate;
+
+                if (hasAnyField) {
+                    if (!training.courseName || training.courseName.length < 5) {
+                        errors.push({ step: 4, field: `${prefix} - Nombre del Curso`, message: 'Ingrese el nombre del curso (mín. 5 caracteres)' });
+                    }
+                    if (!training.institution || training.institution.length < 3) {
+                        errors.push({ step: 4, field: `${prefix} - Institución`, message: 'Ingrese la institución (mín. 3 caracteres)' });
+                    }
+                    if (!training.hours || training.hours < 1) {
+                        errors.push({ step: 4, field: `${prefix} - Horas`, message: 'Las horas deben ser mayor a 0' });
+                    }
+                    if (!training.certificationDate) {
+                        errors.push({ step: 4, field: `${prefix} - Fecha de Certificación`, message: 'Seleccione el mes/año de certificación' });
+                    }
+                }
+            });
+
+            return errors;
+        },
+
+        // Validar registros profesionales
+        validateRegistrations() {
+            const errors = [];
+            const colegiaturaRequired = {{ $jobProfile->colegiatura_required ? 'true' : 'false' }};
+
+            if (colegiaturaRequired && this.formData.registrations.colegiatura.habilitado) {
+                if (!this.formData.registrations.colegiatura.college || this.formData.registrations.colegiatura.college.length < 5) {
+                    errors.push({ step: 6, field: 'Colegio Profesional', message: 'Ingrese el nombre del colegio profesional (mín. 5 caracteres)' });
+                }
+                if (!this.formData.registrations.colegiatura.number || this.formData.registrations.colegiatura.number.length < 3) {
+                    errors.push({ step: 6, field: 'Número de Colegiatura', message: 'Ingrese el número de colegiatura (mín. 3 caracteres)' });
+                }
+            }
+
+            return errors;
+        },
+
+        // Validar declaraciones
+        validateDeclarations() {
+            const errors = [];
+
+            if (!this.formData.declarationAccepted) {
+                errors.push({ step: 8, field: 'Declaración Jurada', message: 'Debe aceptar la declaración jurada' });
+            }
+            if (!this.formData.termsAccepted) {
+                errors.push({ step: 8, field: 'Términos y Condiciones', message: 'Debe aceptar los términos y condiciones' });
+            }
+
+            return errors;
+        },
+
+        // Obtener todos los errores de validación del formulario completo
+        getAllValidationErrors() {
+            const allErrors = [];
+            for (let step = 1; step <= 8; step++) {
+                allErrors.push(...this.validateStep(step));
+            }
+            return allErrors;
+        },
+
+        // Obtener errores agrupados por paso
+        getErrorsByStep() {
+            const allErrors = this.getAllValidationErrors();
+            const grouped = {};
+
+            allErrors.forEach(error => {
+                if (!grouped[error.step]) {
+                    grouped[error.step] = [];
+                }
+                grouped[error.step].push(error);
+            });
+
+            return grouped;
+        },
+
+        // Verificar si un paso tiene errores
+        stepHasErrors(stepNumber) {
+            return this.validateStep(stepNumber).length > 0;
+        },
+
+        // Contar errores totales
+        getTotalErrorCount() {
+            return this.getAllValidationErrors().length;
         },
 
         get stepTitle() {
@@ -1981,26 +2605,52 @@ function applicationWizard() {
         },
 
         submitApplication() {
-            // 1. Validar que se aceptaron los términos
+            // ============================================
+            // VALIDACIÓN COMPLETA ANTES DE ENVIAR
+            // ============================================
+
+            // 1. Obtener todos los errores de validación
+            const allErrors = this.getAllValidationErrors();
+
+            // 2. Si hay errores, mostrar resumen y no enviar
+            if (allErrors.length > 0) {
+                // Scroll al inicio de la página para ver los errores
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+
+                // Mostrar alerta con resumen de errores
+                const errorsByStep = this.getErrorsByStep();
+                let errorMessage = `Se encontraron ${allErrors.length} error(es) en el formulario:\n\n`;
+
+                const stepNames = {
+                    1: 'Datos Personales',
+                    2: 'Formación Académica',
+                    3: 'Experiencia Laboral',
+                    4: 'Capacitaciones',
+                    6: 'Registros Profesionales',
+                    8: 'Declaraciones'
+                };
+
+                for (const [step, errors] of Object.entries(errorsByStep)) {
+                    errorMessage += `📋 ${stepNames[step] || `Paso ${step}`}:\n`;
+                    errors.forEach(err => {
+                        errorMessage += `   • ${err.field}: ${err.message}\n`;
+                    });
+                    errorMessage += '\n';
+                }
+
+                errorMessage += 'Por favor, corrige los errores antes de enviar la postulación.';
+
+                alert(errorMessage);
+                return;
+            }
+
+            // 3. Validar que se aceptaron los términos (doble verificación)
             if (!this.formData.termsAccepted || !this.formData.declarationAccepted) {
                 alert('Debes aceptar la declaración jurada y los términos y condiciones');
                 return;
             }
 
-            // 2. Validar capacitaciones adicionales (si tienen datos parciales)
-            const incompleteTrainings = this.formData.additionalTrainings.filter(training => {
-                const hasAnyField = training.courseName || training.institution || training.hours || training.certificationDate;
-                const hasAllFields = training.courseName && training.institution && training.hours && training.certificationDate;
-                return hasAnyField && !hasAllFields;
-            });
-
-            if (incompleteTrainings.length > 0) {
-                alert('Hay capacitaciones adicionales con datos incompletos. Por favor, completa todos los campos o elimina la capacitación.');
-                this.currentStep = 4; // Llevar al paso de capacitaciones
-                return;
-            }
-
-            // 3. Limpiar capacitaciones adicionales vacías antes de enviar
+            // 4. Limpiar capacitaciones adicionales vacías antes de enviar
             this.formData.additionalTrainings = this.formData.additionalTrainings.filter(training => {
                 return training.courseName && training.institution && training.hours && training.certificationDate;
             });
