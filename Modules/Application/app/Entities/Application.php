@@ -230,22 +230,31 @@ class Application extends Model
 
     /**
      * Generar código único de postulación
+     *
+     * Usa bloqueo pesimista para evitar race conditions cuando
+     * múltiples usuarios postulan simultáneamente.
      */
     public static function generateCode(string $convocatoriaCode): string
     {
         $year = date('Y');
-        $lastCode = static::where('code', 'LIKE', "APP-{$year}-%")
-            ->orderBy('code', 'desc')
+        $prefix = "APP-{$year}-";
+
+        // Usar bloqueo pesimista para evitar duplicados por concurrencia
+        // SUBSTRING_INDEX extrae el número después del último guion
+        $lastCode = static::where('code', 'LIKE', "{$prefix}%")
+            ->orderByRaw("CAST(SUBSTRING_INDEX(code, '-', -1) AS UNSIGNED) DESC")
+            ->lockForUpdate()
             ->first();
 
         if ($lastCode) {
-            $lastNumber = (int) substr($lastCode->code, -3);
-            $newNumber = str_pad($lastNumber + 1, 3, '0', STR_PAD_LEFT);
+            // Extraer el número del código
+            $lastNumber = (int) str_replace($prefix, '', $lastCode->code);
+            $newNumber = $lastNumber + 1;
         } else {
-            $newNumber = '001';
+            $newNumber = 1;
         }
 
-        return "APP-{$year}-{$newNumber}";
+        return "{$prefix}{$newNumber}";
     }
 
     /**
