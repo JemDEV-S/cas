@@ -519,8 +519,18 @@ class JobPostingController extends Controller
                 if (!empty($training['courseName'])) {
                     // Convertir certificationDate (YYYY-MM) a rango de fechas
                     $certDate = $training['certificationDate'] ?? null;
-                    $startDate = $certDate ? $certDate . '-01' : null;
-                    $endDate = $certDate ? $certDate . '-' . date('t', strtotime($certDate . '-01')) : null;
+                    $startDate = null;
+                    $endDate = null;
+
+                    // Validar formato YYYY-MM antes de procesar
+                    if ($certDate && preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $certDate)) {
+                        $startDate = $certDate . '-01';
+                        $endDate = $certDate . '-' . date('t', strtotime($startDate));
+                    } elseif ($certDate && preg_match('/^\d{4}$/', $certDate)) {
+                        // Si solo es un año (YYYY), usar enero de ese año
+                        $startDate = $certDate . '-01-01';
+                        $endDate = $certDate . '-12-31';
+                    }
 
                     $trainings[] = new \Modules\Application\DTOs\TrainingDTO(
                         institution: $training['institution'] ?? '',
