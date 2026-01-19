@@ -1746,7 +1746,7 @@ function applicationWizard() {
             'personal.fullName': { required: true, label: 'Nombre Completo' },
             'personal.dni': { required: true, pattern: /^[0-9]{8}$/, label: 'DNI', message: 'El DNI debe tener exactamente 8 dígitos' },
             'personal.birthDate': { required: true, type: 'date', label: 'Fecha de Nacimiento' },
-            'personal.address': { required: true, minLength: 10, label: 'Dirección', message: 'La dirección debe tener al menos 10 caracteres' },
+            'personal.address': { required: true, minLength: 4, label: 'Dirección', message: 'La dirección debe tener al menos 10 caracteres' },
             'personal.phone': { required: true, pattern: /^[0-9\-\s]{7,15}$/, label: 'Teléfono', message: 'Ingrese un número de teléfono válido' },
             'personal.email': { required: true, type: 'email', label: 'Email', message: 'Ingrese un email válido' },
 

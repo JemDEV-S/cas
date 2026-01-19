@@ -94,6 +94,38 @@
         </div>
     </div>
 
+    <!-- Botón grande para descargar ficha de postulación -->
+    @if(in_array($application->status, [
+        \Modules\Application\Enums\ApplicationStatus::SUBMITTED,
+        \Modules\Application\Enums\ApplicationStatus::ELIGIBLE,
+        \Modules\Application\Enums\ApplicationStatus::NOT_ELIGIBLE,
+        \Modules\Application\Enums\ApplicationStatus::IN_EVALUATION,
+        \Modules\Application\Enums\ApplicationStatus::APPROVED
+    ]) && $application->generatedDocuments()->whereHas('template', fn($q) => $q->where('code', 'TPL_APPLICATION_SHEET'))->exists())
+        <div class="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl shadow-lg p-6 mb-6">
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="flex items-center gap-4 text-white">
+                    <div class="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold">Ficha de Postulación</h3>
+                        <p class="text-blue-100 text-sm">Descarga tu comprobante de inscripción en formato PDF</p>
+                    </div>
+                </div>
+                <a href="{{ route('applicant.applications.download-pdf', $application->id) }}"
+                   class="w-full sm:w-auto px-8 py-4 bg-white text-blue-700 font-bold rounded-xl hover:bg-blue-50 transition-all shadow-md flex items-center justify-center gap-3 text-lg">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                    </svg>
+                    Descargar PDF
+                </a>
+            </div>
+        </div>
+    @endif
+
     <!-- Contenido según el estado -->
     @if($application->status === \Modules\Application\Enums\ApplicationStatus::DRAFT)
         <!-- Estado: BORRADOR -->
