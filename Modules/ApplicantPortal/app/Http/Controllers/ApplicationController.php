@@ -335,7 +335,7 @@ class ApplicationController extends Controller
             // Condiciones especiales
             'special_conditions' => $application->specialConditions->map(function ($condition) {
                 return [
-                    'type' => $condition->type,
+                    'type' => $condition->condition_type_name,
                     'bonus_percentage' => $condition->bonus_percentage,
                 ];
             })->toArray(),

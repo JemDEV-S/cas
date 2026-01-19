@@ -620,29 +620,29 @@ class JobPostingController extends Controller
 
         if ($conditions['disability'] ?? false) {
             $result[] = new \Modules\Application\DTOs\SpecialConditionDTO(
-                type: 'DISCAPACIDAD',
+                conditionType: 'DISABILITY',
                 bonusPercentage: 15
             );
         }
 
-        if ($conditions['veteran'] ?? false) {
+        if ($conditions['military'] ?? false) {
             $result[] = new \Modules\Application\DTOs\SpecialConditionDTO(
-                type: 'LICENCIADO_FFAA',
+                conditionType: 'MILITARY',
                 bonusPercentage: 10
             );
         }
 
-        if ($conditions['athlete'] ?? false) {
+        if ($conditions['athleteNational'] ?? false) {
             $result[] = new \Modules\Application\DTOs\SpecialConditionDTO(
-                type: 'DEPORTISTA_DESTACADO',
-                bonusPercentage: 5
+                conditionType: 'ATHLETE_NATIONAL',
+                bonusPercentage: 10
             );
         }
 
-        if ($conditions['qualifiedAthlete'] ?? false) {
+        if ($conditions['athleteIntl'] ?? false) {
             $result[] = new \Modules\Application\DTOs\SpecialConditionDTO(
-                type: 'DEPORTISTA_CALIFICADO',
-                bonusPercentage: 3
+                conditionType: 'ATHLETE_INTL',
+                bonusPercentage: 15
             );
         }
 
@@ -837,7 +837,7 @@ class JobPostingController extends Controller
             // Condiciones especiales
             'special_conditions' => $application->specialConditions->map(function ($condition) {
                 return [
-                    'type' => $condition->type,
+                    'type' => $condition->condition_type_name,
                     'bonus_percentage' => $condition->bonus_percentage,
                 ];
             })->toArray(),
