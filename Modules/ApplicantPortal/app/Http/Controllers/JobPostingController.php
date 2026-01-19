@@ -103,9 +103,10 @@ class JobPostingController extends Controller
                 return $profile;
             });
 
-        // Verificar postulaciones del usuario por PERFIL
+        // Verificar postulaciones del usuario por PERFIL (excluir DESISTIDAS)
         $user = Auth::user();
         $userApplications = \Modules\Application\Entities\Application::where('applicant_id', $user->id)
+            ->where('status', '!=', \Modules\Application\Enums\ApplicationStatus::WITHDRAWN)
             ->whereHas('jobProfile', fn($q) => $q->where('job_posting_id', $id))
             ->with('jobProfile')
             ->get();
@@ -163,9 +164,10 @@ class JobPostingController extends Controller
         // Recargar el usuario con todos sus datos (incluyendo birth_date, address, phone)
         $user->refresh();
 
-        // ← ACTUALIZADO: verificar por job_profile_id directamente
+        // ← ACTUALIZADO: verificar por job_profile_id directamente (excluir DESISTIDAS)
         $existingApplication = \Modules\Application\Entities\Application::where('applicant_id', $user->id)
             ->where('job_profile_id', $profileId)
+            ->where('status', '!=', \Modules\Application\Enums\ApplicationStatus::WITHDRAWN)
             ->first();
 
         if ($existingApplication) {
@@ -290,9 +292,10 @@ class JobPostingController extends Controller
             // 4. Validar que no haya postulado a este perfil
             $profile = \Modules\JobProfile\Entities\JobProfile::findOrFail($profileId);
 
-            // ← ACTUALIZADO: verificar por job_profile_id directamente
+            // ← ACTUALIZADO: verificar por job_profile_id directamente (excluir DESISTIDAS)
             $existingApp = \Modules\Application\Entities\Application::where('applicant_id', $user->id)
                 ->where('job_profile_id', $profileId)
+                ->where('status', '!=', \Modules\Application\Enums\ApplicationStatus::WITHDRAWN)
                 ->first();
 
             if ($existingApp) {
