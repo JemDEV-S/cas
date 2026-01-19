@@ -273,6 +273,9 @@ class DocumentService
 
     /**
      * Genera un código único para el documento
+     *
+     * Usa bloqueo pesimista para evitar race conditions cuando
+     * múltiples documentos se generan simultáneamente.
      */
     protected function generateDocumentCode(DocumentTemplate $template, $documentable): string
     {
@@ -292,14 +295,23 @@ class DocumentService
         $prefix = $prefixMap[$templateCode] ?? strtoupper(substr($templateCode, 0, 4));
         $year = now()->year;
         $month = now()->format('m');
+        $codePrefix = "{$prefix}-{$year}{$month}-";
 
-        // Contar documentos del mismo tipo este mes
-        $count = GeneratedDocument::where('document_template_id', $template->id)
-            ->whereYear('created_at', $year)
-            ->whereMonth('created_at', $month)
-            ->count() + 1;
+        // Usar bloqueo pesimista para evitar duplicados por concurrencia
+        $lastDocument = GeneratedDocument::where('code', 'LIKE', "{$codePrefix}%")
+            ->orderByRaw("CAST(SUBSTRING_INDEX(code, '-', -1) AS UNSIGNED) DESC")
+            ->lockForUpdate()
+            ->first();
 
-        return "{$prefix}-{$year}{$month}-" . str_pad($count, 4, '0', STR_PAD_LEFT);
+        if ($lastDocument) {
+            // Extraer el número del código
+            $lastNumber = (int) str_replace($codePrefix, '', $lastDocument->code);
+            $newNumber = $lastNumber + 1;
+        } else {
+            $newNumber = 1;
+        }
+
+        return "{$codePrefix}{$newNumber}";
     }
 
     /**
