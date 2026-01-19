@@ -27,10 +27,10 @@ class ProfessionalRegistrationDTO
     {
         return [
             'registration_type' => $this->registrationType,
-            'issuing_entity' => $this->issuingEntity,
-            'registration_number' => $this->registrationNumber,
-            'issue_date' => $this->issueDate,
-            'expiry_date' => $this->expiryDate,
+            'issuing_entity' => $this->issuingEntity ?: null,
+            'registration_number' => $this->registrationNumber ?: null,
+            'issue_date' => $this->issueDate ?: null,
+            'expiry_date' => $this->expiryDate ?: null,
         ];
     }
 }
