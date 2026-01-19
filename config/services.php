@@ -35,4 +35,22 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Career Matcher NLP Service
+    |--------------------------------------------------------------------------
+    |
+    | Configuración del microservicio Python que usa NLP para comparar
+    | carreras académicas. Se usa para validar carreras afines declaradas
+    | por postulantes que no están en el catálogo de carreras mapeadas.
+    |
+    */
+    'career_matcher' => [
+        'url' => env('CAREER_MATCHER_URL', 'http://localhost:8000'),
+        'threshold' => env('CAREER_MATCHER_THRESHOLD', 0.75),
+        'timeout' => env('CAREER_MATCHER_TIMEOUT', 10),
+        'cache_enabled' => env('CAREER_MATCHER_CACHE_ENABLED', true),
+        'cache_ttl' => env('CAREER_MATCHER_CACHE_TTL', 86400), // 24 horas
+    ],
+
 ];

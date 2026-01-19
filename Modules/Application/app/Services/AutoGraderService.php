@@ -14,8 +14,12 @@ use Modules\Application\Enums\ApplicationStatus;
 class AutoGraderService
 {
     public function __construct(
-        private EligibilityCalculatorService $eligibilityCalculator
-    ) {}
+        private EligibilityCalculatorService $eligibilityCalculator,
+        private ?CareerMatcherService $careerMatcher = null
+    ) {
+        // Lazy initialization del CareerMatcherService si no se inyecta
+        $this->careerMatcher = $careerMatcher ?? app(CareerMatcherService::class);
+    }
 
     /**
      * Evaluar elegibilidad de una postulación
@@ -220,6 +224,7 @@ class AutoGraderService
             $hasRequiredCareer = !empty(array_intersect($applicantCareerIds, $acceptedCareerIds));
 
             if (!$hasRequiredCareer) {
+                // Obtener nombres de carreras para mensajes y validación NLP
                 $requiredCareerNames = \Modules\Application\Entities\AcademicCareer::whereIn('id', $jobProfile->careers()->pluck('career_id'))
                     ->pluck('name')
                     ->toArray();
@@ -228,6 +233,24 @@ class AutoGraderService
                     ->pluck('name')
                     ->toArray();
 
+                // 2.1 Verificar si el postulante declaró una carrera afín
+                $relatedCareers = $academics->filter(
+                    fn($a) => $a->is_related_career && !empty($a->related_career_name)
+                );
+
+                if ($relatedCareers->isNotEmpty()) {
+                    // Intentar validación NLP para carreras afines
+                    $nlpResult = $this->validateRelatedCareerWithNlp(
+                        $relatedCareers,
+                        $requiredCareerNames
+                    );
+
+                    if ($nlpResult !== null) {
+                        return $nlpResult;
+                    }
+                }
+
+                // No hay match por ID ni por NLP
                 return [
                     'passed' => false,
                     'reason' => sprintf(
@@ -789,5 +812,105 @@ class AutoGraderService
             \DB::rollBack();
             throw $e;
         }
+    }
+
+    /**
+     * Validar carrera afín usando el servicio NLP
+     *
+     * Este método se llama cuando el postulante declaró una "carrera afín"
+     * que no está en el catálogo de carreras mapeadas. Usa procesamiento
+     * de lenguaje natural para determinar si es similar a las requeridas.
+     *
+     * @param \Illuminate\Support\Collection $relatedCareers Carreras afines del postulante
+     * @param array $requiredCareerNames Nombres de carreras requeridas por el perfil
+     * @return array|null Resultado de validación si hay match o requiere revisión, null si debe continuar validación normal
+     */
+    private function validateRelatedCareerWithNlp(
+        \Illuminate\Support\Collection $relatedCareers,
+        array $requiredCareerNames
+    ): ?array {
+        if (empty($requiredCareerNames)) {
+            return null;
+        }
+
+        foreach ($relatedCareers as $academic) {
+            $candidateCareer = $academic->related_career_name;
+
+            if (empty($candidateCareer)) {
+                continue;
+            }
+
+            try {
+                $matchResult = $this->careerMatcher->matchRelatedCareer(
+                    $candidateCareer,
+                    $requiredCareerNames
+                );
+
+                // Si hay match por NLP, la carrera afín es válida
+                if ($matchResult['is_match']) {
+                    return [
+                        'passed' => true,
+                        'reason' => sprintf(
+                            'Carrera afín "%s" validada por similitud con "%s" (score: %.0f%%)',
+                            $candidateCareer,
+                            $matchResult['matched_career'],
+                            $matchResult['score'] * 100
+                        ),
+                        'validation_type' => 'nlp',
+                        'nlp_result' => [
+                            'candidate_career' => $candidateCareer,
+                            'matched_career' => $matchResult['matched_career'],
+                            'match_type' => $matchResult['match_type'],
+                            'score' => $matchResult['score'],
+                            'threshold' => $matchResult['threshold_used'] ?? 0.75,
+                        ],
+                    ];
+                }
+
+                // Si el servicio NLP no está disponible, marcar para revisión manual
+                if ($matchResult['requires_manual_review'] ?? false) {
+                    return [
+                        'passed' => false,
+                        'reason' => sprintf(
+                            'Carrera afín "%s" requiere revisión manual (servicio NLP no disponible)',
+                            $candidateCareer
+                        ),
+                        'requires_manual_review' => true,
+                        'validation_type' => 'pending_manual',
+                        'nlp_error' => $matchResult['reason'] ?? 'Servicio no disponible',
+                    ];
+                }
+
+                // El servicio NLP funcionó pero no hubo match
+                // Registrar el intento para trazabilidad
+                \Log::info('NLP career match failed', [
+                    'candidate' => $candidateCareer,
+                    'required' => $requiredCareerNames,
+                    'score' => $matchResult['score'],
+                    'all_scores' => $matchResult['all_scores'] ?? null,
+                ]);
+
+            } catch (\Exception $e) {
+                \Log::error('Error calling NLP career matcher', [
+                    'candidate' => $candidateCareer,
+                    'error' => $e->getMessage(),
+                ]);
+
+                // En caso de error, marcar para revisión manual
+                return [
+                    'passed' => false,
+                    'reason' => sprintf(
+                        'Carrera afín "%s" requiere revisión manual (error en validación NLP)',
+                        $candidateCareer
+                    ),
+                    'requires_manual_review' => true,
+                    'validation_type' => 'error',
+                    'nlp_error' => $e->getMessage(),
+                ];
+            }
+        }
+
+        // No hubo match NLP para ninguna carrera afín
+        return null;
     }
 }

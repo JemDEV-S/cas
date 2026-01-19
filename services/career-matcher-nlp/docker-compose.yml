@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  career-matcher:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: career-matcher-nlp
+    ports:
+      - "${CAREER_MATCHER_PORT:-8000}:8000"
+    environment:
+      - CAREER_MATCHER_DEBUG=${CAREER_MATCHER_DEBUG:-false}
+      - CAREER_MATCHER_MODEL_NAME=${CAREER_MATCHER_MODEL_NAME:-paraphrase-multilingual-MiniLM-L12-v2}
+      - CAREER_MATCHER_DEFAULT_THRESHOLD=${CAREER_MATCHER_DEFAULT_THRESHOLD:-0.75}
+    volumes:
+      # Persistir cache del modelo para evitar re-descarga
+      - career-matcher-cache:/app/.cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s  # El modelo tarda en cargar la primera vez
+    deploy:
+      resources:
+        limits:
+          memory: 2G  # El modelo necesita ~1.5GB
+        reservations:
+          memory: 1G
+    networks:
+      - cas-network
+
+volumes:
+  career-matcher-cache:
+    driver: local
+
+networks:
+  cas-network:
+    external: true
+    name: cas_default  # Ajustar al nombre de la red de tu proyecto Laravel
