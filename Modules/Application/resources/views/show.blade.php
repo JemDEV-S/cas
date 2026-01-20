@@ -273,7 +273,13 @@
                                     <p class="text-sm text-gray-600">N° {{ $registration->registration_number }}</p>
                                 </div>
                                 <div class="text-right text-sm">
-                                    <p class="text-gray-500">Emisión: {{ $registration->issue_date->format('d/m/Y') }}</p>
+                                    <p class="text-gray-500">
+                                        Emisión:
+                                        {{ $registration->issue_date
+                                            ? $registration->issue_date->format('d/m/Y')
+                                            : 'No registrada' }}
+                                    </p>
+
                                     @if($registration->expiry_date)
                                         <p class="{{ $registration->isValid() ? 'text-gray-500' : 'text-red-600 font-semibold' }}">
                                             Vence: {{ $registration->expiry_date->format('d/m/Y') }}
