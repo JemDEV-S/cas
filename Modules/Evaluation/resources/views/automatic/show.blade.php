@@ -26,7 +26,7 @@
                 <code class="bg-gray-100 px-2 py-1 rounded">{{ $jobPosting->code }}</code>
                 <span class="mx-2">•</span>
                 <i class="fas fa-users mr-1"></i>
-                {{ $jobPosting->jobProfiles->sum(fn($jp) => $jp->vacancies->count()) }} vacante(s)
+                {{ $jobPosting->jobProfiles->count() }} perfil(es)
             </p>
         </div>
         <div>
@@ -109,38 +109,37 @@
         </div>
     @endif
 
-    {{-- Tabla de Postulaciones por Perfil y Vacante --}}
+    {{-- Tabla de Postulaciones por Perfil --}}
     @foreach($jobPosting->jobProfiles as $jobProfile)
-        @foreach($jobProfile->vacancies as $vacancy)
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
-                <div class="bg-gray-50 px-6 py-4 border-b border-gray-200">
-                    <h5 class="text-lg font-semibold text-gray-800">
-                        <i class="fas fa-briefcase mr-2"></i>
-                        {{ $jobProfile->title }}
-                        <span class="ml-2 inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-200 text-gray-800">
-                            {{ $vacancy->applications->count() }} postulaciones
-                        </span>
-                    </h5>
-                </div>
-                <div class="p-6">
-                    @if($vacancy->applications->isEmpty())
-                        <p class="text-center text-gray-500 py-8">No hay postulaciones para esta vacante.</p>
-                    @else
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Código</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Postulante</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DNI</th>
-                                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Evaluación</th>
-                                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="bg-white divide-y divide-gray-200">
-                                    @foreach($vacancy->applications as $application)
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+            <div class="bg-gray-50 px-6 py-4 border-b border-gray-200">
+                <h5 class="text-lg font-semibold text-gray-800">
+                    <i class="fas fa-briefcase mr-2"></i>
+                    {{ $jobProfile->title }}
+                    <span class="ml-2 inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-200 text-gray-800">
+                        {{ $jobProfile->applications->count() }} postulaciones
+                    </span>
+                </h5>
+            </div>
+            <div class="p-6">
+                @if($jobProfile->applications->isEmpty())
+                    <p class="text-center text-gray-500 py-8">No hay postulaciones para este perfil.</p>
+                @else
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Código</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Postulante</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DNI</th>
+                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Evaluación</th>
+                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                @foreach($jobProfile->applications as $application)
                                         <tr class="hover:bg-gray-50 transition-colors">
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <code class="text-sm bg-gray-100 px-2 py-1 rounded">{{ $application->code }}</code>
@@ -149,7 +148,7 @@
                                                 {{ $application->full_name }}
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                {{ $application->document_number }}
+                                                {{ $application->dni }}
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-center">
                                                 @if($application->status === \Modules\Application\Enums\ApplicationStatus::SUBMITTED)
@@ -192,14 +191,13 @@
                                                 @endif
                                             </td>
                                         </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                    @endif
-                </div>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
             </div>
-        @endforeach
+        </div>
     @endforeach
 </div>
 

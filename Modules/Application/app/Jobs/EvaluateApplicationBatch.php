@@ -2,21 +2,23 @@
 
 namespace Modules\Application\Jobs;
 
+use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Modules\Application\Services\AutoGraderService;
-use Modules\Application\Entities\Application;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Modules\Application\Entities\Application;
+use Modules\Application\Services\AutoGraderService;
 
 class EvaluateApplicationBatch implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $tries = 3;
-    public $timeout = 300; // 5 minutos
+    public $timeout = 600; // 10 minutos
     public $backoff = 60; // Esperar 60 segundos entre reintentos
 
     /**
@@ -24,7 +26,8 @@ class EvaluateApplicationBatch implements ShouldQueue
      */
     public function __construct(
         public array $applicationIds,
-        public string $userId
+        public string $userId,
+        public string $jobPostingId
     ) {}
 
     /**
@@ -32,19 +35,16 @@ class EvaluateApplicationBatch implements ShouldQueue
      */
     public function handle(AutoGraderService $autoGrader): void
     {
+        // Si el batch fue cancelado, salir
+        if ($this->batch() && $this->batch()->cancelled()) {
+            return;
+        }
+
         Log::info('Iniciando evaluación de lote', [
             'batch_size' => count($this->applicationIds),
-            'user_id' => $this->userId
+            'user_id' => $this->userId,
+            'job_posting_id' => $this->jobPostingId,
         ]);
-
-        $startTime = microtime(true);
-        $stats = [
-            'total' => count($this->applicationIds),
-            'evaluated' => 0,
-            'eligible' => 0,
-            'not_eligible' => 0,
-            'errors' => 0,
-        ];
 
         $applications = Application::whereIn('id', $this->applicationIds)
             ->with([
@@ -53,54 +53,70 @@ class EvaluateApplicationBatch implements ShouldQueue
                 'trainings',
                 'professionalRegistrations',
                 'knowledge',
-                'vacancy.jobProfileRequest.careers'
+                'jobProfile.careers',
+                'applicant',
             ])
             ->get();
 
         foreach ($applications as $application) {
+            // Verificar cancelación en cada iteración
+            if ($this->batch() && $this->batch()->cancelled()) {
+                return;
+            }
+
             try {
-                $result = $autoGrader->evaluateEligibility($application);
-                $autoGrader->applyAutoGrading($application, $this->userId);
+                // Usar el método integrado con módulo Evaluation
+                $evaluation = $autoGrader->applyAutoGradingWithEvaluationModule(
+                    $application,
+                    $this->userId
+                );
 
-                $stats['evaluated']++;
-
-                if ($result['is_eligible']) {
-                    $stats['eligible']++;
-                } else {
-                    $stats['not_eligible']++;
-                }
+                // Actualizar estadísticas en cache
+                $this->updateStats(
+                    $evaluation->isCompleted() && $application->fresh()->is_eligible
+                        ? 'eligible'
+                        : 'not_eligible'
+                );
 
                 Log::info('Postulación evaluada', [
                     'application_id' => $application->id,
                     'application_code' => $application->code,
-                    'applicant_name' => $application->full_name,
-                    'result' => $result['is_eligible'] ? 'APTO' : 'NO_APTO',
-                    'reasons' => $result['reasons'] ?? [],
+                    'result' => $application->fresh()->is_eligible ? 'APTO' : 'NO_APTO',
                 ]);
 
             } catch (\Exception $e) {
-                $stats['errors']++;
+                $this->updateStats('errors');
 
                 Log::error('Error evaluando postulación en lote', [
                     'application_id' => $application->id,
-                    'application_code' => $application->code,
-                    'applicant_name' => $application->full_name,
+                    'application_code' => $application->code ?? 'N/A',
                     'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString(),
                 ]);
 
                 // Continuar con la siguiente postulación
                 continue;
             }
         }
+    }
 
-        $duration = round(microtime(true) - $startTime, 2);
+    /**
+     * Actualizar estadísticas en cache para seguimiento del progreso
+     */
+    private function updateStats(string $type): void
+    {
+        $cacheKey = "evaluation_progress:{$this->jobPostingId}";
 
-        Log::info('Lote de evaluación completado', [
-            'statistics' => $stats,
-            'duration_seconds' => $duration,
-            'applications_per_second' => round($stats['evaluated'] / max($duration, 1), 2),
+        $stats = Cache::get($cacheKey, [
+            'eligible' => 0,
+            'not_eligible' => 0,
+            'errors' => 0,
+            'processed' => 0,
         ]);
+
+        $stats[$type]++;
+        $stats['processed']++;
+
+        Cache::put($cacheKey, $stats, now()->addHours(1));
     }
 
     /**
@@ -111,11 +127,8 @@ class EvaluateApplicationBatch implements ShouldQueue
         Log::error('Job de evaluación falló completamente', [
             'batch_size' => count($this->applicationIds),
             'user_id' => $this->userId,
+            'job_posting_id' => $this->jobPostingId,
             'error' => $exception->getMessage(),
-            'trace' => $exception->getTraceAsString(),
         ]);
-
-        // Aquí puedes agregar notificación al administrador
-        // event(new EvaluationJobFailed($this->applicationIds, $exception));
     }
 }

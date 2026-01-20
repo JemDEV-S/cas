@@ -126,13 +126,11 @@
                         <tbody class="bg-white divide-y divide-gray-200">
                             @foreach($jobPostings as $posting)
                                 @php
-                                    $allApps = $posting->jobProfiles->flatMap(function($jp) {
-                                        return $jp->vacancies->flatMap->applications;
-                                    });
+                                    $allApps = $posting->jobProfiles->flatMap->applications;
                                     $pending = $allApps->where('status', \Modules\Application\Enums\ApplicationStatus::SUBMITTED)->whereNull('eligibility_checked_at')->count();
                                     $evaluated = $allApps->whereNotNull('eligibility_checked_at')->count();
                                     $total = $allApps->count();
-                                    $totalVacancies = $posting->jobProfiles->sum(fn($jp) => $jp->vacancies->count());
+                                    $totalProfiles = $posting->jobProfiles->count();
                                 @endphp
                                 <tr class="hover:bg-gray-50 transition-colors">
                                     <td class="px-6 py-4 whitespace-nowrap">
@@ -143,7 +141,7 @@
                                             <div class="font-medium text-gray-900">{{ $posting->title }}</div>
                                             <div class="text-sm text-gray-500">
                                                 <i class="fas fa-users mr-1"></i>
-                                                {{ $totalVacancies }} vacante(s)
+                                                {{ $totalProfiles }} perfil(es)
                                             </div>
                                         </div>
                                     </td>

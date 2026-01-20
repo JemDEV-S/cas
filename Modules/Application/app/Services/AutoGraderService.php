@@ -4,6 +4,7 @@ namespace Modules\Application\Services;
 
 use Modules\Application\Entities\Application;
 use Modules\Application\Enums\ApplicationStatus;
+use Modules\Core\ValueObjects\ExperienceDuration;
 
 /**
  * Servicio para evaluación automática de elegibilidad
@@ -13,6 +14,14 @@ use Modules\Application\Enums\ApplicationStatus;
  */
 class AutoGraderService
 {
+    /**
+     * Formatea un valor decimal de experiencia a texto legible
+     * Ejemplo: 2.5 -> "2 años y 6 meses"
+     */
+    private function formatExperience(float $decimalYears): string
+    {
+        return ExperienceDuration::fromDecimal($decimalYears)->toHuman();
+    }
     public function __construct(
         private EligibilityCalculatorService $eligibilityCalculator,
         private ?CareerMatcherService $careerMatcher = null
@@ -319,20 +328,22 @@ class AutoGraderService
             $requiredYears = $requiredYears ?? 0;
         }
 
+        $requiredFormatted = $this->formatExperience($requiredYears);
+
         if ($result['decimal_years'] < $requiredYears) {
             return [
                 'passed' => false,
-                'reason' => "Experiencia general insuficiente. Requerido: {$requiredYears} años, Acreditado: {$result['formatted']}",
-                'required' => $requiredYears,
-                'achieved' => $result['decimal_years'],
+                'reason' => "Experiencia general insuficiente. Requerido: {$requiredFormatted}, Acreditado: {$result['formatted']}",
+                'required' => $requiredFormatted,
+                'achieved' => $result['formatted'],
             ];
         }
 
         return [
             'passed' => true,
-            'reason' => "Cumple con la experiencia general requerida",
-            'required' => $requiredYears,
-            'achieved' => $result['decimal_years'],
+            'reason' => "Cumple con la experiencia general requerida ({$result['formatted']})",
+            'required' => $requiredFormatted,
+            'achieved' => $result['formatted'],
         ];
     }
 
@@ -357,20 +368,22 @@ class AutoGraderService
             $requiredYears = $requiredYears ?? 0;
         }
 
+        $requiredFormatted = $this->formatExperience($requiredYears);
+
         if ($result['decimal_years'] < $requiredYears) {
             return [
                 'passed' => false,
-                'reason' => "Experiencia específica insuficiente. Requerido: {$requiredYears} años, Acreditado: {$result['formatted']}",
-                'required' => $requiredYears,
-                'achieved' => $result['decimal_years'],
+                'reason' => "Experiencia específica insuficiente. Requerido: {$requiredFormatted}, Acreditado: {$result['formatted']}",
+                'required' => $requiredFormatted,
+                'achieved' => $result['formatted'],
             ];
         }
 
         return [
             'passed' => true,
-            'reason' => "Cumple con la experiencia específica requerida",
-            'required' => $requiredYears,
-            'achieved' => $result['decimal_years'],
+            'reason' => "Cumple con la experiencia específica requerida ({$result['formatted']})",
+            'required' => $requiredFormatted,
+            'achieved' => $result['formatted'],
         ];
     }
 
@@ -720,39 +733,51 @@ class AutoGraderService
                 'ELIGIBILITY_TECHNICAL_KNOWLEDGE' => $result['details']['technical_knowledge'] ?? null,
             ];
 
-            // 6. Guardar detalles de cada criterio evaluado
-            foreach ($criteriaMapping as $code => $detail) {
-                if ($detail === null) {
-                    continue; // Criterio no aplicable para este cargo
+            // 6. Obtener TODOS los criterios activos de la fase 4 para garantizar completitud
+            $allCriteria = \Modules\Evaluation\Entities\EvaluationCriterion::active()
+                ->where('phase_id', $phase4->id)
+                ->where(function ($q) use ($jobPosting) {
+                    $q->whereNull('job_posting_id')
+                      ->orWhere('job_posting_id', $jobPosting->id);
+                })
+                ->get();
+
+            // 7. Guardar detalles de cada criterio (evaluado o no aplicable)
+            foreach ($allCriteria as $criterion) {
+                $detail = $criteriaMapping[$criterion->code] ?? null;
+
+                if ($detail !== null) {
+                    // Criterio fue evaluado - guardar resultado
+                    $evaluationService->saveEvaluationDetail($evaluation, [
+                        'criterion_id' => $criterion->id,
+                        'score' => $detail['passed'] ? 1 : 0, // 0 = No cumple, 1 = Cumple
+                        'comments' => $detail['reason'] ?? 'Criterio evaluado automáticamente',
+                        'evidence' => null,
+                        'metadata' => [
+                            'required' => $detail['required'] ?? null,
+                            'achieved' => $detail['achieved'] ?? null,
+                            'full_detail' => $detail,
+                        ],
+                    ]);
+                } else {
+                    // Criterio no aplica para este perfil - marcar como "No aplica" con score máximo
+                    $evaluationService->saveEvaluationDetail($evaluation, [
+                        'criterion_id' => $criterion->id,
+                        'score' => 1, // Cumple por defecto (no es requisito para este perfil)
+                        'comments' => 'No aplica para este perfil de puesto',
+                        'evidence' => null,
+                        'metadata' => [
+                            'not_applicable' => true,
+                            'reason' => 'El perfil del puesto no requiere este criterio',
+                        ],
+                    ]);
                 }
-
-                // Obtener el criterio
-                $criterion = \Modules\Evaluation\Entities\EvaluationCriterion::where('code', $code)
-                    ->where('phase_id', $phase4->id)
-                    ->first();
-
-                if (!$criterion) {
-                    continue; // Criterio no existe, saltarlo
-                }
-
-                // Guardar detalle de evaluación
-                $evaluationService->saveEvaluationDetail($evaluation, [
-                    'criterion_id' => $criterion->id,
-                    'score' => $detail['passed'] ? 1 : 0, // 0 = No cumple, 1 = Cumple
-                    'comments' => $detail['reason'] ?? 'Criterio evaluado automáticamente',
-                    'evidence' => null,
-                    'metadata' => [
-                        'required' => $detail['required'] ?? null,
-                        'achieved' => $detail['achieved'] ?? null,
-                        'full_detail' => $detail,
-                    ],
-                ]);
             }
 
-            // 7. Enviar evaluación (marcar como SUBMITTED)
+            // 8. Enviar evaluación (marcar como SUBMITTED)
             $evaluationService->submitEvaluation($evaluation);
 
-            // 8. Actualizar Application (mantener compatibilidad)
+            // 9. Actualizar Application (mantener compatibilidad)
             $application->update([
                 'is_eligible' => $result['is_eligible'],
                 'status' => $result['is_eligible']
@@ -763,7 +788,7 @@ class AutoGraderService
                 'eligibility_checked_by' => $evaluatedBy,
             ]);
 
-            // 9. También guardar en ApplicationEvaluation (mantener compatibilidad con sistema existente)
+            // 10. También guardar en ApplicationEvaluation (mantener compatibilidad con sistema existente)
             \Modules\Application\Entities\ApplicationEvaluation::create([
                 'application_id' => $application->id,
                 'is_eligible' => $result['is_eligible'],

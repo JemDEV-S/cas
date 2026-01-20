@@ -102,6 +102,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ->name('execute')
                 ->can('execute', \Modules\Evaluation\Policies\AutomaticEvaluationPolicy::class);
 
+            // Página de progreso de evaluación
+            Route::get('{id}/progress', [AutomaticEvaluationController::class, 'progress'])
+                ->name('progress')
+                ->can('viewAny', \Modules\Evaluation\Policies\AutomaticEvaluationPolicy::class);
+
+            // Endpoint AJAX para obtener estado del progreso
+            Route::get('{id}/progress/status', [AutomaticEvaluationController::class, 'getProgress'])
+                ->name('progress.status')
+                ->can('viewAny', \Modules\Evaluation\Policies\AutomaticEvaluationPolicy::class);
+
             // Ver detalles de evaluación de una postulación
             Route::get('application/{id}', [AutomaticEvaluationController::class, 'viewApplicationEvaluation'])
                 ->name('application')
