@@ -136,6 +136,72 @@ class DocumentTemplatesSeeder extends Seeder
             ]
         );
 
+        // Template de Resultado de Elegibilidad MDSJ
+        DocumentTemplate::updateOrCreate(
+            ['code' => 'TPL_RESULT_ELIGIBILITY_MDSJ'],
+            [
+                'name' => 'Resultado de Elegibilidad - MDSJ',
+                'description' => 'Template oficial para resultados de elegibilidad organizado por Unidad Organizacional y Perfil - Municipalidad Distrital de San Jerónimo',
+                'category' => 'resultado',
+                'content' => file_get_contents(__DIR__ . '/../../resources/views/templates/result_eligibility_mdsj.blade.php'),
+                'variables' => [
+                    'title', 'subtitle', 'posting', 'phase', 'date', 'time',
+                    'stats', 'units', 'signers', 'document_code', 'generated_at',
+                ],
+                'signature_required' => true,
+                'signature_workflow_type' => 'sequential',
+                'signers_config' => [
+                    [
+                        'role_key' => 'presidente_comite',
+                        'type' => 'aprobacion',
+                        'role' => 'Presidente del Comité',
+                    ],
+                    [
+                        'role_key' => 'miembro_titular_1',
+                        'type' => 'visto_bueno',
+                        'role' => 'Miembro Titular',
+                    ],
+                    [
+                        'role_key' => 'miembro_titular_2',
+                        'type' => 'visto_bueno',
+                        'role' => 'Miembro Titular',
+                    ],
+                ],
+                'signature_positions' => [
+                    [
+                        'page' => -1,
+                        'x' => 30,
+                        'y' => 50,
+                        'width' => 150,
+                        'height' => 60,
+                    ],
+                    [
+                        'page' => -1,
+                        'x' => 220,
+                        'y' => 50,
+                        'width' => 150,
+                        'height' => 60,
+                    ],
+                    [
+                        'page' => -1,
+                        'x' => 410,
+                        'y' => 50,
+                        'width' => 150,
+                        'height' => 60,
+                    ],
+                ],
+                'paper_size' => 'A4',
+                'orientation' => 'portrait',
+                'margins' => [
+                    'top' => 12,
+                    'right' => 10,
+                    'bottom' => 15,
+                    'left' => 10,
+                ],
+                'status' => 'active',
+            ]
+        );
+
         $this->command->info('Templates de documentos creados exitosamente.');
     }
 }

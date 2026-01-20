@@ -16,11 +16,40 @@ class AutoGraderService
 {
     /**
      * Formatea un valor decimal de experiencia a texto legible
-     * Ejemplo: 2.5 -> "2 años y 6 meses"
+     * Ejemplo: 0.5 -> "6 meses", 2.5 -> "2 años, 6 meses"
+     *
+     * NOTA: El valor decimal representa años (0.5 = 6 meses, 1.0 = 1 año)
+     *
+     * @param float $decimalYears Valor decimal de años
+     * @param bool $includeDays Si true, incluye días en el formato (para experiencia acreditada)
      */
-    private function formatExperience(float $decimalYears): string
+    private function formatExperience(float $decimalYears, bool $includeDays = false): string
     {
-        return ExperienceDuration::fromDecimal($decimalYears)->toHuman();
+        // Usar el mismo método que EligibilityCalculatorService para consistencia
+        $totalDays = (int) round($decimalYears * 365);
+
+        $years = (int) floor($totalDays / 365);
+        $remainingDays = $totalDays % 365;
+        $months = (int) floor($remainingDays / 30);
+        $days = $remainingDays % 30;
+
+        $parts = [];
+        if ($years > 0) {
+            $parts[] = "{$years} " . ($years === 1 ? 'año' : 'años');
+        }
+        if ($months > 0) {
+            $parts[] = "{$months} " . ($months === 1 ? 'mes' : 'meses');
+        }
+        // Solo mostrar días si se solicita explícitamente o si es el único valor
+        if ($includeDays && $days > 0) {
+            $parts[] = "{$days} " . ($days === 1 ? 'día' : 'días');
+        }
+
+        if (empty($parts)) {
+            return 'Sin experiencia';
+        }
+
+        return implode(', ', $parts);
     }
     public function __construct(
         private EligibilityCalculatorService $eligibilityCalculator,
@@ -320,20 +349,18 @@ class AutoGraderService
 
         $result = $this->eligibilityCalculator->calculateGeneralExperience($experiences);
 
-        // Convertir ExperienceDuration a decimal si es un objeto
-        $requiredYears = $jobProfile->general_experience_years;
-        if (is_object($requiredYears) && method_exists($requiredYears, 'toDecimal')) {
-            $requiredYears = $requiredYears->toDecimal();
-        } else {
-            $requiredYears = $requiredYears ?? 0;
-        }
+        // Obtener el valor requerido - usar el atributo raw para obtener el decimal de la BD
+        $rawValue = $jobProfile->getAttributes()['general_experience_years'] ?? 0;
+        $requiredYears = (float) $rawValue;
 
-        $requiredFormatted = $this->formatExperience($requiredYears);
+        // Formatear usando ExperienceDuration para consistencia
+        $experienceObj = ExperienceDuration::fromDecimal($requiredYears);
+        $requiredFormatted = $experienceObj->toHuman();
 
         if ($result['decimal_years'] < $requiredYears) {
             return [
                 'passed' => false,
-                'reason' => "Experiencia general insuficiente. Requerido: {$requiredFormatted}, Acreditado: {$result['formatted']}",
+                'reason' => "Experiencia general insuficiente. Requerido: {$requiredFormatted} | Acreditado: {$result['formatted']}",
                 'required' => $requiredFormatted,
                 'achieved' => $result['formatted'],
             ];
@@ -360,20 +387,18 @@ class AutoGraderService
 
         $result = $this->eligibilityCalculator->calculateSpecificExperience($experiences);
 
-        // Convertir ExperienceDuration a decimal si es un objeto
-        $requiredYears = $jobProfile->specific_experience_years;
-        if (is_object($requiredYears) && method_exists($requiredYears, 'toDecimal')) {
-            $requiredYears = $requiredYears->toDecimal();
-        } else {
-            $requiredYears = $requiredYears ?? 0;
-        }
+        // Obtener el valor requerido - usar el atributo raw para obtener el decimal de la BD
+        $rawValue = $jobProfile->getAttributes()['specific_experience_years'] ?? 0;
+        $requiredYears = (float) $rawValue;
 
-        $requiredFormatted = $this->formatExperience($requiredYears);
+        // Formatear usando ExperienceDuration para consistencia
+        $experienceObj = ExperienceDuration::fromDecimal($requiredYears);
+        $requiredFormatted = $experienceObj->toHuman();
 
         if ($result['decimal_years'] < $requiredYears) {
             return [
                 'passed' => false,
-                'reason' => "Experiencia específica insuficiente. Requerido: {$requiredFormatted}, Acreditado: {$result['formatted']}",
+                'reason' => "Experiencia específica insuficiente. Requerido: {$requiredFormatted} | Acreditado: {$result['formatted']}",
                 'required' => $requiredFormatted,
                 'achieved' => $result['formatted'],
             ];

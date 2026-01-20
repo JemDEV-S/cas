@@ -300,12 +300,12 @@ class EvaluateApplicationsCommand extends Command
             return 'No evaluado';
         }
 
-        $required = $detail['required'] ?? 0;
-        $achieved = $detail['achieved'] ?? 0;
+        $required = $detail['required'] ?? 'Sin experiencia';
+        $achieved = $detail['achieved'] ?? 'Sin experiencia';
         $reason = $detail['reason'] ?? '';
 
         return sprintf(
-            "Requerido: %.2f años | Acreditado: %.2f años\n%s",
+            "Requerido: %s | Acreditado: %s\n%s",
             $required,
             $achieved,
             $reason

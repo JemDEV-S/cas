@@ -152,8 +152,8 @@
                                     'CANCELLED' => 'bg-red-100 text-red-800',
                                 ];
                             @endphp
-                            <span class="px-3 py-1 text-xs font-semibold rounded-full {{ $statusColors[$evaluation->status] ?? 'bg-gray-100 text-gray-800' }}">
-                                {{ $evaluation->status }}
+                            <span class="px-3 py-1 text-xs font-semibold rounded-full {{ $statusColors[$evaluation->status->value] ?? 'bg-gray-100 text-gray-800' }}">
+                                {{ $evaluation->status->value }}
                             </span>
                         </td>
                         <td class="px-6 py-4">

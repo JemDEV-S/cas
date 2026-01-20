@@ -38,6 +38,11 @@ class DocumentServiceProvider extends ServiceProvider
     {
         $this->app->register(EventServiceProvider::class);
         $this->app->register(RouteServiceProvider::class);
+
+        // Registrar servicios
+        $this->app->singleton(\Modules\Document\Services\EligibilityReportService::class, function ($app) {
+            return new \Modules\Document\Services\EligibilityReportService();
+        });
     }
 
     /**
@@ -94,6 +99,7 @@ class DocumentServiceProvider extends ServiceProvider
             \Modules\Document\Console\Commands\RegenerateApprovedJobProfileDocuments::class,
             \Modules\Document\Console\Commands\RegenerateConvocatoriaDocument::class,
             \Modules\Document\Console\Commands\UpdateConvocatoriaDocumentData::class,
+            \Modules\Document\Console\Commands\GenerateEligibilityReportCommand::class,
         ]);
     }
 
