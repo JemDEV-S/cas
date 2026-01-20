@@ -57,22 +57,56 @@ class CareerMatcherService:
         "téc.": "tecnico",
     }
 
-    # Sinónimos de carreras comunes
+    # Sinónimos de carreras comunes (Perú)
     CAREER_SYNONYMS = {
-        "sistemas": ["informatica", "computacion", "software", "tics", "tecnologias de informacion"],
-        "informatica": ["sistemas", "computacion", "software", "tics"],
-        "computacion": ["sistemas", "informatica", "software", "ciencias computacionales"],
-        "software": ["sistemas", "informatica", "desarrollo de software"],
-        "administracion": ["gestion", "gerencia", "direccion de empresas", "negocios"],
-        "contabilidad": ["contaduria", "ciencias contables", "auditoria"],
-        "derecho": ["ciencias juridicas", "leyes", "jurisprudencia"],
-        "economia": ["ciencias economicas", "finanzas"],
-        "industrial": ["produccion", "manufactura", "procesos industriales"],
-        "civil": ["construccion", "estructuras", "obras civiles"],
-        "electronica": ["telecomunicaciones", "electronica y telecomunicaciones"],
-        "mecanica": ["mecanica industrial", "maquinaria"],
-        "ambiental": ["medio ambiente", "ecologia", "gestion ambiental"],
-        "agronomia": ["agropecuaria", "agricultura", "ciencias agrarias"],
+        # Ingenierías de TI
+        "sistemas": ["informatica", "computacion", "software", "tics", "tecnologias de informacion", "ciencias de la computacion"],
+        "informatica": ["sistemas", "computacion", "software", "tics", "ciencias de la computacion"],
+        "computacion": ["sistemas", "informatica", "software", "ciencias computacionales", "ciencias de la computacion"],
+        "software": ["sistemas", "informatica", "desarrollo de software", "ingenieria de software"],
+
+        # Administración y Negocios
+        "administracion": ["gestion", "gerencia", "direccion de empresas", "negocios", "gestion empresarial", "ciencias administrativas"],
+        "gestion": ["administracion", "gerencia", "negocios", "gestion empresarial"],
+        "negocios": ["administracion", "gestion", "comercio", "negocios internacionales"],
+
+        # Contabilidad y Finanzas
+        "contabilidad": ["contaduria", "ciencias contables", "auditoria", "contabilidad y finanzas"],
+        "contaduria": ["contabilidad", "ciencias contables", "auditoria"],
+        "finanzas": ["economia", "banca", "contabilidad y finanzas"],
+
+        # Derecho (NUEVO: bidireccional)
+        "derecho": ["ciencias juridicas", "leyes", "jurisprudencia", "abogacia"],
+        "juridicas": ["derecho", "leyes", "jurisprudencia", "abogacia"],
+        "juridica": ["derecho", "leyes", "jurisprudencia", "abogacia"],
+
+        # Economía
+        "economia": ["ciencias economicas", "finanzas", "economica"],
+
+        # Ingenierías
+        "industrial": ["produccion", "manufactura", "procesos industriales", "gestion industrial"],
+        "civil": ["construccion", "estructuras", "obras civiles", "ingenieria civil"],
+        "electronica": ["telecomunicaciones", "electronica y telecomunicaciones", "electronico"],
+        "mecanica": ["mecanica industrial", "maquinaria", "mecanico"],
+        "ambiental": ["medio ambiente", "ecologia", "gestion ambiental", "ingenieria ambiental"],
+
+        # Ciencias Agrarias
+        "agronomia": ["agropecuaria", "agricultura", "ciencias agrarias", "agroindustrial"],
+        "agroindustrial": ["agronomia", "industrias alimentarias", "agroindustria"],
+
+        # Salud
+        "enfermeria": ["ciencias de enfermeria", "enfermera", "enfermero"],
+        "medicina": ["ciencias medicas", "medicina humana", "medico"],
+        "obstetricia": ["obstetra", "ciencias obstetricas"],
+        "psicologia": ["ciencias psicologicas", "psicologo"],
+
+        # Educación
+        "educacion": ["pedagogia", "ciencias de la educacion", "docencia"],
+        "pedagogia": ["educacion", "ciencias de la educacion"],
+
+        # Comunicaciones
+        "comunicacion": ["comunicaciones", "periodismo", "ciencias de la comunicacion"],
+        "periodismo": ["comunicacion", "comunicaciones"],
     }
 
     def __init__(self, model_name: Optional[str] = None, threshold: Optional[float] = None):
@@ -144,7 +178,9 @@ class CareerMatcherService:
                 }
 
         # Verificar match por sinónimos
-        synonym_match = self._check_synonym_match(candidate_normalized, accepted_normalized, accepted_careers)
+        synonym_match = self._check_synonym_match(
+            candidate_normalized, accepted_normalized, accepted_careers, include_all_scores
+        )
         if synonym_match:
             return synonym_match
 
@@ -233,7 +269,8 @@ class CareerMatcherService:
         self,
         candidate: str,
         accepted_normalized: list[str],
-        accepted_original: list[str]
+        accepted_original: list[str],
+        include_all_scores: bool = False
     ) -> Optional[dict]:
         """
         Verifica si hay match por sinónimos conocidos.
@@ -253,26 +290,42 @@ class CareerMatcherService:
                     synonyms = set(self.CAREER_SYNONYMS[cword])
                     # Si algún sinónimo está en las palabras de la carrera aceptada
                     if synonyms & accepted_words:
-                        return {
+                        result = {
                             "is_match": True,
                             "score": 0.90,  # Score alto pero no perfecto
                             "matched_career": accepted_original[i],
                             "match_type": "synonym",
                             "reason": f"Match por sinónimo: '{cword}' relacionado con carrera aceptada"
                         }
+                        if include_all_scores:
+                            result["all_scores"] = [
+                                {"career": accepted_original[i], "score": 0.90}
+                            ] + [
+                                {"career": c, "score": 0.0}
+                                for j, c in enumerate(accepted_original) if j != i
+                            ]
+                        return result
 
             # Verificar inverso: palabra de accepted tiene sinónimo en candidate
             for aword in accepted_words:
                 if aword in self.CAREER_SYNONYMS:
                     synonyms = set(self.CAREER_SYNONYMS[aword])
                     if synonyms & candidate_words:
-                        return {
+                        result = {
                             "is_match": True,
                             "score": 0.90,
                             "matched_career": accepted_original[i],
                             "match_type": "synonym",
                             "reason": f"Match por sinónimo inverso: '{aword}' relacionado"
                         }
+                        if include_all_scores:
+                            result["all_scores"] = [
+                                {"career": accepted_original[i], "score": 0.90}
+                            ] + [
+                                {"career": c, "score": 0.0}
+                                for j, c in enumerate(accepted_original) if j != i
+                            ]
+                        return result
 
         return None
 

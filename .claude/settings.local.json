@@ -9,7 +9,8 @@
       "Bash(npm run build:*)",
       "Bash(dir:*)",
       "Bash(findstr:*)",
-      "Bash(composer require:*)"
+      "Bash(composer require:*)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []

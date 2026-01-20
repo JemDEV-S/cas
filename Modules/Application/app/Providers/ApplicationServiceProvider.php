@@ -64,6 +64,7 @@ class ApplicationServiceProvider extends ServiceProvider
     {
         $this->commands([
             \Modules\Application\Console\EvaluateApplicationsCommand::class,
+            \Modules\Application\Console\FindInvalidCareerIdsCommand::class,
         ]);
     }
 
