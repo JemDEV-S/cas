@@ -15,7 +15,9 @@ class RegenerateApplicationSheetsCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'applications:regenerate-sheets {--all : Regenerar todos los documentos, incluso si ya existen}';
+    protected $signature = 'applications:regenerate-sheets
+                            {--id= : ID específico de la postulación a regenerar}
+                            {--all : Regenerar todos los documentos, incluso si ya existen}';
 
     /**
      * The console command description.
@@ -45,26 +47,62 @@ class RegenerateApplicationSheetsCommand extends Command
         $this->info("✓ Template encontrado: {$template->name}");
         $this->newLine();
 
-        // Obtener postulaciones en estado SUBMITTED
-        $query = Application::where('status', ApplicationStatus::SUBMITTED)
-            ->with([
-                'applicant',
-                'jobProfile.jobPosting',  // ← ACTUALIZADO: relación directa
-                'assignedVacancy',        // ← ACTUALIZADO: vacante asignada si existe
-                'academics.career',
-                'experiences',
-                'trainings',
-                'knowledge',
-                'professionalRegistrations',
-                'specialConditions',
-                'generatedDocuments'
-            ]);
+        // Verificar si se especificó un ID específico
+        $specificId = $this->option('id');
 
-        $applications = $query->get();
+        if ($specificId) {
+            // Buscar postulación específica por ID
+            $application = Application::where('id', $specificId)
+                ->with([
+                    'applicant',
+                    'jobProfile.jobPosting',
+                    'assignedVacancy',
+                    'academics.career',
+                    'experiences',
+                    'trainings',
+                    'knowledge',
+                    'professionalRegistrations',
+                    'specialConditions',
+                    'generatedDocuments'
+                ])
+                ->first();
 
-        if ($applications->isEmpty()) {
-            $this->warn('No se encontraron postulaciones en estado SUBMITTED.');
-            return Command::SUCCESS;
+            if (!$application) {
+                $this->error("No se encontró la postulación con ID: {$specificId}");
+                return Command::FAILURE;
+            }
+
+            if ($application->status !== ApplicationStatus::SUBMITTED) {
+                $this->warn("La postulación {$application->code} no está en estado SUBMITTED (estado actual: {$application->status->value})");
+                if (!$this->confirm('¿Desea continuar de todos modos?')) {
+                    return Command::SUCCESS;
+                }
+            }
+
+            $applications = collect([$application]);
+            $this->info("Procesando postulación específica: {$application->code} (ID: {$application->id})");
+        } else {
+            // Obtener postulaciones en estado SUBMITTED
+            $query = Application::where('status', ApplicationStatus::SUBMITTED)
+                ->with([
+                    'applicant',
+                    'jobProfile.jobPosting',
+                    'assignedVacancy',
+                    'academics.career',
+                    'experiences',
+                    'trainings',
+                    'knowledge',
+                    'professionalRegistrations',
+                    'specialConditions',
+                    'generatedDocuments'
+                ]);
+
+            $applications = $query->get();
+
+            if ($applications->isEmpty()) {
+                $this->warn('No se encontraron postulaciones en estado SUBMITTED.');
+                return Command::SUCCESS;
+            }
         }
 
         $this->info("Se encontraron {$applications->count()} postulaciones para procesar.");
