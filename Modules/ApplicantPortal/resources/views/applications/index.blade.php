@@ -179,6 +179,27 @@
                                class="px-4 py-2 gradient-municipal text-white font-semibold rounded-xl hover:shadow-lg transition-all duration-300 text-center text-sm">
                                 Ver Detalles
                             </a>
+                            @if($application->status === \Modules\Application\Enums\ApplicationStatus::ELIGIBLE)
+                                @php
+                                    $hasCv = $application->documents()->where('document_type', 'DOC_CV')->exists();
+                                @endphp
+                                @if($hasCv)
+                                    <span class="px-4 py-2 bg-green-100 text-green-800 font-semibold rounded-xl text-center text-sm flex items-center justify-center gap-2">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                        </svg>
+                                        CV Subido
+                                    </span>
+                                @else
+                                    <a href="{{ route('applicant.applications.upload-cv.form', $application->id) }}"
+                                       class="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white font-semibold rounded-xl hover:shadow-lg transition-all duration-300 text-center text-sm flex items-center justify-center gap-2">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                                        </svg>
+                                        Subir CV
+                                    </a>
+                                @endif
+                            @endif
                             @if(in_array($application->status, [
                                 \Modules\Application\Enums\ApplicationStatus::SUBMITTED,
                                 \Modules\Application\Enums\ApplicationStatus::IN_REVIEW,

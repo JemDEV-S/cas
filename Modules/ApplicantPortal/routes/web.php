@@ -70,6 +70,16 @@ Route::prefix('portal')->middleware(['auth', 'role:applicant'])->name('applicant
         // Enviar postulación
         Route::post('/{id}/enviar', [ApplicationController::class, 'submit'])
             ->name('submit');
+
+        // Subir CV documentado
+        Route::get('/{id}/subir-cv', [ApplicationController::class, 'showUploadCvForm'])
+            ->name('upload-cv.form');
+        Route::post('/{id}/subir-cv', [ApplicationController::class, 'uploadCv'])
+            ->name('upload-cv');
+
+        // Ver CV documentado (abre en nueva pestaña)
+        Route::get('/{id}/ver-cv', [ApplicationController::class, 'viewCv'])
+            ->name('view-cv');
     });
 
     // ========================================

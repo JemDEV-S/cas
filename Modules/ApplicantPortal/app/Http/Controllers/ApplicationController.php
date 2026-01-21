@@ -10,6 +10,8 @@ use Modules\Application\Entities\Application;
 use Modules\Document\Services\DocumentService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Storage;
+use Modules\Application\Entities\ApplicationDocument;
+use Modules\Application\Enums\ApplicationStatus;
 
 
 class ApplicationController extends Controller
@@ -380,6 +382,150 @@ class ApplicationController extends Controller
             'days' => $days,
             'formatted' => implode(', ', $parts) ?: '0 días',
         ];
+    }
+
+    /**
+     * Mostrar formulario de subida de CV documentado.
+     */
+    public function showUploadCvForm(string $id)
+    {
+        $user = Auth::user();
+        $application = $this->applicationService->getApplicationById($id);
+
+        // Verificar que el usuario es dueño de la postulación
+        if ($application->applicant_id !== $user->id) {
+            abort(403, 'No tienes permiso para acceder a esta postulación.');
+        }
+
+        // Verificar que la postulación esté en estado APTO
+        if ($application->status !== ApplicationStatus::ELIGIBLE) {
+            return redirect()
+                ->route('applicant.applications.show', $application->id)
+                ->with('error', 'Solo puedes subir tu CV documentado cuando tu postulación está en estado APTO.');
+        }
+
+        // Cargar relaciones necesarias
+        $application->load(['jobProfile', 'documents']);
+
+        return view('applicantportal::applications.upload-cv', compact('application'));
+    }
+
+    /**
+     * Upload CV documentado (solo para postulaciones APTO).
+     */
+    public function uploadCv(Request $request, string $id): RedirectResponse
+    {
+        $user = Auth::user();
+        $application = $this->applicationService->getApplicationById($id);
+
+        // Verificar que el usuario es dueño de la postulación
+        if ($application->applicant_id !== $user->id) {
+            abort(403, 'No tienes permiso para subir documentos a esta postulación.');
+        }
+
+        // Verificar que la postulación esté en estado APTO
+        if ($application->status !== ApplicationStatus::ELIGIBLE) {
+            return redirect()
+                ->back()
+                ->with('error', 'Solo puedes subir tu CV documentado cuando tu postulación está en estado APTO.');
+        }
+
+        // Validar el archivo
+        $request->validate([
+            'cv_file' => [
+                'required',
+                'file',
+                'mimes:pdf',
+                'max:15360', // 15 MB en KB
+            ],
+        ], [
+            'cv_file.required' => 'Debes seleccionar un archivo PDF.',
+            'cv_file.file' => 'El archivo no es válido.',
+            'cv_file.mimes' => 'El archivo debe ser un PDF.',
+            'cv_file.max' => 'El archivo no debe superar los 15 MB.',
+        ]);
+
+        try {
+            $file = $request->file('cv_file');
+
+            // Generar nombre único para el archivo
+            $fileName = 'CV_' . $application->code . '_' . time() . '.pdf';
+            $filePath = 'applications/' . $application->id . '/cv/' . $fileName;
+
+            // Guardar el archivo
+            Storage::disk('local')->put($filePath, file_get_contents($file));
+
+            // Eliminar CV anterior si existe
+            $existingCv = $application->documents()->where('document_type', 'DOC_CV')->first();
+            if ($existingCv) {
+                // Eliminar archivo físico anterior
+                if (Storage::disk('local')->exists($existingCv->file_path)) {
+                    Storage::disk('local')->delete($existingCv->file_path);
+                }
+                $existingCv->forceDelete();
+            }
+
+            // Crear registro del documento
+            ApplicationDocument::create([
+                'application_id' => $application->id,
+                'document_type' => 'DOC_CV',
+                'file_name' => $file->getClientOriginalName(),
+                'file_path' => $filePath,
+                'file_extension' => 'pdf',
+                'file_size' => $file->getSize(),
+                'mime_type' => 'application/pdf',
+                'file_hash' => hash_file('sha256', $file->getRealPath()),
+                'description' => 'CV Documentado - Fase 5',
+                'uploaded_by' => $user->id,
+            ]);
+
+            return redirect()
+                ->back()
+                ->with('cv_uploaded', true)
+                ->with('success', '¡Tu CV documentado ha sido subido correctamente!');
+
+        } catch (\Exception $e) {
+            \Log::error('Error al subir CV', [
+                'application_id' => $application->id,
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return redirect()
+                ->back()
+                ->with('error', 'Ocurrió un error al subir el archivo. Por favor, intenta nuevamente.');
+        }
+    }
+
+    /**
+     * View CV documentado en nueva pestaña.
+     */
+    public function viewCv(string $id)
+    {
+        $user = Auth::user();
+        $application = $this->applicationService->getApplicationById($id);
+
+        // Verificar que el usuario es dueño de la postulación
+        if ($application->applicant_id !== $user->id) {
+            abort(403, 'No tienes permiso para ver este documento.');
+        }
+
+        // Buscar el CV
+        $cvDocument = $application->documents()->where('document_type', 'DOC_CV')->first();
+
+        if (!$cvDocument) {
+            abort(404, 'No se encontró el CV documentado.');
+        }
+
+        // Verificar que el archivo existe
+        if (!Storage::disk('local')->exists($cvDocument->file_path)) {
+            abort(404, 'El archivo no existe en el servidor.');
+        }
+
+        // Retornar el PDF para visualización en el navegador
+        return response(Storage::disk('local')->get($cvDocument->file_path), 200)
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'inline; filename="' . $cvDocument->file_name . '"');
     }
 
     /**
