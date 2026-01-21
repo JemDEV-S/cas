@@ -219,53 +219,98 @@
             </div>
 
             {{-- Sección de CV documentado --}}
-            <div class="bg-gradient-to-r from-emerald-600 to-green-700 rounded-2xl shadow-lg p-6 mb-6">
-                <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <div class="flex items-center gap-4 text-white">
-                        <div class="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center">
-                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            @if($canUploadCv ?? false)
+                <div class="bg-gradient-to-r from-emerald-600 to-green-700 rounded-2xl shadow-lg p-6 mb-6">
+                    <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div class="flex items-center gap-4 text-white">
+                            <div class="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center">
+                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-xl font-bold">CV Documentado - Fase 5</h3>
+                                @if($cvDocument)
+                                    <p class="text-emerald-100 text-sm">Tu CV ha sido subido correctamente</p>
+                                @else
+                                    <p class="text-emerald-100 text-sm">Sube tus documentos sustentatorios en un PDF</p>
+                                @endif
+                            </div>
+                        </div>
+                        @if($cvDocument)
+                            <div class="flex gap-3">
+                                <a href="{{ route('applicant.applications.view-cv', $application->id) }}"
+                                   target="_blank"
+                                   class="px-6 py-3 bg-white text-emerald-700 font-bold rounded-xl hover:bg-emerald-50 transition-all flex items-center gap-2">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                    </svg>
+                                    Ver PDF
+                                </a>
+                                <a href="{{ route('applicant.applications.upload-cv.form', $application->id) }}"
+                                   class="px-6 py-3 bg-emerald-800 text-white font-bold rounded-xl hover:bg-emerald-900 transition-all flex items-center gap-2">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                    </svg>
+                                    Reemplazar
+                                </a>
+                            </div>
+                        @else
+                            <a href="{{ route('applicant.applications.upload-cv.form', $application->id) }}"
+                               class="w-full sm:w-auto px-8 py-4 bg-white text-emerald-700 font-bold rounded-xl hover:bg-emerald-50 transition-all shadow-md flex items-center justify-center gap-3 text-lg">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                                </svg>
+                                Subir CV Documentado
+                            </a>
+                        @endif
+                    </div>
+                </div>
+            @elseif($cvDocument)
+                {{-- Si ya subió CV pero la fase terminó, solo mostrar para ver --}}
+                <div class="bg-gradient-to-r from-gray-600 to-gray-700 rounded-2xl shadow-lg p-6 mb-6">
+                    <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div class="flex items-center gap-4 text-white">
+                            <div class="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center">
+                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-xl font-bold">CV Documentado</h3>
+                                <p class="text-gray-200 text-sm">Tu CV fue subido correctamente (fase cerrada)</p>
+                            </div>
+                        </div>
+                        <a href="{{ route('applicant.applications.view-cv', $application->id) }}"
+                           target="_blank"
+                           class="px-6 py-3 bg-white text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-all flex items-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                            </svg>
+                            Ver PDF
+                        </a>
+                    </div>
+                </div>
+            @else
+                {{-- Si no subió CV y la fase terminó, mostrar mensaje de advertencia --}}
+                <div class="bg-yellow-50 border-l-4 border-yellow-500 rounded-xl p-6 mb-6">
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0">
+                            <svg class="h-6 w-6 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
                             </svg>
                         </div>
-                        <div>
-                            <h3 class="text-xl font-bold">CV Documentado - Fase 5</h3>
-                            @if($cvDocument)
-                                <p class="text-emerald-100 text-sm">Tu CV ha sido subido correctamente</p>
-                            @else
-                                <p class="text-emerald-100 text-sm">Sube tus documentos sustentatorios en un PDF</p>
-                            @endif
+                        <div class="ml-3">
+                            <h3 class="text-lg font-bold text-yellow-800 mb-2">CV Documentado no presentado</h3>
+                            <p class="text-sm text-yellow-700">
+                                La fase de presentación de CV documentado no está activa actualmente. Si no subiste tu CV durante el período habilitado, es posible que no puedas continuar en el proceso.
+                            </p>
                         </div>
                     </div>
-                    @if($cvDocument)
-                        <div class="flex gap-3">
-                            <a href="{{ route('applicant.applications.view-cv', $application->id) }}"
-                               target="_blank"
-                               class="px-6 py-3 bg-white text-emerald-700 font-bold rounded-xl hover:bg-emerald-50 transition-all flex items-center gap-2">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                                </svg>
-                                Ver PDF
-                            </a>
-                            <a href="{{ route('applicant.applications.upload-cv.form', $application->id) }}"
-                               class="px-6 py-3 bg-emerald-800 text-white font-bold rounded-xl hover:bg-emerald-900 transition-all flex items-center gap-2">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                                </svg>
-                                Reemplazar
-                            </a>
-                        </div>
-                    @else
-                        <a href="{{ route('applicant.applications.upload-cv.form', $application->id) }}"
-                           class="w-full sm:w-auto px-8 py-4 bg-white text-emerald-700 font-bold rounded-xl hover:bg-emerald-50 transition-all shadow-md flex items-center justify-center gap-3 text-lg">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-                            </svg>
-                            Subir CV Documentado
-                        </a>
-                    @endif
                 </div>
-            </div>
+            @endif
         @else
             <div class="bg-yellow-50 border-l-4 border-yellow-500 rounded-xl p-6 mb-6">
                 <div class="flex items-start">

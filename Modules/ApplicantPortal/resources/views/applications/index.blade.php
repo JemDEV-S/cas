@@ -190,7 +190,7 @@
                                         </svg>
                                         CV Subido
                                     </span>
-                                @else
+                                @elseif($application->can_upload_cv ?? false)
                                     <a href="{{ route('applicant.applications.upload-cv.form', $application->id) }}"
                                        class="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white font-semibold rounded-xl hover:shadow-lg transition-all duration-300 text-center text-sm flex items-center justify-center gap-2">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -198,6 +198,13 @@
                                         </svg>
                                         Subir CV
                                     </a>
+                                @else
+                                    <span class="px-4 py-2 bg-gray-100 text-gray-600 font-semibold rounded-xl text-center text-sm flex items-center justify-center gap-2">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                        Fase no activa
+                                    </span>
                                 @endif
                             @endif
                             @if(in_array($application->status, [

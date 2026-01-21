@@ -41,6 +41,18 @@ class ApplicationController extends Controller
         // Get status counts for filter badges
         $statusCounts = $this->applicationService->getUserApplicationStatusCounts($user->id);
 
+        // Agregar información de fase actual a cada postulación para determinar si puede subir CV
+        $applications->getCollection()->transform(function ($application) {
+            $jobPosting = $application->jobProfile?->jobPosting;
+            if ($jobPosting) {
+                $currentPhase = $jobPosting->getCurrentPhase();
+                $application->can_upload_cv = $currentPhase && in_array($currentPhase->phase?->code ?? '', ['PHASE_05_CV_SUBMISSION', 'PHASE_05_DOCUMENTS']);
+            } else {
+                $application->can_upload_cv = false;
+            }
+            return $application;
+        });
+
         return view('applicantportal::applications.index', compact(
             'applications',
             'statusCounts',
@@ -82,11 +94,15 @@ class ApplicationController extends Controller
         // Get current phase using the method instead of a relationship
         $currentPhase = $jobPosting->getCurrentPhase();
 
+        // Verificar si puede subir CV (fase de presentación de CV documentado)
+        $canUploadCv = $currentPhase && in_array($currentPhase->phase?->code ?? '', ['PHASE_05_CV_SUBMISSION', 'PHASE_05_DOCUMENTS']);
+
         return view('applicantportal::applications.show', compact(
             'application',
             'jobProfile',
             'jobPosting',
-            'currentPhase'
+            'currentPhase',
+            'canUploadCv'
         ));
     }
 
@@ -405,7 +421,18 @@ class ApplicationController extends Controller
         }
 
         // Cargar relaciones necesarias
-        $application->load(['jobProfile', 'documents']);
+        $application->load(['jobProfile.jobPosting.schedules.phase', 'documents']);
+
+        // Verificar que estemos en la fase de presentación de CV
+        $jobPosting = $application->jobProfile?->jobPosting;
+        $currentPhase = $jobPosting?->getCurrentPhase();
+        $canUploadCv = $currentPhase && in_array($currentPhase->phase?->code ?? '', ['PHASE_05_CV_SUBMISSION', 'PHASE_05_DOCUMENTS']);
+
+        if (!$canUploadCv) {
+            return redirect()
+                ->route('applicant.applications.show', $application->id)
+                ->with('error', 'La fase de presentación de CV documentado no está activa en este momento.');
+        }
 
         return view('applicantportal::applications.upload-cv', compact('application'));
     }
@@ -428,6 +455,18 @@ class ApplicationController extends Controller
             return redirect()
                 ->back()
                 ->with('error', 'Solo puedes subir tu CV documentado cuando tu postulación está en estado APTO.');
+        }
+
+        // Cargar relaciones necesarias y verificar fase
+        $application->load(['jobProfile.jobPosting.schedules.phase']);
+        $jobPosting = $application->jobProfile?->jobPosting;
+        $currentPhase = $jobPosting?->getCurrentPhase();
+        $canUploadCv = $currentPhase && in_array($currentPhase->phase?->code ?? '', ['PHASE_05_CV_SUBMISSION', 'PHASE_05_DOCUMENTS']);
+
+        if (!$canUploadCv) {
+            return redirect()
+                ->back()
+                ->with('error', 'La fase de presentación de CV documentado no está activa en este momento.');
         }
 
         // Validar el archivo
