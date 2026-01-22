@@ -4,6 +4,7 @@ namespace Modules\Application\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Modules\Application\Entities\Application;
 use Modules\Application\Services\EligibilityOverrideService;
@@ -288,5 +289,38 @@ class EligibilityOverrideController extends Controller
                 'error' => $e->getMessage()
             ], 422);
         }
+    }
+
+    /**
+     * Ver ficha de postulación PDF en el navegador
+     */
+    public function viewApplicationSheet(string $applicationId)
+    {
+        $this->authorize('eligibility.override');
+
+        $application = Application::findOrFail($applicationId);
+
+        // Buscar el documento de ficha de postulación
+        $document = $application->generatedDocuments()
+            ->whereHas('template', fn($q) => $q->where('code', 'TPL_APPLICATION_SHEET'))
+            ->first();
+
+        if (!$document) {
+            return redirect()
+                ->back()
+                ->with('error', 'No se encontró la ficha de postulación para este postulante.');
+        }
+
+        // Verificar que el PDF existe
+        if (!$document->pdf_path || !Storage::disk('private')->exists($document->pdf_path)) {
+            return redirect()
+                ->back()
+                ->with('error', 'El archivo PDF no existe.');
+        }
+
+        // Retornar el PDF para visualización en el navegador (inline)
+        return response(Storage::disk('private')->get($document->pdf_path), 200)
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'inline; filename="Ficha_Postulacion_' . $application->code . '.pdf"');
     }
 }

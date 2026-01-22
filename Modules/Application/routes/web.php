@@ -82,4 +82,8 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(
     // Generar PDF general de resoluciones por convocatoria
     Route::get('eligibility-override/{posting}/pdf', [EligibilityOverrideController::class, 'generatePdf'])
         ->name('eligibility-override.pdf');
+
+    // Ver ficha de postulación en nueva pestaña
+    Route::get('eligibility-override/application/{application}/view-sheet', [EligibilityOverrideController::class, 'viewApplicationSheet'])
+        ->name('eligibility-override.view-sheet');
 });
