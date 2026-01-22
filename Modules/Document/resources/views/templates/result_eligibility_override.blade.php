@@ -461,6 +461,9 @@
                         </td>
                         <td class="resolution-text">
                             <span class="resolution-summary">{{ $override->resolution_summary }}</span>
+                            @if($override->resolution_detail)
+                                <br><span style="color: #25272b;">{{ $override->resolution_detail }}</span>
+                            @endif
                         </td>
                         <td class="text-center" style="font-size: 6pt;">{{ $override->resolved_at->format('d/m/Y') }}</td>
                     </tr>
