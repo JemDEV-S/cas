@@ -246,9 +246,12 @@
                                                 {{ $academic->degree_type }}
                                             </span>
                                             @if($academic->is_related_career)
+                                                {{ $academic->related_career_name ?? 'No especificada' }}
                                                 <span class="ml-1 px-2 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800">
-                                                    Carrera Afin
+                                                    Carrera Afín
                                                 </span>
+                                            @else
+                                                {{ $academic->career?->name ?? 'No especificada' }}
                                             @endif
                                         </div>
                                         <span class="text-sm text-gray-500">{{ $academic->issue_date?->format('d/m/Y') }}</span>
