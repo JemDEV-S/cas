@@ -14,19 +14,10 @@
                         Reevaluacion de elegibilidad - {{ $application->full_name }}
                     </p>
                 </div>
-                <div class="flex space-x-2">
-                    @if($application->eligibilityOverride)
-                        <a href="{{ route('admin.eligibility-override.pdf', $application->id) }}"
-                           class="bg-green-500 hover:bg-green-700 text-white px-4 py-2 rounded"
-                           target="_blank">
-                            Descargar PDF
-                        </a>
-                    @endif
-                    <a href="{{ route('admin.eligibility-override.index', $application->jobProfile->job_posting_id) }}"
-                       class="bg-gray-500 hover:bg-gray-700 text-white px-4 py-2 rounded">
-                        Volver
-                    </a>
-                </div>
+                <a href="{{ route('admin.eligibility-override.index', $application->jobProfile->job_posting_id) }}"
+                   class="bg-gray-500 hover:bg-gray-700 text-white px-4 py-2 rounded">
+                    Volver
+                </a>
             </div>
         </div>
     </div>

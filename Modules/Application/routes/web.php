@@ -79,7 +79,7 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(
     Route::post('eligibility-override/{application}/reject', [EligibilityOverrideController::class, 'reject'])
         ->name('eligibility-override.reject');
 
-    // Generar PDF de resolución
-    Route::get('eligibility-override/{application}/pdf', [EligibilityOverrideController::class, 'generatePdf'])
+    // Generar PDF general de resoluciones por convocatoria
+    Route::get('eligibility-override/{posting}/pdf', [EligibilityOverrideController::class, 'generatePdf'])
         ->name('eligibility-override.pdf');
 });

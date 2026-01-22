@@ -130,37 +130,86 @@ class EligibilityOverrideController extends Controller
     }
 
     /**
-     * Generar PDF de resolución
+     * Generar PDF general de resoluciones por convocatoria
      */
-    public function generatePdf(string $applicationId)
+    public function generatePdf(string $postingId)
     {
         $this->authorize('eligibility.override');
 
-        $application = Application::with([
-            'applicant',
-            'jobProfile.jobPosting',
-            'eligibilityOverride.resolver'
-        ])->findOrFail($applicationId);
+        $posting = JobPosting::with(['jobProfiles.organizationalUnit'])->findOrFail($postingId);
 
-        $override = $application->eligibilityOverride;
+        // Obtener todas las postulaciones con override resuelto
+        $resolvedApplications = $this->service->getResolvedApplications($postingId);
 
-        if (!$override) {
+        if ($resolvedApplications->isEmpty()) {
             return redirect()
                 ->back()
-                ->with('error', 'No hay resolución de reevaluación para esta postulación');
+                ->with('error', 'No hay resoluciones de reevaluación para esta convocatoria');
         }
 
-        $posting = $application->jobProfile->jobPosting;
+        // Estadísticas generales
+        $stats = $this->service->getStatistics($postingId);
 
-        $pdf = Pdf::loadView('document::templates.eligibility_resolution', [
-            'application' => $application,
-            'override' => $override,
+        // Agrupar por unidad organizacional y perfil
+        $units = [];
+        foreach ($resolvedApplications as $application) {
+            $profile = $application->jobProfile;
+            $unitName = $profile->organizationalUnit->name ?? 'Sin Unidad Asignada';
+            $unitId = $profile->organizational_unit_id ?? 'sin_unidad';
+
+            if (!isset($units[$unitId])) {
+                $units[$unitId] = [
+                    'name' => $unitName,
+                    'profiles' => [],
+                    'stats' => ['total' => 0, 'approved' => 0, 'rejected' => 0],
+                ];
+            }
+
+            $profileId = $profile->id;
+            if (!isset($units[$unitId]['profiles'][$profileId])) {
+                $units[$unitId]['profiles'][$profileId] = [
+                    'code' => $profile->code,
+                    'title' => $profile->profile_name ?? $profile->title,
+                    'position_code' => $profile->position_code ?? 'N/A',
+                    'vacancies' => $profile->total_vacancies ?? 1,
+                    'applications' => [],
+                    'stats' => ['total' => 0, 'approved' => 0, 'rejected' => 0],
+                ];
+            }
+
+            $units[$unitId]['profiles'][$profileId]['applications'][] = $application;
+            $units[$unitId]['profiles'][$profileId]['stats']['total']++;
+            $units[$unitId]['stats']['total']++;
+
+            if ($application->eligibilityOverride->decision->value === 'APPROVED') {
+                $units[$unitId]['profiles'][$profileId]['stats']['approved']++;
+                $units[$unitId]['stats']['approved']++;
+            } else {
+                $units[$unitId]['profiles'][$profileId]['stats']['rejected']++;
+                $units[$unitId]['stats']['rejected']++;
+            }
+        }
+
+        // Convertir a array indexado
+        $units = array_values($units);
+        foreach ($units as &$unit) {
+            $unit['profiles'] = array_values($unit['profiles']);
+        }
+
+        $pdf = Pdf::loadView('document::templates.result_eligibility_override', [
             'posting' => $posting,
+            'units' => $units,
+            'stats' => $stats,
+            'title' => 'RESULTADO DE REEVALUACION DE ELEGIBILIDAD',
+            'subtitle' => 'Resolucion de Reclamos - Proceso CAS',
+            'date' => now()->format('d/m/Y'),
+            'time' => now()->format('H:i'),
+            'phase' => 'Reevaluacion de Elegibilidad (Reclamos)',
         ]);
 
-        $pdf->setPaper('A4', 'portrait');
+        $pdf->setPaper('A4', 'landscape');
 
-        $filename = "resolucion-reclamo-{$application->code}.pdf";
+        $filename = "resultado-reevaluacion-{$posting->code}.pdf";
 
         return $pdf->download($filename);
     }
