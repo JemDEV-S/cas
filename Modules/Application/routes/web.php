@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Modules\Application\Http\Controllers\ApplicationController;
 use Modules\Application\Http\Controllers\Admin\ApplicationEvaluationController;
+use Modules\Application\Http\Controllers\Admin\EligibilityOverrideController;
 
 /*
  * Rutas del módulo Application
@@ -56,4 +57,29 @@ Route::middleware(['auth', 'verified'])->prefix('admin/applications')->name('adm
     // Ver detalle de evaluación
     Route::get('evaluation/{application}/detail', [ApplicationEvaluationController::class, 'show'])
         ->name('evaluation.show');
+});
+
+/*
+ * Rutas de administración - Reevaluación de Elegibilidad (Reclamos)
+ */
+Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(function () {
+    // Lista de postulaciones para reevaluar por convocatoria
+    Route::get('eligibility-override/{posting}', [EligibilityOverrideController::class, 'index'])
+        ->name('eligibility-override.index');
+
+    // Detalle de postulación para reevaluar
+    Route::get('eligibility-override/application/{application}', [EligibilityOverrideController::class, 'show'])
+        ->name('eligibility-override.show');
+
+    // Aprobar reevaluación (cambiar a APTO)
+    Route::post('eligibility-override/{application}/approve', [EligibilityOverrideController::class, 'approve'])
+        ->name('eligibility-override.approve');
+
+    // Rechazar reevaluación (mantener NO_APTO)
+    Route::post('eligibility-override/{application}/reject', [EligibilityOverrideController::class, 'reject'])
+        ->name('eligibility-override.reject');
+
+    // Generar PDF de resolución
+    Route::get('eligibility-override/{application}/pdf', [EligibilityOverrideController::class, 'generatePdf'])
+        ->name('eligibility-override.pdf');
 });

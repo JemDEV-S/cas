@@ -649,7 +649,8 @@ Modules/Application/
 │   └── migrations/
 │       └── xxxx_create_eligibility_overrides_table.php
 └── routes/
-    └── api.php (agregar rutas)
+    └── web.php (agregar rutas)
+    
 
 Modules/Document/
 └── resources/views/templates/

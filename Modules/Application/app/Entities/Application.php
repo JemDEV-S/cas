@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Application extends Model
@@ -202,6 +203,14 @@ class Application extends Model
     public function latestEvaluation()
     {
         return $this->hasOne(ApplicationEvaluation::class)->latestOfMany('evaluated_at');
+    }
+
+    /**
+     * Relación con override de elegibilidad (reevaluación de reclamo)
+     */
+    public function eligibilityOverride(): HasOne
+    {
+        return $this->hasOne(EligibilityOverride::class);
     }
 
     /**

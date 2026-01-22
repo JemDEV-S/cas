@@ -479,6 +479,13 @@
                         </a>
                         @endcan
 
+                        @can('eligibility.override')
+                        <a href="{{ route('admin.eligibility-override.index', $jobPosting) }}"
+                           class="block w-full px-6 py-3 bg-gradient-to-r from-amber-500 to-yellow-600 text-white rounded-xl font-bold hover:from-amber-600 hover:to-yellow-700 transition-all shadow-lg hover:shadow-xl text-center">
+                            ⚖️ Reevaluacion (Reclamos)
+                        </a>
+                        @endcan
+
                         @can('jobposting.create.posting')
                         <form action="{{ route('jobposting.clone', $jobPosting) }}" method="POST">
                             @csrf

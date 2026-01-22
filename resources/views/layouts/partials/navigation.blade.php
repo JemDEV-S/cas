@@ -196,7 +196,18 @@
                                     <svg class="w-5 h-5 mr-3 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
                                     </svg>
-                                    <span class="font-medium group-hover:text-emerald-500">Evaluaciones Automáticas</span>
+                                    <span class="font-medium group-hover:text-emerald-500">Evaluaciones Automaticas</span>
+                                </a>
+                                @endcan
+                                @can('eligibility.override')
+                                <div class="border-t border-gray-200 my-1"></div>
+                                <a href="{{ route('jobposting.list') }}"
+                                   class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-amber-50 hover:to-yellow-50 transition-all group"
+                                   title="Seleccione una convocatoria para reevaluar elegibilidad">
+                                    <svg class="w-5 h-5 mr-3 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                                    </svg>
+                                    <span class="font-medium group-hover:text-amber-500">Reevaluacion (Reclamos)</span>
                                 </a>
                                 @endcan
                             </div>
