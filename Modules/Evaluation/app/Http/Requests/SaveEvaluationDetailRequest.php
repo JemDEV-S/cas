@@ -19,6 +19,16 @@ class SaveEvaluationDetailRequest extends FormRequest
      */
     public function rules(): array
     {
+        // Si es una descalificación, no requerimos criterion_id ni score
+        if ($this->has('disqualified') && $this->input('disqualified') === true) {
+            return [
+                'disqualified' => ['required', 'boolean'],
+                'disqualification_reason' => ['required', 'string', 'max:2000'],
+                'disqualification_type' => ['nullable', 'string', 'max:100'],
+            ];
+        }
+
+        // Validación normal para detalles de criterios
         return [
             'criterion_id' => ['required', 'integer', 'exists:evaluation_criteria,id'],
             'score' => ['required', 'numeric', 'min:0'],
@@ -34,9 +44,14 @@ class SaveEvaluationDetailRequest extends FormRequest
     public function withValidator($validator): void
     {
         $validator->after(function ($validator) {
+            // Si es descalificación, no validar criterios
+            if ($this->has('disqualified') && $this->input('disqualified') === true) {
+                return;
+            }
+
             if ($this->criterion_id) {
                 $criterion = \Modules\Evaluation\Entities\EvaluationCriterion::find($this->criterion_id);
-                
+
                 if ($criterion) {
                     // Validar que el score esté dentro del rango del criterio
                     if ($this->score < $criterion->min_score || $this->score > $criterion->max_score) {

@@ -22,6 +22,9 @@ class SubmitEvaluationRequest extends FormRequest
         return [
             'confirm' => ['required', 'boolean', 'accepted'],
             'general_comments' => ['nullable', 'string', 'max:5000'],
+            'disqualified' => ['nullable', 'boolean'],
+            'disqualification_reason' => ['nullable', 'string', 'max:2000'],
+            'disqualification_type' => ['nullable', 'string', 'max:100'],
         ];
     }
 

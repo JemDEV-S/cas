@@ -84,14 +84,44 @@ class EvaluationService
 
     /**
      * Guardar o actualizar detalle de evaluación (calificación por criterio)
+     * O guardar descalificación si es el caso
      */
-    public function saveEvaluationDetail(Evaluation $evaluation, array $detailData): EvaluationDetail
+    public function saveEvaluationDetail(Evaluation $evaluation, array $detailData)
     {
         if (!$evaluation->canEdit()) {
             throw new EvaluationException('Esta evaluación ya no puede ser editada');
         }
 
         return DB::transaction(function () use ($evaluation, $detailData) {
+            // Si es una descalificación
+            if (isset($detailData['disqualified']) && $detailData['disqualified'] === true) {
+                // Guardar en metadata y general_comments
+                $metadata = $evaluation->metadata ?? [];
+                $metadata['disqualified'] = true;
+                $metadata['disqualification_type'] = $detailData['disqualification_type'] ?? null;
+
+                $evaluation->update([
+                    'metadata' => $metadata,
+                    'general_comments' => $detailData['disqualification_reason'],
+                    'status' => EvaluationStatusEnum::IN_PROGRESS,
+                    'total_score' => 0,
+                ]);
+
+                // Registrar en historial
+                $userId = auth()->id() ?? $evaluation->evaluator_id;
+                EvaluationHistory::logChange(
+                    $evaluation->id,
+                    $userId,
+                    'DISQUALIFIED',
+                    'Postulante descalificado',
+                    null,
+                    ['reason' => $detailData['disqualification_reason']]
+                );
+
+                return $evaluation;
+            }
+
+            // Flujo normal para detalles de criterios
             $detail = $evaluation->details()
                 ->where('criterion_id', $detailData['criterion_id'])
                 ->first();
@@ -108,7 +138,6 @@ class EvaluationService
                 ]);
 
                 // Registrar cambio
-                // Si no hay usuario autenticado, usar el evaluator_id
                 $userId = auth()->id() ?? $evaluation->evaluator_id;
 
                 EvaluationHistory::logChange(
@@ -147,12 +176,17 @@ class EvaluationService
             throw new EvaluationException('Esta evaluación ya no puede ser enviada');
         }
 
-        // Validar que todos los criterios estén calificados
+        // Validar que todos los criterios estén calificados (o que tenga descalificación)
         $this->validateEvaluationComplete($evaluation);
 
         return DB::transaction(function () use ($evaluation) {
             $evaluation->submit();
-            $evaluation->updateScores();
+
+            // Solo actualizar scores si no está descalificado
+            $metadata = $evaluation->metadata ?? [];
+            if (!isset($metadata['disqualified']) || $metadata['disqualified'] !== true) {
+                $evaluation->updateScores();
+            }
 
             // Marcar asignación como completada
             if ($evaluation->evaluatorAssignment) {
@@ -162,11 +196,15 @@ class EvaluationService
             // Registrar en historial
             $userId = auth()->id() ?? $evaluation->evaluator_id;
 
+            $message = isset($metadata['disqualified']) && $metadata['disqualified']
+                ? 'Evaluación enviada - Postulante descalificado'
+                : 'Evaluación enviada y finalizada';
+
             EvaluationHistory::logChange(
                 $evaluation->id,
                 $userId,
                 'SUBMITTED',
-                'Evaluación enviada y finalizada'
+                $message
             );
 
             // Disparar evento
@@ -315,6 +353,18 @@ class EvaluationService
      */
     protected function validateEvaluationComplete(Evaluation $evaluation): void
     {
+        // Si está descalificado, no validar criterios
+        $metadata = $evaluation->metadata ?? [];
+        if (isset($metadata['disqualified']) && $metadata['disqualified'] === true) {
+            // Solo validar que tenga el motivo de descalificación
+            if (empty($evaluation->general_comments)) {
+                throw new EvaluationException(
+                    "Debe especificar el motivo de la descalificación"
+                );
+            }
+            return;
+        }
+
         // Obtener el position_code_id desde la postulación
         $positionCodeId = $evaluation->application
             ? $evaluation->application->jobProfile?->position_code_id

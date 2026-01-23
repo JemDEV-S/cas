@@ -3,7 +3,7 @@
 @section('title', 'Evaluar Postulante')
 
 @section('page-title')
-    Evaluación - {{ $evaluation->evaluatorAssignment->application->full_name ?? 'Postulante' }}
+    Evaluación - {{ $application->full_name ?? 'Postulante' }}
 @endsection
 
 @section('breadcrumbs')
@@ -22,7 +22,7 @@
                 <div class="text-white">
                     <h3 class="text-lg font-semibold">Curriculum Vitae</h3>
                     <p class="text-sm text-blue-100 mt-1">
-                        {{ $evaluation->evaluatorAssignment->application->full_name ?? 'N/A' }}
+                        {{ $application->full_name ?? 'N/A' }}
                     </p>
                 </div>
                 @if($cvDocument)
@@ -65,25 +65,18 @@
         <div class="px-6 py-4 bg-white border-b border-gray-200 shadow-sm">
             <div class="flex items-center justify-between">
                 <div>
-                    <h3 class="text-lg font-semibold text-gray-900">Formulario de Evaluación</h3>
+                    <h3 class="text-lg font-semibold text-gray-900">Evaluación de Currículum</h3>
                     <p class="text-sm text-gray-600 mt-1">
-                        {{ $evaluation->evaluatorAssignment->application->jobProfile->jobPosting->title ?? 'Convocatoria' }} -
-                        {{ $evaluation->phase->name }}
+                        {{ $jobProfile->jobPosting->title ?? 'Convocatoria' }} - {{ $evaluation->phase->name }}
                     </p>
-                    @if($positionCode)
-                    <p class="text-xs text-gray-500 mt-1">
-                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                            Código de Puesto: {{ $positionCode }}
-                        </span>
-                    </p>
-                    @endif
                 </div>
 
-                <!-- Resumen de progreso -->
+                <!-- Estado de evaluación -->
                 <div class="text-right">
-                    <div class="text-2xl font-bold text-blue-600" x-text="totalScore.toFixed(2)">0.00</div>
-                    <p class="text-xs text-gray-500">de {{ number_format($maxTotalScore, 2) }} pts</p>
-                    <div class="mt-1 w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div x-show="!isDisqualified" class="text-2xl font-bold text-blue-600" x-text="totalScore.toFixed(2)">0.00</div>
+                    <div x-show="isDisqualified" class="text-2xl font-bold text-red-600">DESCALIFICADO</div>
+                    <p x-show="!isDisqualified" class="text-xs text-gray-500">de {{ number_format($maxTotalScore, 2) }} pts</p>
+                    <div x-show="!isDisqualified" class="mt-1 w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
                         <div class="h-full bg-blue-600 transition-all duration-300" :style="`width: ${progress}%`"></div>
                     </div>
                 </div>
@@ -93,8 +86,431 @@
         <!-- Contenido del formulario con scroll -->
         <div class="flex-1 overflow-y-auto px-6 py-6">
             <form id="evaluationForm">
-                <!-- Criterios de evaluación -->
-                <div class="space-y-4">
+
+                <!-- INFORMACIÓN DEL PERFIL Y POSTULACIÓN -->
+                <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 shadow-md mb-6 overflow-hidden">
+                    <div class="px-6 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 border-b border-blue-300">
+                        <h4 class="text-base font-bold text-white flex items-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            Información de la Postulación
+                        </h4>
+                    </div>
+                    <div class="px-6 py-4 space-y-3">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Código de Postulación</p>
+                                <p class="text-sm font-semibold text-gray-900 mt-1">{{ $application->code ?? 'N/A' }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Postulante</p>
+                                <p class="text-sm font-semibold text-gray-900 mt-1">{{ $application->full_name ?? 'N/A' }}</p>
+                            </div>
+                        </div>
+                        @if($positionCode)
+                        <div>
+                            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Código de Puesto</p>
+                            <div class="mt-1">
+                                <span class="inline-flex items-center px-3 py-1 rounded-lg text-sm font-semibold bg-blue-100 text-blue-800">
+                                    {{ $positionCode }}
+                                    @if($jobProfile && $jobProfile->positionCode && $jobProfile->positionCode->name)
+                                    <span class="ml-2 text-blue-600">- {{ $jobProfile->positionCode->name }}</span>
+                                    @endif
+                                </span>
+                            </div>
+                        </div>
+                        @endif
+                        <div>
+                            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Título del Perfil</p>
+                            <p class="text-sm font-semibold text-gray-900 mt-1">{{ $jobProfile->title ?? 'N/A' }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FLUJO DE CALIFICACIÓN PREVIA A CRITERIOS -->
+                <div class="space-y-5 mb-6">
+
+                    <!-- 1. VERIFICACIÓN DE ORDEN DE DOCUMENTOS DEL CV -->
+                    <div class="bg-white rounded-xl border-2 border-gray-200 shadow-sm overflow-hidden">
+                        <div class="px-5 py-4 bg-gradient-to-r from-amber-50 to-orange-50 border-b border-amber-200">
+                            <div class="flex items-center justify-between">
+                                <h4 class="text-base font-bold text-gray-900 flex items-center gap-2">
+                                    <span class="flex items-center justify-center w-7 h-7 rounded-full bg-amber-500 text-white text-sm font-bold">1</span>
+                                    Verificación de Orden de Documentos del CV
+                                </h4>
+                                <span x-show="cvOrderCheck === 'not_complies'" class="px-3 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-full uppercase">
+                                    No Cumple
+                                </span>
+                                <span x-show="cvOrderCheck === 'complies'" class="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full uppercase">
+                                    Cumple
+                                </span>
+                            </div>
+                        </div>
+                        <div class="px-5 py-4">
+                            <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+                                <p class="text-sm text-amber-900 font-medium">
+                                    Verifique que el CV del postulante cumpla con el orden establecido de documentos según las bases de la convocatoria.
+                                </p>
+                            </div>
+
+                            <div class="space-y-3">
+                                <label class="flex items-center gap-3 p-3 bg-green-50 border-2 border-green-200 rounded-lg cursor-pointer hover:bg-green-100 transition-colors">
+                                    <input type="radio"
+                                           name="cv_order_check"
+                                           value="complies"
+                                           x-model="cvOrderCheck"
+                                           class="w-4 h-4 text-green-600 focus:ring-green-500">
+                                    <span class="text-sm font-semibold text-gray-900">Cumple con el orden de documentos</span>
+                                </label>
+
+                                <label class="flex items-center gap-3 p-3 bg-red-50 border-2 border-red-200 rounded-lg cursor-pointer hover:bg-red-100 transition-colors">
+                                    <input type="radio"
+                                           name="cv_order_check"
+                                           value="not_complies"
+                                           x-model="cvOrderCheck"
+                                           class="w-4 h-4 text-red-600 focus:ring-red-500">
+                                    <span class="text-sm font-semibold text-gray-900">No cumple con el orden de documentos</span>
+                                </label>
+                            </div>
+
+                            <div x-show="cvOrderCheck === 'not_complies'"
+                                 x-transition
+                                 class="mt-4 p-4 bg-red-100 border-l-4 border-red-500 rounded-r-lg">
+                                <div class="flex items-start gap-3">
+                                    <svg class="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                    </svg>
+                                    <div class="flex-1">
+                                        <p class="text-sm font-bold text-red-800 mb-2">El postulante será descalificado por no cumplir con el orden de documentos.</p>
+                                        <textarea x-model="cvOrderReason"
+                                                  class="w-full px-3 py-2 text-sm border border-red-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                                                  rows="2"
+                                                  placeholder="Especifique qué documento(s) están mal ordenados o faltantes..."></textarea>
+                                        <button type="button"
+                                                @click="disqualify('cv_order')"
+                                                class="mt-3 w-full px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                            </svg>
+                                            Descalificar por no cumplir orden de documentos
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. VERIFICACIÓN DE NIVEL EDUCATIVO -->
+                    @if($jobProfile && $jobProfile->education_levels && count($jobProfile->education_levels) > 0)
+                    <div class="bg-white rounded-xl border-2 border-gray-200 shadow-sm overflow-hidden" x-show="cvOrderCheck === 'complies'">
+                        <div class="px-5 py-4 bg-gradient-to-r from-purple-50 to-pink-50 border-b border-purple-200">
+                            <div class="flex items-center justify-between">
+                                <h4 class="text-base font-bold text-gray-900 flex items-center gap-2">
+                                    <span class="flex items-center justify-center w-7 h-7 rounded-full bg-purple-500 text-white text-sm font-bold">2</span>
+                                    Verificación de Nivel Educativo
+                                </h4>
+                                <span x-show="educationCheck === 'not_complies'" class="px-3 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-full uppercase">
+                                    No Cumple
+                                </span>
+                                <span x-show="educationCheck === 'complies'" class="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full uppercase">
+                                    Cumple
+                                </span>
+                            </div>
+                        </div>
+                        <div class="px-5 py-4">
+                            <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4">
+                                <p class="text-xs font-medium text-purple-900 uppercase tracking-wide mb-2">Niveles Educativos Requeridos:</p>
+                                <div class="flex flex-wrap gap-2">
+                                    @foreach($jobProfile->education_levels as $level)
+                                    <span class="inline-flex items-center px-3 py-1 rounded-lg text-sm font-semibold bg-purple-100 text-purple-800">
+                                        {{ $level }}
+                                    </span>
+                                    @endforeach
+                                </div>
+                            </div>
+
+                            <div class="space-y-3">
+                                <label class="flex items-center gap-3 p-3 bg-green-50 border-2 border-green-200 rounded-lg cursor-pointer hover:bg-green-100 transition-colors">
+                                    <input type="radio"
+                                           name="education_check"
+                                           value="complies"
+                                           x-model="educationCheck"
+                                           class="w-4 h-4 text-green-600 focus:ring-green-500">
+                                    <span class="text-sm font-semibold text-gray-900">Cumple con el nivel educativo requerido</span>
+                                </label>
+
+                                <label class="flex items-center gap-3 p-3 bg-red-50 border-2 border-red-200 rounded-lg cursor-pointer hover:bg-red-100 transition-colors">
+                                    <input type="radio"
+                                           name="education_check"
+                                           value="not_complies"
+                                           x-model="educationCheck"
+                                           class="w-4 h-4 text-red-600 focus:ring-red-500">
+                                    <span class="text-sm font-semibold text-gray-900">No cumple con el nivel educativo requerido</span>
+                                </label>
+                            </div>
+
+                            <div x-show="educationCheck === 'not_complies'"
+                                 x-transition
+                                 class="mt-4 p-4 bg-red-100 border-l-4 border-red-500 rounded-r-lg">
+                                <div class="flex items-start gap-3">
+                                    <svg class="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                    </svg>
+                                    <div class="flex-1">
+                                        <p class="text-sm font-bold text-red-800 mb-2">El postulante será descalificado por no cumplir el requisito de nivel educativo.</p>
+                                        <textarea x-model="educationReason"
+                                                  class="w-full px-3 py-2 text-sm border border-red-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                                                  rows="2"
+                                                  placeholder="Especifique el motivo (ej: Solo tiene título técnico, se requiere bachiller universitario)..."></textarea>
+                                        <button type="button"
+                                                @click="disqualify('education')"
+                                                class="mt-3 w-full px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                            </svg>
+                                            Descalificar por no cumplir nivel educativo
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    @endif
+
+                    <!-- 3. VERIFICACIÓN DE CARRERA PROFESIONAL -->
+                    @if($jobProfile && $jobProfile->career_field)
+                    <div class="bg-white rounded-xl border-2 border-gray-200 shadow-sm overflow-hidden"
+                         x-show="cvOrderCheck === 'complies' && (educationCheck === 'complies' || educationCheck === '')">
+                        <div class="px-5 py-4 bg-gradient-to-r from-teal-50 to-cyan-50 border-b border-teal-200">
+                            <div class="flex items-center justify-between">
+                                <h4 class="text-base font-bold text-gray-900 flex items-center gap-2">
+                                    <span class="flex items-center justify-center w-7 h-7 rounded-full bg-teal-500 text-white text-sm font-bold">3</span>
+                                    Verificación de Carrera Profesional
+                                </h4>
+                                <span x-show="careerCheck === 'not_complies'" class="px-3 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-full uppercase">
+                                    No Cumple
+                                </span>
+                                <span x-show="careerCheck === 'complies'" class="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full uppercase">
+                                    Cumple
+                                </span>
+                            </div>
+                        </div>
+                        <div class="px-5 py-4">
+                            <div class="bg-teal-50 border border-teal-200 rounded-lg p-4 mb-4">
+                                <p class="text-xs font-medium text-teal-900 uppercase tracking-wide mb-2">Carrera Requerida:</p>
+                                <p class="text-sm font-bold text-teal-900">{{ $jobProfile->career_field }}</p>
+                            </div>
+
+                            <div class="space-y-3">
+                                <label class="flex items-center gap-3 p-3 bg-green-50 border-2 border-green-200 rounded-lg cursor-pointer hover:bg-green-100 transition-colors">
+                                    <input type="radio"
+                                           name="career_check"
+                                           value="complies"
+                                           x-model="careerCheck"
+                                           class="w-4 h-4 text-green-600 focus:ring-green-500">
+                                    <span class="text-sm font-semibold text-gray-900">Cumple con la carrera profesional requerida</span>
+                                </label>
+
+                                <label class="flex items-center gap-3 p-3 bg-red-50 border-2 border-red-200 rounded-lg cursor-pointer hover:bg-red-100 transition-colors">
+                                    <input type="radio"
+                                           name="career_check"
+                                           value="not_complies"
+                                           x-model="careerCheck"
+                                           class="w-4 h-4 text-red-600 focus:ring-red-500">
+                                    <span class="text-sm font-semibold text-gray-900">No cumple con la carrera profesional requerida</span>
+                                </label>
+                            </div>
+
+                            <div x-show="careerCheck === 'not_complies'"
+                                 x-transition
+                                 class="mt-4 p-4 bg-red-100 border-l-4 border-red-500 rounded-r-lg">
+                                <div class="flex items-start gap-3">
+                                    <svg class="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                    </svg>
+                                    <div class="flex-1">
+                                        <p class="text-sm font-bold text-red-800 mb-2">El postulante será descalificado por no cumplir el requisito de carrera profesional.</p>
+                                        <textarea x-model="careerReason"
+                                                  class="w-full px-3 py-2 text-sm border border-red-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                                                  rows="2"
+                                                  placeholder="Especifique el motivo (ej: Tiene título en Contabilidad, se requiere Administración)..."></textarea>
+                                        <button type="button"
+                                                @click="disqualify('career')"
+                                                class="mt-3 w-full px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                            </svg>
+                                            Descalificar por no cumplir carrera requerida
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    @endif
+
+                    <!-- 4. VERIFICACIÓN DE EXPERIENCIA GENERAL -->
+                    @if($jobProfile && $jobProfile->general_experience_years)
+                    <div class="bg-white rounded-xl border-2 border-gray-200 shadow-sm overflow-hidden"
+                         x-show="cvOrderCheck === 'complies' && (educationCheck === 'complies' || educationCheck === '') && (careerCheck === 'complies' || careerCheck === '')">
+                        <div class="px-5 py-4 bg-gradient-to-r from-indigo-50 to-blue-50 border-b border-indigo-200">
+                            <div class="flex items-center justify-between">
+                                <h4 class="text-base font-bold text-gray-900 flex items-center gap-2">
+                                    <span class="flex items-center justify-center w-7 h-7 rounded-full bg-indigo-500 text-white text-sm font-bold">4</span>
+                                    Verificación de Experiencia General
+                                </h4>
+                                <span x-show="experienceCheck === 'not_complies'" class="px-3 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-full uppercase">
+                                    No Cumple
+                                </span>
+                                <span x-show="experienceCheck === 'complies'" class="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full uppercase">
+                                    Cumple
+                                </span>
+                            </div>
+                        </div>
+                        <div class="px-5 py-4">
+                            <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-4">
+                                <p class="text-xs font-medium text-indigo-900 uppercase tracking-wide mb-2">Experiencia General Requerida:</p>
+                                <p class="text-sm font-bold text-indigo-900">
+                                    @php
+                                        $rawExperience = $jobProfile->getAttributes()['general_experience_years'] ?? 0;
+                                        $experienceObj = \Modules\Core\ValueObjects\ExperienceDuration::fromDecimal((float) $rawExperience);
+                                    @endphp
+                                    {{ $experienceObj->toHuman() }}
+                                </p>
+                            </div>
+
+                            <div class="space-y-3">
+                                <label class="flex items-center gap-3 p-3 bg-green-50 border-2 border-green-200 rounded-lg cursor-pointer hover:bg-green-100 transition-colors">
+                                    <input type="radio"
+                                           name="experience_check"
+                                           value="complies"
+                                           x-model="experienceCheck"
+                                           class="w-4 h-4 text-green-600 focus:ring-green-500">
+                                    <span class="text-sm font-semibold text-gray-900">Cumple con la experiencia general requerida</span>
+                                </label>
+
+                                <label class="flex items-center gap-3 p-3 bg-red-50 border-2 border-red-200 rounded-lg cursor-pointer hover:bg-red-100 transition-colors">
+                                    <input type="radio"
+                                           name="experience_check"
+                                           value="not_complies"
+                                           x-model="experienceCheck"
+                                           class="w-4 h-4 text-red-600 focus:ring-red-500">
+                                    <span class="text-sm font-semibold text-gray-900">No cumple con la experiencia general requerida</span>
+                                </label>
+                            </div>
+
+                            <div x-show="experienceCheck === 'not_complies'"
+                                 x-transition
+                                 class="mt-4 p-4 bg-red-100 border-l-4 border-red-500 rounded-r-lg">
+                                <div class="flex items-start gap-3">
+                                    <svg class="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                    </svg>
+                                    <div class="flex-1">
+                                        <p class="text-sm font-bold text-red-800 mb-2">El postulante será descalificado por no cumplir el requisito de experiencia general.</p>
+                                        <textarea x-model="experienceReason"
+                                                  class="w-full px-3 py-2 text-sm border border-red-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                                                  rows="2"
+                                                  placeholder="Especifique el motivo (ej: Solo acredita 1 año, se requieren {{ $experienceObj->toHuman() }})..."></textarea>
+                                        <button type="button"
+                                                @click="disqualify('experience')"
+                                                class="mt-3 w-full px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                            </svg>
+                                            Descalificar por no cumplir experiencia requerida
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    @endif
+
+                    <!-- 5. VERIFICACIÓN DE CAPACITACIONES (CHECKLIST DINÁMICO) -->
+                    @if($jobProfile && $jobProfile->required_courses && count($jobProfile->required_courses) > 0)
+                    <div class="bg-white rounded-xl border-2 border-gray-200 shadow-sm overflow-hidden"
+                         x-show="cvOrderCheck === 'complies' && (educationCheck === 'complies' || educationCheck === '') && (careerCheck === 'complies' || careerCheck === '') && (experienceCheck === 'complies' || experienceCheck === '')">
+                        <div class="px-5 py-4 bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-200">
+                            <div class="flex items-center justify-between">
+                                <h4 class="text-base font-bold text-gray-900 flex items-center gap-2">
+                                    <span class="flex items-center justify-center w-7 h-7 rounded-full bg-green-500 text-white text-sm font-bold">5</span>
+                                    Verificación de Capacitaciones Requeridas
+                                </h4>
+                            </div>
+                        </div>
+                        <div class="px-5 py-4">
+                            <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                                <p class="text-sm text-green-900 font-medium mb-2">
+                                    Marque cada capacitación que el postulante cumple. Si falta alguna, será descalificado.
+                                </p>
+                            </div>
+
+                            <div class="space-y-3">
+                                @foreach($jobProfile->required_courses as $index => $course)
+                                <label class="flex items-start gap-3 p-4 bg-gray-50 border-2 border-gray-200 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
+                                       :class="trainingChecks[{{ $index }}] ? 'border-green-300 bg-green-50' : 'border-gray-200'">
+                                    <input type="checkbox"
+                                           x-model="trainingChecks[{{ $index }}]"
+                                           @change="checkTrainings()"
+                                           class="mt-1 w-5 h-5 text-green-600 focus:ring-green-500 rounded">
+                                    <div class="flex-1">
+                                        <p class="text-sm font-semibold text-gray-900">{{ $course }}</p>
+                                        <p class="text-xs text-gray-500 mt-1">Marque si el postulante acredita esta capacitación</p>
+                                    </div>
+                                </label>
+                                @endforeach
+                            </div>
+
+                            <div x-show="trainingsFailed"
+                                 x-transition
+                                 class="mt-4 p-4 bg-red-100 border-l-4 border-red-500 rounded-r-lg">
+                                <div class="flex items-start gap-3">
+                                    <svg class="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                    </svg>
+                                    <div class="flex-1">
+                                        <p class="text-sm font-bold text-red-800 mb-2">El postulante no cumple con todas las capacitaciones requeridas.</p>
+                                        <textarea x-model="trainingsReason"
+                                                  class="w-full px-3 py-2 text-sm border border-red-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                                                  rows="2"
+                                                  placeholder="Especifique qué capacitaciones faltan o no son válidas..."></textarea>
+                                        <button type="button"
+                                                @click="disqualify('trainings')"
+                                                class="mt-3 w-full px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                            </svg>
+                                            Descalificar por no cumplir capacitaciones
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div x-show="!trainingsFailed && trainingChecks.filter(c => c).length === {{ count($jobProfile->required_courses) }}"
+                                 x-transition
+                                 class="mt-4 p-3 bg-green-100 border-l-4 border-green-500 rounded-r-lg">
+                                <p class="text-sm font-semibold text-green-800 flex items-center gap-2">
+                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                    </svg>
+                                    Cumple con todas las capacitaciones requeridas
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    @endif
+
+                </div>
+
+                <!-- CRITERIOS DE EVALUACIÓN (Solo si pasa las verificaciones previas) -->
+                <div x-show="!isDisqualified && allPreChecksPass" x-transition class="space-y-4">
+                    <div class="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg px-5 py-3 shadow-md">
+                        <h4 class="text-base font-bold text-white">Criterios de Evaluación</h4>
+                        <p class="text-sm text-blue-100 mt-1">Complete la evaluación de cada criterio según la guía proporcionada</p>
+                    </div>
+
                     @foreach($criteria as $criterion)
                     <div class="bg-white rounded-lg border border-gray-200 shadow-sm"
                          data-criterion-id="{{ $criterion->id }}">
@@ -211,31 +627,54 @@
                                 </div>
                             @endif
 
-                            <!-- Comentarios -->
+                            <!-- Comentarios (Colapsable y Opcional por defecto) -->
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    Comentarios
-                                    @if($criterion->requires_comment)
-                                        <span class="text-red-500">*</span>
-                                    @endif
-                                </label>
-                                <textarea class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                          name="criteria[{{ $criterion->id }}][comments]"
-                                          rows="3"
-                                          placeholder="Observaciones sobre este criterio..."
-                                          {{ $criterion->requires_comment ? 'required' : '' }}>{{ $details[$criterion->id]->comments ?? '' }}</textarea>
+                                <button type="button"
+                                        @click="toggleSection('comments-{{ $criterion->id }}')"
+                                        class="w-full flex items-center justify-between p-3 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+                                    <span class="text-sm font-medium text-gray-700">
+                                        Comentarios @if($criterion->requires_comment)<span class="text-red-500">*</span>@else<span class="text-gray-400">(Opcional)</span>@endif
+                                    </span>
+                                    <svg class="w-4 h-4 text-gray-600 transform transition-transform"
+                                         :class="openSections['comments-{{ $criterion->id }}'] ? 'rotate-180' : ''"
+                                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </button>
+                                <div x-show="openSections['comments-{{ $criterion->id }}']"
+                                     x-transition
+                                     class="mt-2">
+                                    <textarea class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                              name="criteria[{{ $criterion->id }}][comments]"
+                                              rows="3"
+                                              placeholder="Observaciones sobre este criterio..."
+                                              {{ $criterion->requires_comment ? 'required' : '' }}>{{ $details[$criterion->id]->comments ?? '' }}</textarea>
+                                </div>
                             </div>
 
-                            <!-- Evidencia -->
+                            <!-- Evidencia (Colapsable y Opcional) -->
                             @if($criterion->requires_evidence)
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    Evidencia
-                                </label>
-                                <textarea class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                          name="criteria[{{ $criterion->id }}][evidence]"
-                                          rows="2"
-                                          placeholder="Describa la evidencia encontrada...">{{ $details[$criterion->id]->evidence ?? '' }}</textarea>
+                                <button type="button"
+                                        @click="toggleSection('evidence-{{ $criterion->id }}')"
+                                        class="w-full flex items-center justify-between p-3 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+                                    <span class="text-sm font-medium text-gray-700">
+                                        Evidencia <span class="text-gray-400">(Opcional)</span>
+                                    </span>
+                                    <svg class="w-4 h-4 text-gray-600 transform transition-transform"
+                                         :class="openSections['evidence-{{ $criterion->id }}'] ? 'rotate-180' : ''"
+                                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </button>
+                                <div x-show="openSections['evidence-{{ $criterion->id }}']"
+                                     x-transition
+                                     class="mt-2">
+                                    <textarea class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                              name="criteria[{{ $criterion->id }}][evidence]"
+                                              rows="2"
+                                              placeholder="Describa la evidencia encontrada...">{{ $details[$criterion->id]->evidence ?? '' }}</textarea>
+                                </div>
                             </div>
                             @endif
 
@@ -249,8 +688,22 @@
                     @endforeach
                 </div>
 
+                <!-- Mensaje si está descalificado -->
+                <div x-show="isDisqualified" x-transition class="bg-red-100 border-2 border-red-500 rounded-xl p-6 text-center">
+                    <svg class="w-16 h-16 text-red-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                    <h3 class="text-xl font-bold text-red-900 mb-2">Postulante Descalificado</h3>
+                    <p class="text-sm text-red-800 font-medium mb-4" x-text="disqualificationReason"></p>
+                    <button type="button"
+                            @click="resetDisqualification()"
+                            class="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors">
+                        Revertir Descalificación
+                    </button>
+                </div>
+
                 <!-- Comentarios Generales -->
-                <div class="mt-6 bg-white rounded-lg border border-gray-200 shadow-sm">
+                <div class="mt-6 bg-white rounded-lg border border-gray-200 shadow-sm" x-show="!isDisqualified">
                     <div class="px-5 py-4 border-b border-gray-100">
                         <h4 class="text-base font-semibold text-gray-900">Comentarios Generales</h4>
                     </div>
@@ -340,6 +793,27 @@ function evaluationApp() {
         saveTimeout: null,
         csrfTokenExpired: false,
 
+        // Estados de verificación previa
+        cvOrderCheck: '',
+        cvOrderReason: '',
+        educationCheck: '',
+        educationReason: '',
+        careerCheck: '',
+        careerReason: '',
+        experienceCheck: '',
+        experienceReason: '',
+        trainingChecks: @json(array_fill(0, $jobProfile && $jobProfile->required_courses ? count($jobProfile->required_courses) : 0, false)),
+        trainingsReason: '',
+        trainingsFailed: false,
+
+        // Estado de descalificación
+        isDisqualified: @json(isset($evaluation->metadata['disqualified']) && $evaluation->metadata['disqualified'] === true),
+        disqualificationReason: @json($evaluation->metadata['disqualified'] ?? false ? $evaluation->general_comments : ''),
+        disqualificationType: @json($evaluation->metadata['disqualification_type'] ?? ''),
+
+        // Secciones colapsables
+        openSections: {},
+
         init() {
             // Verificar CSRF token al inicio
             this.verifyCsrfToken();
@@ -347,6 +821,114 @@ function evaluationApp() {
             this.initializeCheckboxes();
             // Calcular puntajes
             this.calculateWeightedScores();
+        },
+
+        get allPreChecksPass() {
+            // Verificar que todas las verificaciones previas hayan pasado
+            const cvPass = this.cvOrderCheck === 'complies';
+            const eduPass = this.educationCheck === 'complies' || this.educationCheck === '';
+            const careerPass = this.careerCheck === 'complies' || this.careerCheck === '';
+            const expPass = this.experienceCheck === 'complies' || this.experienceCheck === '';
+            const trainingsPass = !this.trainingsFailed;
+
+            return cvPass && eduPass && careerPass && expPass && trainingsPass;
+        },
+
+        toggleSection(sectionId) {
+            if (!this.openSections[sectionId]) {
+                this.openSections[sectionId] = true;
+            } else {
+                this.openSections[sectionId] = false;
+            }
+        },
+
+        checkTrainings() {
+            // Verificar si todas las capacitaciones están marcadas
+            const allChecked = this.trainingChecks.every(check => check === true);
+            this.trainingsFailed = !allChecked;
+        },
+
+        disqualify(type) {
+            let reason = '';
+            switch(type) {
+                case 'cv_order':
+                    reason = 'No cumple con el orden de documentos del CV: ' + this.cvOrderReason;
+                    break;
+                case 'education':
+                    reason = 'No cumple con el nivel educativo requerido: ' + this.educationReason;
+                    break;
+                case 'career':
+                    reason = 'No cumple con la carrera profesional requerida: ' + this.careerReason;
+                    break;
+                case 'experience':
+                    reason = 'No cumple con la experiencia general requerida: ' + this.experienceReason;
+                    break;
+                case 'trainings':
+                    reason = 'No cumple con las capacitaciones requeridas: ' + this.trainingsReason;
+                    break;
+            }
+
+            if (!reason.split(':')[1].trim()) {
+                alert('Por favor, especifique el motivo de la descalificación');
+                return;
+            }
+
+            if (confirm('¿Está seguro de descalificar a este postulante? Esta acción se guardará en la evaluación.')) {
+                this.isDisqualified = true;
+                this.disqualificationReason = reason;
+                this.disqualificationType = type;
+                this.totalScore = 0;
+                this.progress = 0;
+
+                // Guardar la descalificación
+                this.saveDisqualification();
+            }
+        },
+
+        resetDisqualification() {
+            if (confirm('¿Está seguro de revertir la descalificación?')) {
+                this.isDisqualified = false;
+                this.disqualificationReason = '';
+                this.disqualificationType = '';
+
+                // Resetear checks según el tipo
+                this.cvOrderCheck = '';
+                this.educationCheck = '';
+                this.careerCheck = '';
+                this.experienceCheck = '';
+                this.trainingChecks = this.trainingChecks.map(() => false);
+                this.trainingsFailed = false;
+
+                this.calculateWeightedScores();
+            }
+        },
+
+        async saveDisqualification() {
+            try {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+                const response = await fetch('{{ route("evaluation.save-detail", $evaluation->id) }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({
+                        disqualified: true,
+                        disqualification_reason: this.disqualificationReason,
+                        disqualification_type: this.disqualificationType
+                    })
+                });
+
+                if (!response.ok) {
+                    console.error('Error al guardar descalificación');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
         },
 
         verifyCsrfToken() {
@@ -369,12 +951,9 @@ function evaluationApp() {
                         calculatedSpan.textContent = savedScore.toFixed(2);
                     }
 
-                    // Si hay checkboxes y un score guardado, intentar marcar los checkboxes correspondientes
-                    // Nota: esto es una aproximación, idealmente deberíamos guardar qué checkboxes fueron marcados
                     if (savedScore > 0) {
                         const checkboxes = card.querySelectorAll('.scale-checkbox');
                         if (checkboxes.length > 0) {
-                            // Marcar checkboxes hasta alcanzar el score guardado
                             let accumulated = 0;
                             checkboxes.forEach(cb => {
                                 const points = parseFloat(cb.value);
@@ -390,6 +969,12 @@ function evaluationApp() {
         },
 
         calculateWeightedScores() {
+            if (this.isDisqualified) {
+                this.totalScore = 0;
+                this.progress = 0;
+                return;
+            }
+
             let total = 0;
             let count = 0;
 
@@ -402,8 +987,6 @@ function evaluationApp() {
                     return;
                 }
 
-                // Buscar el input de score dentro de la card del criterio
-                // Usando clase porque el selector por name con corchetes puede fallar
                 const scoreInput = card.querySelector('input.score-input');
 
                 if (!scoreInput) {
@@ -411,18 +994,15 @@ function evaluationApp() {
                     return;
                 }
 
-                // Obtener el valor actualizado del input
                 const rawValue = scoreInput.value;
                 const score = parseFloat(rawValue) || 0;
 
-                // Actualizar puntaje ponderado individual (siempre, incluso si es 0)
                 const weighted = score * (parseFloat(criterion.weight) || 1);
                 const weightedSpan = card.querySelector('.weighted-score');
                 if (weightedSpan) {
                     weightedSpan.textContent = weighted.toFixed(2);
                 }
 
-                // Sumar al total y contar si hay puntaje
                 if (score > 0) {
                     count++;
                 }
@@ -436,7 +1016,6 @@ function evaluationApp() {
 
         handleCheckboxChange(event) {
             const checkbox = event.target;
-            // Buscar el div contenedor del criterio (no el checkbox)
             const card = checkbox.closest('div.bg-white[data-criterion-id]');
             const criterionId = checkbox.dataset.criterionId;
             const maxScore = parseFloat(checkbox.dataset.maxScore);
@@ -458,26 +1037,20 @@ function evaluationApp() {
                 return;
             }
 
-            // Buscar el input de score dentro de la card del criterio
             const scoreInput = card.querySelector('input.score-input');
             if (!scoreInput) {
                 console.error('Score input not found for criterion:', criterionId);
                 return;
             }
 
-            // Actualizar el valor del input hidden
             scoreInput.value = total;
 
-            // Actualizar el puntaje calculado mostrado
             const calculatedSpan = card.querySelector('.calculated-score');
             if (calculatedSpan) {
                 calculatedSpan.textContent = total.toFixed(2);
             }
 
-            // Recalcular todos los puntajes ponderados y el total
             this.calculateWeightedScores();
-
-            // Guardar automáticamente
             this.autoSave(card, criterionId);
         },
 
@@ -489,7 +1062,6 @@ function evaluationApp() {
             const min = parseFloat(input.dataset.min);
             const max = parseFloat(input.dataset.max);
 
-            // Validar rango solo si hay un valor
             if (input.value && (isNaN(score) || score < min || score > max)) {
                 input.classList.add('border-red-500');
                 const feedback = input.nextElementSibling;
@@ -524,20 +1096,13 @@ function evaluationApp() {
         },
 
         async saveCriterionDetail(criterionId, score, comments, evidence) {
-            // No intentar guardar si el token CSRF ya expiró
             if (this.csrfTokenExpired) {
                 console.warn('Guardado omitido: CSRF token expirado');
                 return;
             }
 
-            // Validar que el criterio tenga los datos requeridos
             const criterion = this.criteria.find(c => c.id == criterionId);
             if (criterion) {
-                // Evidencia ahora es opcional
-                // if (criterion.requires_evidence && !evidence) {
-                //     console.warn('Guardado omitido: El criterio requiere evidencia obligatoria');
-                //     return;
-                // }
                 if (criterion.requires_comment && !comments) {
                     console.warn('Guardado omitido: El criterio requiere comentarios obligatorios');
                     return;
@@ -545,7 +1110,6 @@ function evaluationApp() {
             }
 
             try {
-                // Obtener el token CSRF para esta petición específica
                 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 
                 if (!csrfToken) {
@@ -555,7 +1119,6 @@ function evaluationApp() {
                     return;
                 }
 
-                // Validar que el score esté dentro del rango del criterio
                 const minScore = parseFloat(criterion.min_score) || 0;
                 const maxScore = parseFloat(criterion.max_score) || 100;
 
@@ -566,7 +1129,6 @@ function evaluationApp() {
 
                 console.log('Guardando criterio:', criterionId, 'Score:', score);
 
-                // Preparar datos para enviar
                 const bodyData = {
                     criterion_id: criterionId,
                     score: score,
@@ -576,7 +1138,6 @@ function evaluationApp() {
 
                 console.log('Datos a enviar:', bodyData);
 
-                // Usar la ruta de Laravel
                 const response = await fetch('{{ route("evaluation.save-detail", $evaluation->id) }}', {
                     method: 'POST',
                     headers: {
@@ -600,13 +1161,6 @@ function evaluationApp() {
                     if (response.status === 422) {
                         const errorData = await response.json();
                         console.error('Error de validación 422:', errorData);
-                        console.error('Datos enviados:', {
-                            criterion_id: criterionId,
-                            score: score,
-                            comments: comments ? comments.substring(0, 50) + '...' : '(vacío)',
-                            evidence: evidence ? evidence.substring(0, 50) + '...' : '(vacío/null)'
-                        });
-                        // No mostrar alert para errores de validación en auto-guardado
                         return;
                     }
 
@@ -633,8 +1187,6 @@ function evaluationApp() {
                     const scoreInput = card.querySelector('input.score-input');
                     const score = scoreInput ? parseFloat(scoreInput.value) || 0 : 0;
 
-                    // Guardar todos los criterios, incluso los que tienen score 0
-                    // La validación de rango se hace en saveCriterionDetail
                     const comments = card.querySelector('textarea[name*="comments"]')?.value || '';
                     const evidenceInput = card.querySelector('textarea[name*="evidence"]');
                     const evidence = evidenceInput ? evidenceInput.value : null;
@@ -659,14 +1211,19 @@ function evaluationApp() {
         },
 
         async submitEvaluation() {
-            if (!confirm('¿Está seguro de enviar la evaluación? No podrá modificarla después.')) {
-                return;
+            if (this.isDisqualified) {
+                if (!confirm('Está a punto de enviar una evaluación con descalificación. ¿Está seguro?')) {
+                    return;
+                }
+            } else {
+                if (!confirm('¿Está seguro de enviar la evaluación? No podrá modificarla después.')) {
+                    return;
+                }
             }
 
             this.isSubmitting = true;
 
             try {
-                // Obtener el token CSRF
                 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 
                 if (!csrfToken) {
@@ -688,7 +1245,9 @@ function evaluationApp() {
                     credentials: 'same-origin',
                     body: JSON.stringify({
                         confirm: true,
-                        general_comments: generalComments
+                        general_comments: generalComments,
+                        disqualified: this.isDisqualified,
+                        disqualification_reason: this.disqualificationReason
                     })
                 });
 

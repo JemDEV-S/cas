@@ -205,6 +205,9 @@ class EvaluationController extends Controller
                 'evaluatorAssignment.application.jobProfile.positionCode',
                 'evaluatorAssignment.application.jobProfile.jobPosting',
                 'evaluatorAssignment.application.documents',
+                'evaluatorAssignment.application.trainings',
+                'evaluatorAssignment.application.academics',
+                'evaluatorAssignment.application.experiences',
                 'evaluatorAssignment.phase',
                 'phase'
             ])->findOrFail($id);
@@ -261,6 +264,10 @@ class EvaluationController extends Controller
                 $details[$detail->criterion_id] = $detail;
             }
 
+            // Obtener application y jobProfile
+            $application = $evaluation->evaluatorAssignment->application ?? null;
+            $jobProfile = $application ? $application->jobProfile : null;
+
             return view('evaluation::evaluations.evaluate', [
                 'evaluation' => $evaluation,
                 'criteria' => $criteria,
@@ -268,6 +275,8 @@ class EvaluationController extends Controller
                 'maxTotalScore' => $maxTotalScore,
                 'cvDocument' => $cvDocument,
                 'details' => $details,
+                'application' => $application,
+                'jobProfile' => $jobProfile,
             ]);
 
         } catch (\Exception $e) {
@@ -446,11 +455,24 @@ class EvaluationController extends Controller
             // Verificar autorización
             $this->authorize('submit', $evaluation);
 
-            // Actualizar comentarios generales si se proporcionan
-            if ($request->has('general_comments')) {
+            // Si viene información de descalificación, guardarla
+            if ($request->has('disqualified') && $request->input('disqualified') === true) {
+                $metadata = $evaluation->metadata ?? [];
+                $metadata['disqualified'] = true;
+                $metadata['disqualification_type'] = $request->input('disqualification_type') ?? null;
+
                 $evaluation->update([
-                    'general_comments' => $request->input('general_comments'),
+                    'metadata' => $metadata,
+                    'general_comments' => $request->input('disqualification_reason'),
+                    'total_score' => 0,
                 ]);
+            } else {
+                // Actualizar comentarios generales si se proporcionan
+                if ($request->has('general_comments')) {
+                    $evaluation->update([
+                        'general_comments' => $request->input('general_comments'),
+                    ]);
+                }
             }
 
             $submittedEvaluation = $this->evaluationService->submitEvaluation($evaluation);
