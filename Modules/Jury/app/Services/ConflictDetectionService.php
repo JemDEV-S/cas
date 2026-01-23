@@ -2,248 +2,221 @@
 
 namespace Modules\Jury\Services;
 
-use Modules\Jury\Entities\{JuryMember, JuryConflict, JuryHistory};
-use Modules\Jury\Enums\{ConflictType, ConflictSeverity, ConflictStatus};
+use Modules\Jury\Entities\JuryConflict;
+use App\Models\User;
 use Illuminate\Support\Collection;
 
+/**
+ * Servicio para gestionar conflictos de interés (simplificado)
+ *
+ * Según diseño optimizado:
+ * - Solo conflictos manuales: FAMILY y PERSONAL
+ * - Sin workflow complejo (sin severity, status, resolution)
+ * - Usa user_id directamente
+ * - Campos mínimos: user_id, application_id, type, description
+ */
 class ConflictDetectionService
 {
     /**
-     * Report a conflict
+     * Reportar un conflicto de interés manual
+     *
+     * @param array $data ['user_id', 'application_id', 'type', 'description']
+     * @return JuryConflict
      */
     public function report(array $data): JuryConflict
     {
-        // Auto-detect recommended severity
-        if (empty($data['severity']) && !empty($data['conflict_type'])) {
-            $type = ConflictType::from($data['conflict_type']);
-            $data['severity'] = $type->recommendedSeverity();
+        // Validar que el tipo sea FAMILY o PERSONAL
+        if (!in_array($data['type'], ['FAMILY', 'PERSONAL'])) {
+            throw new \Exception('El tipo de conflicto debe ser FAMILY o PERSONAL');
         }
 
-        $conflict = JuryConflict::create(array_merge($data, [
-            'reported_by' => $data['reported_by'] ?? auth()->id(),
-            'status' => ConflictStatus::REPORTED,
-        ]));
+        // Verificar que no exista ya un conflicto para esta combinación
+        $existing = JuryConflict::where('user_id', $data['user_id'])
+            ->where('application_id', $data['application_id'])
+            ->first();
 
-        JuryHistory::logConflictReported(
-            $conflict->jury_member_id,
-            $conflict->conflict_type->value,
-            $conflict->application_id,
-            $conflict->job_posting_id
-        );
+        if ($existing) {
+            throw new \Exception('Ya existe un conflicto reportado para este jurado y postulación');
+        }
 
-        return $conflict->fresh();
+        $conflict = JuryConflict::create([
+            'user_id' => $data['user_id'],
+            'application_id' => $data['application_id'],
+            'type' => $data['type'],
+            'description' => $data['description'],
+        ]);
+
+        return $conflict->fresh(['user', 'application']);
     }
 
     /**
-     * Auto-detect potential conflicts
+     * Verificar si existe conflicto entre un jurado y una postulación
+     *
+     * @param int $userId
+     * @param string $applicationId
+     * @return bool
      */
-    public function autoDetect(string $juryMemberId, string $applicationId): array
+    public function hasConflict(int $userId, string $applicationId): bool
     {
-        $detectedConflicts = [];
-        
-        $juryMember = JuryMember::with('user')->findOrFail($juryMemberId);
-        $application = \Modules\Application\Entities\Application::with('applicant')->findOrFail($applicationId);
-
-        // 1. Check if they share email domain (possible organization relationship)
-        if ($this->shareEmailDomain($juryMember->email, $application->email)) {
-            $detectedConflicts[] = [
-                'type' => ConflictType::PROFESSIONAL,
-                'severity' => ConflictSeverity::MEDIUM,
-                'description' => 'Comparten dominio de correo electrónico',
-            ];
-        }
-
-        // 2. Check if jury member previously evaluated this applicant
-        $previousEvaluations = $this->getPreviousEvaluations($juryMemberId, $application->applicant_id);
-        if ($previousEvaluations > 0) {
-            $detectedConflicts[] = [
-                'type' => ConflictType::PRIOR_EVALUATION,
-                'severity' => ConflictSeverity::MEDIUM,
-                'description' => "Ha evaluado a este postulante {$previousEvaluations} vez(ces) anteriormente",
-            ];
-        }
-
-        // 3. Check existing conflicts for this applicant
-        $existingConflicts = JuryConflict::byJuryMember($juryMemberId)
-            ->where('applicant_id', $application->applicant_id)
-            ->where('status', '!=', ConflictStatus::DISMISSED)
-            ->exists();
-
-        if ($existingConflicts) {
-            $detectedConflicts[] = [
-                'type' => ConflictType::OTHER,
-                'severity' => ConflictSeverity::HIGH,
-                'description' => 'Existe un conflicto previo reportado con este postulante',
-            ];
-        }
-
-        return $detectedConflicts;
+        return JuryConflict::hasConflict($userId, $applicationId);
     }
 
     /**
-     * Get conflicted jury members for an application
+     * Obtener conflictos de un usuario
+     *
+     * @param int $userId
+     * @return Collection
      */
-    public function getConflictedJuryMembers(string $applicationId): Collection
+    public function getConflictsByUser(int $userId): Collection
     {
-        return JuryMember::whereHas('conflicts', function ($query) use ($applicationId) {
-            $query->where('application_id', $applicationId)
-                ->whereIn('status', [
-                    ConflictStatus::REPORTED,
-                    ConflictStatus::UNDER_REVIEW,
-                    ConflictStatus::CONFIRMED,
-                ]);
+        return JuryConflict::byUser($userId)
+            ->with(['application'])
+            ->get();
+    }
+
+    /**
+     * Obtener conflictos para una postulación
+     *
+     * @param string $applicationId
+     * @return Collection
+     */
+    public function getConflictsByApplication(string $applicationId): Collection
+    {
+        return JuryConflict::byApplication($applicationId)
+            ->with(['user'])
+            ->get();
+    }
+
+    /**
+     * Get conflicted users (jurors) for an application
+     *
+     * @param string $applicationId
+     * @return Collection
+     */
+    public function getConflictedUsers(string $applicationId): Collection
+    {
+        return User::whereHas('juryConflicts', function ($query) use ($applicationId) {
+            $query->where('application_id', $applicationId);
         })->get();
     }
 
     /**
-     * Move conflict to review
+     * Eliminar un conflicto
+     *
+     * @param string $conflictId
+     * @return bool
      */
-    public function moveToReview(string $conflictId, ?string $notes = null): JuryConflict
+    public function deleteConflict(string $conflictId): bool
     {
         $conflict = JuryConflict::findOrFail($conflictId);
-        $conflict->moveToReview(auth()->id(), $notes);
-
-        return $conflict->fresh();
+        return $conflict->delete();
     }
 
     /**
-     * Confirm conflict
+     * Actualizar descripción de conflicto
+     *
+     * @param string $conflictId
+     * @param string $description
+     * @return JuryConflict
      */
-    public function confirm(string $conflictId, ?string $notes = null): JuryConflict
+    public function updateDescription(string $conflictId, string $description): JuryConflict
     {
         $conflict = JuryConflict::findOrFail($conflictId);
-        $conflict->confirm(auth()->id(), $notes);
+        $conflict->update(['description' => $description]);
 
         return $conflict->fresh();
     }
 
     /**
-     * Dismiss conflict
-     */
-    public function dismiss(string $conflictId, string $resolution): JuryConflict
-    {
-        $conflict = JuryConflict::findOrFail($conflictId);
-        $conflict->dismiss($resolution, auth()->id());
-
-        JuryHistory::log([
-            'jury_member_id' => $conflict->jury_member_id,
-            'event_type' => 'CONFLICT_DISMISSED',
-            'description' => 'Conflicto desestimado',
-            'reason' => $resolution,
-            'metadata' => ['conflict_id' => $conflict->id],
-            'performed_by' => auth()->id(),
-        ]);
-
-        return $conflict->fresh();
-    }
-
-    /**
-     * Resolve conflict
-     */
-    public function resolve(
-        string $conflictId,
-        string $resolution,
-        string $actionTaken,
-        ?string $actionNotes = null
-    ): JuryConflict {
-        $conflict = JuryConflict::findOrFail($conflictId);
-        $conflict->resolve($resolution, $actionTaken, $actionNotes, auth()->id());
-
-        JuryHistory::log([
-            'jury_member_id' => $conflict->jury_member_id,
-            'event_type' => 'CONFLICT_RESOLVED',
-            'description' => 'Conflicto resuelto',
-            'reason' => $resolution,
-            'metadata' => [
-                'conflict_id' => $conflict->id,
-                'action_taken' => $actionTaken,
-            ],
-            'performed_by' => auth()->id(),
-        ]);
-
-        return $conflict->fresh();
-    }
-
-    /**
-     * Excuse jury member due to conflict
-     */
-    public function excuseJuryMember(string $conflictId, ?string $notes = null): JuryConflict
-    {
-        $conflict = JuryConflict::findOrFail($conflictId);
-        $conflict->excuseJuryMember($notes);
-
-        // También excusar de la asignación si existe
-        if ($conflict->application_id) {
-            $application = \Modules\Application\Entities\Application::find($conflict->application_id);
-            if ($application) {
-                $assignment = \Modules\Jury\Entities\JuryAssignment::byJobPosting($application->job_profile_vacancy_id)
-                    ->byJuryMember($conflict->jury_member_id)
-                    ->active()
-                    ->first();
-
-                if ($assignment) {
-                    $assignment->excuse("Conflicto de interés: {$conflict->conflict_type->label()}", auth()->id());
-                }
-            }
-        }
-
-        return $conflict->fresh();
-    }
-
-    /**
-     * Get conflict statistics
+     * Obtener estadísticas de conflictos
+     *
+     * @param array $filters ['job_posting_id'?, 'user_id'?]
+     * @return array
      */
     public function getStatistics(array $filters = []): array
     {
         $query = JuryConflict::query();
 
         if (!empty($filters['job_posting_id'])) {
-            $query->byJobPosting($filters['job_posting_id']);
+            $query->whereHas('application', function($q) use ($filters) {
+                $q->where('job_profile_vacancy_id', $filters['job_posting_id']);
+            });
         }
 
-        if (!empty($filters['from_date'])) {
-            $query->where('reported_at', '>=', $filters['from_date']);
+        if (!empty($filters['user_id'])) {
+            $query->byUser($filters['user_id']);
         }
 
-        $all = $query->get();
+        $conflicts = $query->with(['user', 'application'])->get();
 
         return [
-            'total' => $all->count(),
-            'by_status' => [
-                'pending' => $all->filter(fn($c) => $c->isPending())->count(),
-                'closed' => $all->filter(fn($c) => $c->isClosed())->count(),
+            'total' => $conflicts->count(),
+            'by_type' => [
+                'family' => $conflicts->where('type', 'FAMILY')->count(),
+                'personal' => $conflicts->where('type', 'PERSONAL')->count(),
             ],
-            'by_severity' => [
-                'low' => $all->where('severity', ConflictSeverity::LOW)->count(),
-                'medium' => $all->where('severity', ConflictSeverity::MEDIUM)->count(),
-                'high' => $all->where('severity', ConflictSeverity::HIGH)->count(),
-                'critical' => $all->where('severity', ConflictSeverity::CRITICAL)->count(),
-            ],
-            'by_type' => $all->groupBy('conflict_type')->map->count(),
-            'high_priority' => $all->filter(fn($c) => $c->requiresImmediateAction())->count(),
-            'self_reported' => $all->where('is_self_reported', true)->count(),
-            'average_resolution_time' => $all->filter(fn($c) => $c->isClosed())->avg('days_open'),
+            'unique_users' => $conflicts->pluck('user_id')->unique()->count(),
+            'unique_applications' => $conflicts->pluck('application_id')->unique()->count(),
         ];
     }
 
     /**
-     * Helper: Check if emails share domain
+     * Verificar conflictos automáticos basados en dependencia
+     * (Conflicto automático: jurado.dependencia == perfil.dependencia)
+     *
+     * @param int $userId
+     * @param string $applicationId
+     * @return bool
      */
-    protected function shareEmailDomain(string $email1, string $email2): bool
+    public function checkAutomaticDependencyConflict(int $userId, string $applicationId): bool
     {
-        $domain1 = explode('@', $email1)[1] ?? '';
-        $domain2 = explode('@', $email2)[1] ?? '';
+        $application = \Modules\Application\Entities\Application::with('profile')->findOrFail($applicationId);
+        $user = User::with('dependency')->findOrFail($userId);
 
-        return !empty($domain1) && $domain1 === $domain2;
+        // Si el jurado tiene una dependencia y coincide con la del perfil, hay conflicto automático
+        if ($user->dependency_id && $application->profile && $application->profile->dependency_id) {
+            return $user->dependency_id == $application->profile->dependency_id;
+        }
+
+        return false;
     }
 
     /**
-     * Helper: Get previous evaluations count
+     * Buscar conflictos potenciales (sugerencias) para revisar manualmente
+     * Nota: Los conflictos automáticos por dependencia se manejan en JuryAssignmentService
+     *
+     * @param int $userId
+     * @param string $applicationId
+     * @return array
      */
-    protected function getPreviousEvaluations(string $juryMemberId, string $applicantId): int
+    public function suggestPotentialConflicts(int $userId, string $applicationId): array
     {
-        // This would query Evaluation module
-        // For now return 0
-        return 0;
+        $suggestions = [];
+
+        // Verificar conflicto automático por dependencia
+        if ($this->checkAutomaticDependencyConflict($userId, $applicationId)) {
+            $suggestions[] = [
+                'type' => 'DEPENDENCY',
+                'severity' => 'AUTOMATIC',
+                'description' => 'El jurado pertenece a la misma dependencia que el perfil del puesto',
+                'prevents_assignment' => true,
+            ];
+        }
+
+        // Verificar si ya tiene un conflicto manual reportado
+        if ($this->hasConflict($userId, $applicationId)) {
+            $conflict = JuryConflict::where('user_id', $userId)
+                ->where('application_id', $applicationId)
+                ->first();
+
+            $suggestions[] = [
+                'type' => $conflict->type,
+                'severity' => 'MANUAL',
+                'description' => $conflict->description,
+                'prevents_assignment' => true,
+            ];
+        }
+
+        return $suggestions;
     }
 }

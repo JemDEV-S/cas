@@ -3,7 +3,7 @@
 namespace Modules\Jury\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Modules\Jury\Enums\{MemberType, JuryRole};
+use Modules\Jury\Enums\JuryRole;
 
 class AssignJuryRequest extends FormRequest
 {
@@ -15,16 +15,10 @@ class AssignJuryRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'jury_member_id' => ['required', 'string', 'exists:jury_members,id'],
+            'user_id' => ['required', 'string', 'exists:users,id'],
             'job_posting_id' => ['required', 'string', 'exists:job_postings,id'],
-            'member_type' => ['required', 'string', 'in:' . implode(',', MemberType::values())],
-            'role_in_jury' => ['nullable', 'string', 'in:' . implode(',', JuryRole::values())],
-            'order' => ['nullable', 'integer', 'min:0'],
-            'assignment_resolution' => ['nullable', 'string', 'max:255'],
-            'resolution_date' => ['nullable', 'date'],
-            'max_evaluations' => ['nullable', 'integer', 'min:1'],
-            'available_from' => ['nullable', 'date'],
-            'available_until' => ['nullable', 'date', 'after:available_from'],
+            'role_in_jury' => ['required', 'string', 'in:' . implode(',', JuryRole::values())],
+            'dependency_scope_id' => ['nullable', 'string', 'exists:organizational_units,id'],
             'metadata' => ['nullable', 'array'],
         ];
     }
@@ -32,12 +26,13 @@ class AssignJuryRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'jury_member_id.required' => 'El jurado es requerido',
-            'jury_member_id.exists' => 'El jurado no existe',
+            'user_id.required' => 'El usuario es requerido',
+            'user_id.exists' => 'El usuario no existe',
             'job_posting_id.required' => 'La convocatoria es requerida',
             'job_posting_id.exists' => 'La convocatoria no existe',
-            'member_type.required' => 'El tipo de miembro es requerido',
-            'member_type.in' => 'El tipo de miembro no es válido',
+            'role_in_jury.required' => 'El rol en el jurado es requerido',
+            'role_in_jury.in' => 'El rol en el jurado no es válido',
+            'dependency_scope_id.exists' => 'La dependencia no existe',
         ];
     }
 }

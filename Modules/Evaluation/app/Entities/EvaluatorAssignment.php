@@ -18,7 +18,7 @@ class EvaluatorAssignment extends Model
 
     protected $fillable = [
         'uuid',
-        'evaluator_id',
+        'user_id',
         'application_id',
         'phase_id',
         'job_posting_id',
@@ -26,15 +26,8 @@ class EvaluatorAssignment extends Model
         'assigned_by',
         'assigned_at',
         'status',
-        'workload_weight',
         'deadline_at',
         'completed_at',
-        'has_conflict',
-        'conflict_reason',
-        'is_available',
-        'unavailability_reason',
-        'notified',
-        'notified_at',
         'metadata',
     ];
 
@@ -44,11 +37,6 @@ class EvaluatorAssignment extends Model
         'assigned_at' => 'datetime',
         'deadline_at' => 'datetime',
         'completed_at' => 'datetime',
-        'workload_weight' => 'integer',
-        'has_conflict' => 'boolean',
-        'is_available' => 'boolean',
-        'notified' => 'boolean',
-        'notified_at' => 'datetime',
         'metadata' => 'array',
     ];
 
@@ -69,14 +57,14 @@ class EvaluatorAssignment extends Model
     /**
      * Relaciones
      */
-    public function juryMember(): BelongsTo
-{
-    return $this->belongsTo(\Modules\Jury\Entities\JuryMember::class, 'evaluator_id');
-}
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo('Modules\User\Entities\User', 'user_id');
+    }
 
     public function evaluator(): BelongsTo
     {
-        return $this->juryMember();
+        return $this->user();
     }
 
     public function application(): BelongsTo
@@ -101,18 +89,18 @@ class EvaluatorAssignment extends Model
 
     public function juryAssignment(): BelongsTo
     {
-        return $this->belongsTo(\Modules\Jury\Entities\JuryAssignment::class, 'evaluator_id', 'jury_member_id')
-            ->where('is_active', true);
+        return $this->belongsTo(\Modules\Jury\Entities\JuryAssignment::class, 'user_id', 'user_id')
+            ->where('job_posting_id', $this->job_posting_id);
     }
 
     public function isEvaluatorAvailable(): bool
     {
-        if (!$this->juryMember) {
+        if (!$this->user) {
             return false;
         }
 
-        $juryAssignment = \Modules\Jury\Entities\JuryAssignment::where('jury_member_id', $this->evaluator_id)
-            ->where('job_posting_id', $this->application->job_profile_vacancy_id)
+        $juryAssignment = \Modules\Jury\Entities\JuryAssignment::where('user_id', $this->user_id)
+            ->where('job_posting_id', $this->job_posting_id)
             ->where('status', 'ACTIVE')
             ->first();
 
@@ -122,9 +110,14 @@ class EvaluatorAssignment extends Model
     /**
      * Scopes
      */
-    public function scopeByEvaluator($query, $evaluatorId)
+    public function scopeByEvaluator($query, $userId)
     {
-        return $query->where('evaluator_id', $evaluatorId);
+        return $query->where('user_id', $userId);
+    }
+
+    public function scopeByUser($query, $userId)
+    {
+        return $query->where('user_id', $userId);
     }
 
     public function scopeByApplication($query, $applicationId)
@@ -168,8 +161,13 @@ class EvaluatorAssignment extends Model
 
     public function scopeAvailable($query)
     {
-        return $query->where('is_available', true)
-            ->where('has_conflict', false);
+        return $query->whereDoesntHave('conflicts');
+    }
+
+    public function conflicts()
+    {
+        return $this->hasMany(\Modules\Jury\Entities\JuryConflict::class, 'user_id', 'user_id')
+            ->where('application_id', $this->application_id);
     }
 
     /**
@@ -207,28 +205,20 @@ class EvaluatorAssignment extends Model
         $this->save();
     }
 
-    public function reassign(int $newEvaluatorId, int $reassignedBy): self
+    public function reassign(int $newUserId, int $reassignedBy): self
     {
         $this->status = AssignmentStatusEnum::REASSIGNED;
         $this->save();
 
         // Crear nueva asignación
         return static::create([
-            'evaluator_id' => $newEvaluatorId,
+            'user_id' => $newUserId,
             'application_id' => $this->application_id,
             'phase_id' => $this->phase_id,
             'job_posting_id' => $this->job_posting_id,
             'assignment_type' => 'MANUAL',
             'assigned_by' => $reassignedBy,
             'deadline_at' => $this->deadline_at,
-            'workload_weight' => $this->workload_weight,
         ]);
-    }
-
-    public function markAsNotified(): void
-    {
-        $this->notified = true;
-        $this->notified_at = now();
-        $this->save();
     }
 }

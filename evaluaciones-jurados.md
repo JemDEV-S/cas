@@ -5,8 +5,10 @@
 2. [Fases de Evaluación](#fases-de-evaluación)
 3. [Evaluación Curricular (CV)](#evaluación-curricular-cv)
 4. [Evaluación de Entrevista](#evaluación-de-entrevista)
-5. [Gestión de Jurados](#gestión-de-jurados)
-6. [Cálculo de Puntajes](#cálculo-de-puntajes)
+5. [Módulo Jury - Gestión de Jurados](#módulo-jury---gestión-de-jurados)
+6. [Módulo Evaluation - Sistema de Evaluación](#módulo-evaluation---sistema-de-evaluación)
+7. [Conflictos de Interés](#conflictos-de-interés)
+8. [Cálculo de Puntajes](#cálculo-de-puntajes)
 
 ---
 
@@ -151,35 +153,255 @@ Los criterios de entrevista son **genéricos** (sin `position_code_id`), aplicab
 
 ---
 
-## Gestión de Jurados
+## Módulo Jury - Gestión de Jurados
 
-### Asignación de Jurados a Convocatoria
+**Ubicación:** `Modules/Jury/`
+
+### Entidades del Módulo
+
+#### 1. JuryMember (Miembro de Jurado)
+
+Representa a un usuario habilitado para ser jurado evaluador.
 
 | Campo | Tipo | Descripción |
 |-------|------|-------------|
-| job_posting_id | uuid | Convocatoria asignada |
-| jury_id | uuid | Usuario con rol JURY |
-| role | enum | TITULAR / SUPLENTE |
-| designation_document | string | Documento de designación |
-| designation_number | string | Número de resolución |
+| user_id | FK | Usuario asociado |
+| specialty | string | Especialidad del jurado |
+| years_of_experience | int | Años de experiencia |
+| professional_title | string | Título profesional |
+| is_active | boolean | Estado activo |
+| is_available | boolean | Disponibilidad actual |
+| unavailable_from/until | date | Período de no disponibilidad |
+| training_completed | boolean | Capacitación completada |
+| max_concurrent_assignments | int | Máximo de asignaciones simultáneas |
+| total_evaluations | int | Total de evaluaciones realizadas |
+| consistency_score | decimal | Puntaje de consistencia |
+| average_rating | decimal | Calificación promedio |
 
-### Roles
+**Requisitos para evaluar:**
+- `is_active = true`
+- `is_available = true`
+- `training_completed = true`
+- No estar sobrecargado (asignaciones < max_concurrent_assignments)
 
-| Rol | Función |
-|-----|---------|
-| TITULAR | Realiza evaluaciones activamente |
-| SUPLENTE | Reemplazo en caso de impedimento del titular |
+#### 2. JuryAssignment (Asignación a Convocatoria)
 
-### Conflictos de Interés
+Asigna un miembro de jurado a una convocatoria específica.
 
-| Tipo | Descripción |
-|------|-------------|
-| FAMILIAR | Relación de parentesco |
-| LABORAL | Relación laboral previa |
-| ECONOMICO | Vínculo económico |
-| AMISTAD | Relación personal cercana |
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| jury_member_id | FK | Miembro de jurado |
+| job_posting_id | FK | Convocatoria |
+| member_type | enum | TITULAR / SUPLENTE |
+| role_in_jury | enum | Rol dentro del jurado |
+| status | enum | Estado de la asignación |
+| assignment_resolution | string | Documento de resolución |
+| max_evaluations | int | Máximo de evaluaciones asignables |
+| current_evaluations | int | Evaluaciones actuales |
+| completed_evaluations | int | Evaluaciones completadas |
 
-**Acciones:** NONE (sin acción), RECUSAL (se excusa), REASSIGNMENT (reasignación)
+### Enums del Módulo Jury
+
+#### MemberType (Tipo de Miembro)
+| Valor | Label | Descripción |
+|-------|-------|-------------|
+| TITULAR | Titular | Miembro titular del jurado |
+| SUPLENTE | Suplente | Miembro suplente del jurado |
+
+#### JuryRole (Rol en el Jurado)
+| Valor | Label | Tiene Autoridad |
+|-------|-------|-----------------|
+| PRESIDENTE | Presidente | Sí |
+| SECRETARIO | Secretario | Sí |
+| VOCAL | Vocal | No |
+| MIEMBRO | Miembro | No |
+
+#### AssignmentStatus (Estado de Asignación)
+| Valor | Label | Puede Evaluar |
+|-------|-------|---------------|
+| ACTIVE | Activo | Sí |
+| REPLACED | Reemplazado | No |
+| EXCUSED | Excusado | No |
+| REMOVED | Removido | No |
+| SUSPENDED | Suspendido | No |
+
+---
+
+## Módulo Evaluation - Sistema de Evaluación
+
+**Ubicación:** `Modules/Evaluation/`
+
+### Entidades del Módulo
+
+#### 1. Evaluation (Evaluación)
+
+Registro principal de una evaluación realizada por un jurado a una postulación.
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| uuid | uuid | Identificador único |
+| application_id | FK | Postulación evaluada |
+| evaluator_id | FK | Jurado evaluador |
+| phase_id | FK | Fase del proceso (CV/Entrevista) |
+| job_posting_id | FK | Convocatoria |
+| status | enum | Estado de la evaluación |
+| total_score | decimal(5,2) | Puntaje total |
+| max_possible_score | decimal(5,2) | Puntaje máximo posible |
+| percentage | decimal(5,2) | Porcentaje obtenido |
+| submitted_at | timestamp | Fecha de envío |
+| deadline_at | timestamp | Fecha límite |
+| is_anonymous | boolean | Evaluación anónima |
+| is_collaborative | boolean | Evaluación colaborativa |
+| general_comments | text | Comentarios generales |
+| modified_by | FK | Modificado por (si aplica) |
+| modification_reason | text | Razón de modificación |
+
+#### 2. EvaluationCriterion (Criterio de Evaluación)
+
+Define los criterios que se evalúan en cada fase.
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| uuid | uuid | Identificador único |
+| phase_id | FK | Fase del proceso |
+| job_posting_id | FK/null | Convocatoria (null = genérico) |
+| code | string | Código del criterio |
+| name | string | Nombre del criterio |
+| description | text | Descripción/guía |
+| min_score | decimal(5,2) | Puntaje mínimo |
+| max_score | decimal(5,2) | Puntaje máximo |
+| weight | decimal(5,2) | Peso/ponderación |
+| order | int | Orden de presentación |
+| requires_comment | boolean | Requiere comentario obligatorio |
+| requires_evidence | boolean | Requiere evidencia |
+| score_type | enum | Tipo de puntaje |
+| is_active | boolean | Estado activo |
+
+#### 3. EvaluationDetail (Detalle de Evaluación)
+
+Puntaje otorgado por criterio.
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| uuid | uuid | Identificador único |
+| evaluation_id | FK | Evaluación padre |
+| criterion_id | FK | Criterio evaluado |
+| score | decimal(5,2) | Puntaje otorgado |
+| weighted_score | decimal(5,2) | Puntaje ponderado (auto-calculado) |
+| comments | text | Comentarios del evaluador |
+| evidence | text | Evidencia/sustento |
+| version | int | Versión (para historial) |
+
+#### 4. EvaluatorAssignment (Asignación de Evaluador)
+
+Asigna un evaluador a una postulación específica.
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| uuid | uuid | Identificador único |
+| evaluator_id | FK | Jurado asignado (JuryMember) |
+| application_id | FK | Postulación a evaluar |
+| phase_id | FK | Fase del proceso |
+| job_posting_id | FK | Convocatoria |
+| assignment_type | string | MANUAL / AUTOMATIC |
+| assigned_by | FK | Usuario que asignó |
+| status | enum | Estado de la asignación |
+| workload_weight | int | Peso de carga de trabajo |
+| deadline_at | timestamp | Fecha límite |
+| has_conflict | boolean | Tiene conflicto de interés |
+| is_available | boolean | Evaluador disponible |
+
+### Enums del Módulo Evaluation
+
+#### EvaluationStatusEnum (Estado de Evaluación)
+| Valor | Label | Puede Editar | Completada |
+|-------|-------|--------------|------------|
+| ASSIGNED | Asignada | Sí | No |
+| IN_PROGRESS | En Progreso | Sí | No |
+| SUBMITTED | Enviada | No | Sí |
+| MODIFIED | Modificada | No | Sí |
+| CANCELLED | Cancelada | No | No |
+
+**Flujo de estados:**
+```
+ASSIGNED → IN_PROGRESS → SUBMITTED
+                              ↓
+                         MODIFIED (si se requiere corrección)
+```
+
+#### AssignmentStatusEnum (Estado de Asignación de Evaluador)
+| Valor | Label | Activo |
+|-------|-------|--------|
+| PENDING | Pendiente | Sí |
+| IN_PROGRESS | En Progreso | Sí |
+| COMPLETED | Completada | No |
+| CANCELLED | Cancelada | No |
+| REASSIGNED | Reasignada | No |
+
+---
+
+## Conflictos de Interés
+
+### Entidad: JuryConflict
+
+Registra conflictos de interés entre jurados y postulantes.
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| jury_member_id | FK | Jurado involucrado |
+| application_id | FK | Postulación afectada |
+| applicant_id | FK | Postulante |
+| conflict_type | enum | Tipo de conflicto |
+| severity | enum | Severidad |
+| status | enum | Estado del conflicto |
+| description | text | Descripción del conflicto |
+| is_self_reported | boolean | Auto-reportado |
+| action_taken | string | Acción tomada |
+| resolution | text | Resolución |
+
+### ConflictType (Tipos de Conflicto)
+
+| Tipo | Label | Severidad Recomendada |
+|------|-------|----------------------|
+| FAMILY | Familiar | CRITICAL |
+| LABOR | Laboral | HIGH |
+| PROFESSIONAL | Profesional | MEDIUM |
+| FINANCIAL | Financiero | CRITICAL |
+| PERSONAL | Personal | HIGH |
+| ACADEMIC | Académico | HIGH |
+| PRIOR_EVALUATION | Evaluación Previa | MEDIUM |
+| OTHER | Otro | MEDIUM |
+
+### ConflictSeverity (Severidad)
+
+| Nivel | Label | Requiere Acción Inmediata |
+|-------|-------|--------------------------|
+| LOW | Baja | No |
+| MEDIUM | Media | No |
+| HIGH | Alta | Sí |
+| CRITICAL | Crítica | Sí |
+
+### ConflictStatus (Estado del Conflicto)
+
+| Estado | Label | Pendiente |
+|--------|-------|-----------|
+| REPORTED | Reportado | Sí |
+| UNDER_REVIEW | En Revisión | Sí |
+| CONFIRMED | Confirmado | Sí |
+| DISMISSED | Desestimado | No |
+| RESOLVED | Resuelto | No |
+
+**Flujo de estados:**
+```
+REPORTED → UNDER_REVIEW → CONFIRMED → RESOLVED
+              ↓
+          DISMISSED
+```
+
+**Acciones posibles al resolver:**
+- `NO_ACTION` - Sin acción requerida
+- `EXCUSED` - Jurado excusado de la evaluación
+- `REASSIGNED` - Evaluación reasignada a otro jurado
 
 ---
 
@@ -199,6 +421,13 @@ PUNTAJE_ENTREVISTA = Dominio + Análisis + Ética + Comunicación
 
 PUNTAJE_FINAL = PUNTAJE_CV + PUNTAJE_ENTREVISTA
               = 0 a 100 puntos
+```
+
+### Puntaje Ponderado (EvaluationDetail)
+
+El sistema calcula automáticamente el `weighted_score` al guardar:
+```php
+weighted_score = score × criterion.weight
 ```
 
 ### Ejemplo de Cálculo
@@ -239,43 +468,292 @@ puntaje_con_bonificacion = min(puntaje_final × (1 + bonificacion), 100)
 
 ---
 
-## Estructura de Base de Datos
+## Estructura de Archivos (nwidart/laravel-modules)
 
-### Tabla: evaluation_criteria
+### Módulo Jury
+```
+Modules/Jury/
+├── app/
+│   ├── Entities/
+│   │   ├── JuryMember.php
+│   │   ├── JuryAssignment.php
+│   │   ├── JuryConflict.php
+│   │   └── JuryHistory.php
+│   ├── Enums/
+│   │   ├── MemberType.php
+│   │   ├── JuryRole.php
+│   │   ├── AssignmentStatus.php
+│   │   ├── ConflictType.php
+│   │   ├── ConflictSeverity.php
+│   │   └── ConflictStatus.php
+│   ├── Services/
+│   │   ├── JuryAssignmentService.php
+│   │   ├── JuryMemberService.php
+│   │   ├── ConflictDetectionService.php
+│   │   └── WorkloadBalancerService.php
+│   └── Http/Controllers/
+├── database/migrations/
+└── routes/
+```
 
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| id | int | PK |
-| position_code_id | int/null | FK a position_codes (null = entrevista) |
-| phase | int | 2 = CV, 3 = Entrevista |
-| name | string | Nombre del criterio |
-| description | json/text | Configuración adicional o descripción |
-| max_score | decimal(5,2) | Puntaje máximo |
-| min_score | decimal(5,2) | Puntaje mínimo/base |
-
-### Tabla: evaluations
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| id | uuid | PK |
-| application_id | uuid | FK postulación |
-| process_phase_id | uuid | FK fase (CV o Entrevista) |
-| evaluator_id | uuid | FK jurado evaluador |
-| status | enum | PENDIENTE, EN_PROGRESO, COMPLETADA |
-| raw_score | decimal(5,2) | Puntaje sin bonificación |
-| final_score | decimal(5,2) | Puntaje con bonificación |
-
-### Tabla: evaluation_details
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| evaluation_id | uuid | FK evaluación |
-| evaluation_criterion_id | int | FK criterio |
-| score | decimal(5,2) | Puntaje otorgado |
-| comments | text | Observaciones del jurado |
+### Módulo Evaluation
+```
+Modules/Evaluation/
+├── app/
+│   ├── Entities/
+│   │   ├── Evaluation.php
+│   │   ├── EvaluationCriterion.php
+│   │   ├── EvaluationDetail.php
+│   │   ├── EvaluatorAssignment.php
+│   │   └── EvaluationHistory.php
+│   ├── Enums/
+│   │   ├── EvaluationStatusEnum.php
+│   │   ├── AssignmentStatusEnum.php
+│   │   └── ScoreTypeEnum.php
+│   ├── Services/
+│   │   ├── EvaluationService.php
+│   │   └── EvaluatorAssignmentService.php
+│   ├── Events/
+│   │   ├── EvaluationAssigned.php
+│   │   ├── EvaluationSubmitted.php
+│   │   ├── EvaluationModified.php
+│   │   └── EvaluationDeadlineApproaching.php
+│   └── Http/Controllers/
+├── database/migrations/
+└── routes/
+```
 
 ---
 
-**Extraído de:** cas-info.md + evaluation_criteria.json
-**Versión:** 1.0
+## Relaciones entre Módulos
+
+```
+User (App\Models\User)
+    ↓
+JuryMember (1:1)
+    ↓
+JuryAssignment (1:N) ←→ JobPosting
+    ↓
+EvaluatorAssignment (1:N) ←→ Application
+    ↓
+Evaluation (1:N)
+    ↓
+EvaluationDetail (1:N) ←→ EvaluationCriterion
+```
+
+---
+
+## Vistas Implementadas (Blade + Alpine.js)
+
+### Stack Frontend
+- **Templates:** Blade (Laravel)
+- **Interactividad:** Alpine.js
+- **Estilos:** Tailwind CSS
+- **Iconos:** Font Awesome
+- **Layout base:** `layouts.app`
+
+### Módulo Jury - Vistas
+
+| Vista | Ruta | Estado | Descripción |
+|-------|------|--------|-------------|
+| `members/index.blade.php` | `/jury-members` | Implementada | Lista de jurados con filtros, stats cards, barra de carga |
+| `members/create.blade.php` | `/jury-members/create` | Implementada | Formulario crear jurado |
+| `members/show.blade.php` | `/jury-members/{id}` | Implementada | Detalle de jurado |
+| `members/edit.blade.php` | `/jury-members/{id}/edit` | Falta | Editar jurado |
+| `assignments/index.blade.php` | `/jury-assignments` | Implementada | Lista asignaciones + modal asignación automática |
+| `assignments/show.blade.php` | `/jury-assignments/{id}` | Falta | Detalle de asignación |
+| `conflicts/index.blade.php` | `/jury-conflicts` | Implementada | Lista conflictos con filtros + modal reportar |
+| `conflicts/show.blade.php` | `/jury-conflicts/{id}` | Falta | Detalle y resolución de conflicto |
+
+**Componentes Alpine.js en Jury:**
+- `deleteMember(id)` - Eliminar jurado con confirmación
+- `reviewConflict(id)` - Mover conflicto a revisión
+- Modal Bootstrap para asignación automática
+- Modal Bootstrap para reportar conflicto
+
+### Módulo Evaluation - Vistas
+
+| Vista | Ruta | Estado | Descripción |
+|-------|------|--------|-------------|
+| `index.blade.php` | `/evaluation` | Implementada | Dashboard de evaluación |
+| `my-evaluations.blade.php` | `/evaluation/my-evaluations` | Implementada | Evaluaciones asignadas al jurado actual |
+| `evaluations/evaluate.blade.php` | `/evaluation/{id}/evaluate` | Implementada | Formulario de evaluación con auto-guardado |
+| `evaluations/show.blade.php` | `/evaluation/{id}` | Falta | Ver evaluación completada |
+| `criteria/index.blade.php` | `/evaluation-criteria` | Implementada | Lista criterios por fase con resumen |
+| `criteria/create.blade.php` | `/evaluation-criteria/create` | Implementada | Crear criterio |
+| `criteria/edit.blade.php` | `/evaluation-criteria/{id}/edit` | Falta | Editar criterio |
+| `criteria/show.blade.php` | `/evaluation-criteria/{id}` | Falta | Detalle de criterio |
+| `assignments/index.blade.php` | `/evaluator-assignments` | Implementada | Lista asignaciones de evaluadores |
+| `automatic/index.blade.php` | `/evaluation/automatic` | Implementada | Evaluación automática |
+| `automatic/show.blade.php` | `/evaluation/automatic/{id}` | Implementada | Detalle evaluación automática |
+| `automatic/progress.blade.php` | `/evaluation/automatic/progress` | Implementada | Progreso de evaluación |
+
+**Componentes JavaScript en Evaluation:**
+```javascript
+// evaluate.blade.php - Auto-guardado
+calculateWeightedScores()     // Calcula puntajes ponderados en tiempo real
+saveCriterionDetail()         // Guarda detalle via API (axios)
+// Auto-save después de 1 segundo de inactividad
+// Barra de progreso de criterios evaluados
+// Sidebar sticky con resumen
+```
+
+### Patrones de UI Comunes
+
+**Stats Cards:**
+```html
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+    <div class="bg-white rounded-lg shadow-sm border p-6">
+        <div class="flex items-center">
+            <div class="bg-indigo-100 rounded-lg p-3">
+                <i class="fas fa-icon text-indigo-600"></i>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm text-gray-500">Label</p>
+                <p class="text-2xl font-semibold">Value</p>
+            </div>
+        </div>
+    </div>
+</div>
+```
+
+**Badges de Estado:**
+```html
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+    Activo
+</span>
+```
+
+**Barra de Progreso:**
+```html
+<div class="w-full bg-gray-200 rounded-full h-2">
+    <div class="bg-indigo-600 h-2 rounded-full" style="width: {{ $percentage }}%"></div>
+</div>
+```
+
+---
+
+## Lista de Tareas - Pendientes y Mejoras
+
+### Alta Prioridad
+
+| # | Tarea | Módulo | Tipo | Descripción |
+|---|-------|--------|------|-------------|
+| 1 | Vista `members/edit.blade.php` | Jury | Crear | Formulario edición de jurado |
+| 2 | Vista `assignments/show.blade.php` | Jury | Crear | Detalle de asignación con historial |
+| 3 | Vista `conflicts/show.blade.php` | Jury | Crear | Detalle conflicto + acciones (confirmar, desestimar, resolver) |
+| 4 | Vista `evaluations/show.blade.php` | Evaluation | Crear | Ver evaluación completada (solo lectura) |
+| 5 | Vista `criteria/edit.blade.php` | Evaluation | Crear | Editar criterio existente |
+| 6 | Vista `criteria/show.blade.php` | Evaluation | Crear | Detalle de criterio con estadísticas |
+| 7 | Modal asignación automática funcional | Jury | Mejorar | Conectar con WorkloadBalancerService |
+| 8 | Validación completa en evaluate.blade.php | Evaluation | Mejorar | Validar todos los criterios antes de enviar |
+
+### Media Prioridad
+
+| # | Tarea | Módulo | Tipo | Descripción |
+|---|-------|--------|------|-------------|
+| 9 | Migrar modales Bootstrap a Alpine.js | Ambos | Refactor | Usar x-data, @click, x-show para modales |
+| 10 | Componente reutilizable de filtros | Ambos | Crear | `<x-filters>` con slots para campos |
+| 11 | Componente de tabla con ordenamiento | Ambos | Crear | `<x-data-table>` con Alpine.js |
+| 12 | Dashboard de jurado | Jury | Crear | Vista principal del jurado con KPIs |
+| 13 | Historial de evaluaciones | Evaluation | Crear | Vista con todas las evaluaciones por jurado |
+| 14 | Notificaciones en tiempo real | Ambos | Implementar | Usar Laravel Echo + eventos |
+| 15 | Exportar evaluaciones a PDF | Evaluation | Crear | Generar acta de evaluación |
+| 16 | Bulk actions en tablas | Ambos | Crear | Selección múltiple + acciones masivas |
+
+### Baja Prioridad
+
+| # | Tarea | Módulo | Tipo | Descripción |
+|---|-------|--------|------|-------------|
+| 17 | Dark mode | Ambos | Mejorar | Soporte para tema oscuro |
+| 18 | Responsive mejorado | Ambos | Mejorar | Optimizar para móviles |
+| 19 | Skeleton loaders | Ambos | Mejorar | Mostrar placeholders mientras carga |
+| 20 | Tooltips informativos | Ambos | Mejorar | Agregar ayuda contextual |
+| 21 | Keyboard shortcuts | Evaluation | Crear | Atajos para evaluar más rápido |
+| 22 | Gráficos de rendimiento | Ambos | Crear | Charts con distribución de puntajes |
+
+### Correcciones Identificadas
+
+| # | Bug/Corrección | Archivo | Descripción |
+|---|----------------|---------|-------------|
+| 1 | Color dinámico no funciona | `members/index.blade.php:193` | `bg-{{ $color }}` no compila en Tailwind |
+| 2 | Falta CSRF en fetch | `members/index.blade.php:258` | Ya tiene, verificar en otros |
+| 3 | Modal sin Alpine.js | `assignments/index.blade.php` | Usa Bootstrap, migrar a Alpine |
+| 4 | Select sin opciones | `assignments/index.blade.php:198-206` | Falta poblar convocatorias/fases |
+| 5 | Axios no declarado | `evaluate.blade.php` | Verificar que axios esté incluido |
+| 6 | Route no definida | `my-evaluations.blade.php:160` | `evaluation.show` puede no existir |
+
+### Mejoras de Backend Relacionadas
+
+| # | Tarea | Descripción |
+|---|-------|-------------|
+| 1 | API para asignación automática | Endpoint `POST /api/jury/auto-assign` |
+| 2 | Validar conflictos al asignar | Verificar JuryConflict antes de EvaluatorAssignment |
+| 3 | Calcular ranking automático | Trigger al completar todas las evaluaciones de una fase |
+| 4 | Notificar deadline próximo | Job programado para enviar recordatorios |
+| 5 | Auditoría de cambios | Registrar modificaciones en evaluaciones |
+
+---
+
+## Ejemplos de Código Alpine.js
+
+### Modal con Alpine.js
+```html
+<div x-data="{ open: false }">
+    <button @click="open = true">Abrir Modal</button>
+
+    <div x-show="open" x-cloak class="fixed inset-0 z-50">
+        <div class="bg-black bg-opacity-50 absolute inset-0" @click="open = false"></div>
+        <div class="bg-white rounded-lg p-6 relative z-10 max-w-md mx-auto mt-20">
+            <h3>Título del Modal</h3>
+            <button @click="open = false">Cerrar</button>
+        </div>
+    </div>
+</div>
+```
+
+### Formulario con validación Alpine.js
+```html
+<form x-data="{
+    score: '',
+    isValid: false,
+    validate() {
+        this.isValid = this.score >= 0 && this.score <= 100;
+    }
+}" @submit.prevent="isValid && $el.submit()">
+    <input type="number" x-model="score" @input="validate()">
+    <button :disabled="!isValid" :class="{ 'opacity-50': !isValid }">
+        Guardar
+    </button>
+</form>
+```
+
+### Auto-save con debounce
+```html
+<div x-data="{
+    value: '',
+    saving: false,
+    saved: false,
+    save() {
+        this.saving = true;
+        fetch('/api/save', {
+            method: 'POST',
+            body: JSON.stringify({ value: this.value })
+        }).then(() => {
+            this.saving = false;
+            this.saved = true;
+            setTimeout(() => this.saved = false, 2000);
+        });
+    }
+}">
+    <input x-model.debounce.500ms="value" @input="save()">
+    <span x-show="saving">Guardando...</span>
+    <span x-show="saved" class="text-green-600">Guardado</span>
+</div>
+```
+
+---
+
+**Extraído de:** cas-info.md + evaluation_criteria.json + Modules/Jury + Modules/Evaluation
+**Versión:** 3.0
 **Fecha:** 2025

@@ -17,10 +17,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('jury-members', JuryMemberController::class)->names('jury-members');
 
     Route::prefix('jury-members')->name('jury-members.')->group(function () {
-        Route::post('{id}/toggle-active', [JuryMemberController::class, 'toggleActive'])->name('toggle-active');
-        Route::post('{id}/mark-unavailable', [JuryMemberController::class, 'markUnavailable'])->name('mark-unavailable');
-        Route::post('{id}/mark-available', [JuryMemberController::class, 'markAvailable'])->name('mark-available');
-        Route::post('{id}/complete-training', [JuryMemberController::class, 'completeTraining'])->name('complete-training');
         Route::get('{id}/statistics', [JuryMemberController::class, 'statistics'])->name('statistics');
         Route::get('workload-summary', [JuryMemberController::class, 'workloadSummary'])->name('workload-summary');
         Route::get('available-for-assignment', [JuryMemberController::class, 'availableForAssignment'])->name('available-for-assignment');

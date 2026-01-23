@@ -2,16 +2,24 @@
 
 namespace Modules\Jury\Services;
 
-use Modules\Jury\Entities\{JuryMember, JuryAssignment, JuryHistory};
-use Modules\Jury\Enums\{MemberType, JuryRole, AssignmentStatus};
+use Modules\Jury\Entities\{JuryAssignment, JuryConflict};
+use Modules\Jury\Enums\{JuryRole, AssignmentStatus};
+use Modules\User\Entities\User;
 use Illuminate\Support\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 
+/**
+ * Servicio para gestionar asignaciones de jurados a convocatorias
+ *
+ * Según diseño optimizado:
+ * - Usa user_id directamente (sin JuryMember)
+ * - Sin gestión de workload (se calcula dinámicamente)
+ * - Estado simple: ACTIVE/INACTIVE
+ */
 class JuryAssignmentService
 {
     public function __construct(
-        protected ConflictDetectionService $conflictService,
-        protected WorkloadBalancerService $workloadService
+        protected ConflictDetectionService $conflictService
     ) {}
 
     /**
@@ -19,22 +27,22 @@ class JuryAssignmentService
      */
     public function getAll(array $filters = []): LengthAwarePaginator
     {
-        $query = JuryAssignment::with(['juryMember.user', 'jobPosting']);
+        $query = JuryAssignment::with(['user', 'jobPosting']);
 
         if (!empty($filters['job_posting_id'])) {
             $query->byJobPosting($filters['job_posting_id']);
         }
 
-        if (!empty($filters['jury_member_id'])) {
-            $query->byJuryMember($filters['jury_member_id']);
-        }
-
-        if (!empty($filters['member_type'])) {
-            $query->where('member_type', $filters['member_type']);
+        if (!empty($filters['user_id'])) {
+            $query->byUser($filters['user_id']);
         }
 
         if (!empty($filters['role_in_jury'])) {
-            $query->where('role_in_jury', $filters['role_in_jury']);
+            $query->byRole($filters['role_in_jury']);
+        }
+
+        if (!empty($filters['dependency_scope_id'])) {
+            $query->byDependency($filters['dependency_scope_id']);
         }
 
         if (!empty($filters['status'])) {
@@ -53,113 +61,94 @@ class JuryAssignmentService
      */
     public function getByJobPosting(string $jobPostingId): Collection
     {
-        return JuryAssignment::with(['juryMember.user'])
+        return JuryAssignment::with(['user'])
             ->byJobPosting($jobPostingId)
             ->ordered()
             ->get();
     }
 
     /**
-     * Assign jury member to job posting
+     * Assign user (with JURADO role) to job posting
+     *
+     * @param array $data ['user_id', 'job_posting_id', 'role_in_jury', 'dependency_scope_id'?]
      */
     public function assign(array $data): JuryAssignment
     {
-        // Validar que el jurado puede ser asignado
-        $juryMember = JuryMember::findOrFail($data['jury_member_id']);
-        
-        if (!$juryMember->canBeAssigned()) {
-            throw new \Exception('El jurado no está disponible para asignación');
+        // Validar que el usuario tiene rol JURADO
+        $user = User::findOrFail($data['user_id']);
+
+        if (!$user->hasRole('jury')) {
+            throw new \Exception('El usuario debe tener el rol JURADO para ser asignado');
         }
 
         // Verificar duplicados
         $existing = JuryAssignment::byJobPosting($data['job_posting_id'])
-            ->byJuryMember($data['jury_member_id'])
-            ->where('member_type', $data['member_type'])
+            ->byUser($data['user_id'])
             ->active()
             ->first();
 
         if ($existing) {
-            throw new \Exception('El jurado ya está asignado a esta convocatoria con el mismo tipo');
+            throw new \Exception('El usuario ya está asignado a esta convocatoria');
         }
 
         // Crear asignación
         $assignment = JuryAssignment::create(array_merge($data, [
             'assigned_by' => auth()->id(),
             'status' => AssignmentStatus::ACTIVE,
-            'is_active' => true,
         ]));
 
-        // Registrar en historial
-        JuryHistory::logAssignment(
-            $assignment->id,
-            $assignment->jury_member_id,
-            $assignment->job_posting_id
-        );
-
-        // Actualizar contador de jurado
-        $juryMember->increment('total_assignments');
-
-        return $assignment->fresh(['juryMember.user', 'jobPosting']);
+        return $assignment->fresh(['user', 'jobPosting']);
     }
 
     /**
-     * Auto-assign jury members to job posting
+     * Auto-assign jury members to job posting based on workload balancing
+     *
+     * @param string $jobPostingId
+     * @param int $totalJurors Número total de jurados a asignar
+     * @param array|null $preferredRoles Roles específicos ['PRESIDENTE', 'VOCAL', ...]
      */
     public function autoAssign(
         string $jobPostingId,
-        int $totalTitulares = 3,
-        int $totalSuplentes = 2,
-        ?array $preferredSpecialties = null
+        int $totalJurors = 3,
+        ?array $preferredRoles = null
     ): array {
-        $availableMembers = JuryMember::active()
-            ->available()
-            ->trained()
-            ->withWorkload()
-            ->get()
-            ->filter(fn($m) => !$m->isOverloaded());
+        // Obtener usuarios con rol JURADO disponibles
+        $availableJurors = User::role('JURADO')
+            ->whereNotIn('id', function($query) use ($jobPostingId) {
+                $query->select('user_id')
+                    ->from('jury_assignments')
+                    ->where('job_posting_id', $jobPostingId)
+                    ->where('status', AssignmentStatus::ACTIVE);
+            })
+            ->get();
 
-        if ($preferredSpecialties) {
-            $availableMembers = $availableMembers->filter(function ($member) use ($preferredSpecialties) {
-                return in_array($member->specialty, $preferredSpecialties);
-            });
-        }
-
-        if ($availableMembers->count() < ($totalTitulares + $totalSuplentes)) {
+        if ($availableJurors->count() < $totalJurors) {
             throw new \Exception('No hay suficientes jurados disponibles');
         }
 
-        // Ordenar por carga de trabajo (menor carga primero)
-        $sorted = $availableMembers->sortBy(fn($m) => $m->workload_percentage);
+        // Calcular carga actual de cada jurado
+        $jurorWorkload = $this->calculateWorkloadForUsers($availableJurors->pluck('id')->toArray());
+
+        // Ordenar por menor carga
+        $sortedJurors = $availableJurors->sortBy(function($juror) use ($jurorWorkload) {
+            return $jurorWorkload[$juror->id] ?? 0;
+        });
 
         $assignments = [];
+        $roles = $preferredRoles ?? [
+            JuryRole::PRESIDENTE,
+            JuryRole::VOCAL,
+            JuryRole::VOCAL,
+        ];
 
-        // Asignar titulares
-        $titulares = $sorted->take($totalTitulares);
-        foreach ($titulares->values() as $index => $member) {
-            $role = match($index) {
-                0 => JuryRole::PRESIDENTE,
-                1 => JuryRole::SECRETARIO,
-                default => JuryRole::VOCAL,
-            };
+        // Asignar jurados
+        foreach ($sortedJurors->take($totalJurors)->values() as $index => $juror) {
+            $role = $roles[$index] ?? JuryRole::VOCAL;
 
             $assignments[] = $this->assign([
-                'jury_member_id' => $member->id,
+                'user_id' => $juror->id,
                 'job_posting_id' => $jobPostingId,
-                'member_type' => MemberType::TITULAR,
                 'role_in_jury' => $role,
-                'order' => $index + 1,
-            ]);
-        }
-
-        // Asignar suplentes
-        $suplentes = $sorted->skip($totalTitulares)->take($totalSuplentes);
-        foreach ($suplentes->values() as $index => $member) {
-            $assignments[] = $this->assign([
-                'jury_member_id' => $member->id,
-                'job_posting_id' => $jobPostingId,
-                'member_type' => MemberType::SUPLENTE,
-                'role_in_jury' => JuryRole::MIEMBRO,
-                'order' => $totalTitulares + $index + 1,
             ]);
         }
 
@@ -167,183 +156,150 @@ class JuryAssignmentService
     }
 
     /**
-     * Replace jury member
+     * Deactivate assignment
      */
-    public function replace(
-        string $assignmentId,
-        string $newJuryMemberId,
-        string $reason
-    ): JuryAssignment {
-        $oldAssignment = JuryAssignment::findOrFail($assignmentId);
-        $newMember = JuryMember::findOrFail($newJuryMemberId);
+    public function deactivate(string $assignmentId): JuryAssignment
+    {
+        $assignment = JuryAssignment::findOrFail($assignmentId);
+        $assignment->deactivate();
 
-        if (!$newMember->canBeAssigned()) {
-            throw new \Exception('El nuevo jurado no está disponible');
+        return $assignment->fresh();
+    }
+
+    /**
+     * Activate assignment
+     */
+    public function activate(string $assignmentId): JuryAssignment
+    {
+        $assignment = JuryAssignment::findOrFail($assignmentId);
+        $assignment->activate();
+
+        return $assignment->fresh();
+    }
+
+    /**
+     * Get available evaluators for an application
+     *
+     * Retorna jurados que:
+     * - Están asignados activamente a la convocatoria
+     * - No tienen conflictos con la postulación
+     * - Respetan el dependency_scope si está configurado
+     */
+    public function getAvailableEvaluators(
+        string $jobPostingId,
+        ?string $applicationId = null
+    ): Collection {
+        $assignments = JuryAssignment::byJobPosting($jobPostingId)
+            ->active()
+            ->with('user')
+            ->get();
+
+        // Si hay application_id, excluir jurados con conflictos
+        if ($applicationId) {
+            $conflictedUserIds = JuryConflict::where('application_id', $applicationId)
+                ->pluck('user_id')
+                ->toArray();
+
+            $assignments = $assignments->filter(function ($assignment) use ($conflictedUserIds) {
+                return !in_array($assignment->user_id, $conflictedUserIds);
+            });
+
+            // Filtrar por dependency_scope si está configurado
+            $application = \Modules\Application\Entities\Application::find($applicationId);
+            if ($application) {
+                $assignments = $assignments->filter(function ($assignment) use ($application) {
+                    // Si el jurado tiene dependency_scope_id, verificar que coincida con la dependencia del perfil
+                    if ($assignment->dependency_scope_id) {
+                        return $assignment->dependency_scope_id == $application->profile->dependency_id;
+                    }
+                    return true; // Si no tiene scope, puede evaluar cualquiera
+                });
+            }
         }
 
-        // Marcar la asignación anterior como reemplazada
-        $oldAssignment->replace(
-            $newJuryMemberId,
-            $reason,
-            auth()->id()
-        );
-
-        // Crear nueva asignación con los mismos datos
-        $newAssignment = $this->assign([
-            'jury_member_id' => $newJuryMemberId,
-            'job_posting_id' => $oldAssignment->job_posting_id,
-            'member_type' => $oldAssignment->member_type,
-            'role_in_jury' => $oldAssignment->role_in_jury,
-            'order' => $oldAssignment->order,
-            'max_evaluations' => $oldAssignment->max_evaluations,
-        ]);
-
-        // Registrar en historial
-        JuryHistory::logReplacement(
-            $oldAssignment->id,
-            $oldAssignment->jury_member_id,
-            $newJuryMemberId,
-            $reason
-        );
-
-        return $newAssignment;
-    }
-
-    /**
-     * Excuse jury member from assignment
-     */
-    public function excuse(string $assignmentId, string $reason): JuryAssignment
-    {
-        $assignment = JuryAssignment::findOrFail($assignmentId);
-        $assignment->excuse($reason, auth()->id());
-
-        JuryHistory::log([
-            'jury_assignment_id' => $assignment->id,
-            'jury_member_id' => $assignment->jury_member_id,
-            'job_posting_id' => $assignment->job_posting_id,
-            'event_type' => 'EXCUSED',
-            'description' => 'Jurado excusado de la asignación',
-            'reason' => $reason,
-            'performed_by' => auth()->id(),
-        ]);
-
-        return $assignment->fresh();
-    }
-
-    /**
-     * Remove assignment
-     */
-    public function remove(string $assignmentId): JuryAssignment
-    {
-        $assignment = JuryAssignment::findOrFail($assignmentId);
-        $assignment->remove();
-
-        JuryHistory::log([
-            'jury_assignment_id' => $assignment->id,
-            'jury_member_id' => $assignment->jury_member_id,
-            'job_posting_id' => $assignment->job_posting_id,
-            'event_type' => 'REMOVED',
-            'description' => 'Asignación removida',
-            'performed_by' => auth()->id(),
-        ]);
-
-        return $assignment->fresh();
-    }
-
-    /**
-     * Update workload for assignment
-     */
-    public function updateWorkload(string $assignmentId, int $evaluationsAdded = 0): JuryAssignment
-    {
-        $assignment = JuryAssignment::findOrFail($assignmentId);
-
-        if ($evaluationsAdded > 0) {
-            $assignment->incrementWorkload($evaluationsAdded);
-        } elseif ($evaluationsAdded < 0) {
-            $assignment->decrementWorkload(abs($evaluationsAdded));
-        }
-
-        JuryHistory::log([
-            'jury_assignment_id' => $assignment->id,
-            'jury_member_id' => $assignment->jury_member_id,
-            'event_type' => 'WORKLOAD_UPDATED',
-            'description' => 'Carga de trabajo actualizada',
-            'metadata' => [
-                'change' => $evaluationsAdded,
-                'current_evaluations' => $assignment->current_evaluations,
-            ],
-            'performed_by' => auth()->id(),
-        ]);
-
-        return $assignment->fresh();
+        return $assignments;
     }
 
     /**
      * Get workload statistics for job posting
+     * Calcula dinámicamente desde evaluator_assignments
      */
     public function getWorkloadStatistics(string $jobPostingId): array
     {
         $assignments = JuryAssignment::byJobPosting($jobPostingId)
             ->active()
-            ->with('juryMember.user')
+            ->with('user')
             ->get();
+
+        $workload = $this->calculateWorkloadForUsers($assignments->pluck('user_id')->toArray());
 
         return [
             'total_assignments' => $assignments->count(),
-            'total_evaluations' => $assignments->sum('current_evaluations'),
-            'completed_evaluations' => $assignments->sum('completed_evaluations'),
-            'members' => $assignments->map(function ($assignment) {
+            'members' => $assignments->map(function ($assignment) use ($workload) {
+                $userId = $assignment->user_id;
                 return [
                     'id' => $assignment->id,
-                    'jury_member_name' => $assignment->jury_member_name,
-                    'member_type' => $assignment->member_type->label(),
+                    'user_id' => $userId,
+                    'name' => $assignment->user_name,
                     'role' => $assignment->role_in_jury?->label(),
-                    'current_evaluations' => $assignment->current_evaluations,
-                    'max_evaluations' => $assignment->max_evaluations,
-                    'completed_evaluations' => $assignment->completed_evaluations,
-                    'workload_percentage' => $assignment->workload_percentage,
-                    'has_capacity' => $assignment->hasCapacity(),
+                    'current_evaluations' => $workload[$userId] ?? 0,
                 ];
             }),
         ];
     }
 
     /**
-     * Balance workload across jury members
+     * Calculate current workload for users
+     *
+     * @param array $userIds
+     * @return array ['user_id' => count]
      */
-    public function balanceWorkload(string $jobPostingId): array
+    protected function calculateWorkloadForUsers(array $userIds): array
     {
-        return $this->workloadService->balanceForJobPosting($jobPostingId);
+        $workload = \Modules\Evaluation\Entities\EvaluatorAssignment::whereIn('user_id', $userIds)
+            ->active()
+            ->selectRaw('user_id, COUNT(*) as count')
+            ->groupBy('user_id')
+            ->pluck('count', 'user_id')
+            ->toArray();
+
+        // Rellenar con 0 los usuarios sin asignaciones
+        foreach ($userIds as $userId) {
+            if (!isset($workload[$userId])) {
+                $workload[$userId] = 0;
+            }
+        }
+
+        return $workload;
     }
 
     /**
-     * Get available evaluators for application
+     * Balance workload: suggest best juror for new assignment
+     *
+     * @return array|null ['user_id', 'name', 'current_workload']
      */
-    public function getAvailableEvaluators(
-        string $jobPostingId,
-        ?string $phaseId = null,
-        ?string $applicationId = null
-    ): Collection {
-        $query = JuryAssignment::byJobPosting($jobPostingId)
-            ->active()
-            ->with('juryMember.user');
+    public function suggestBestJuror(string $jobPostingId, ?string $applicationId = null): ?array
+    {
+        $available = $this->getAvailableEvaluators($jobPostingId, $applicationId);
 
-        $assignments = $query->get()->filter(function ($assignment) {
-            return $assignment->hasCapacity();
-        });
-
-        // Si hay application_id, excluir jurados con conflictos
-        if ($applicationId) {
-            $conflictedIds = $this->conflictService
-                ->getConflictedJuryMembers($applicationId)
-                ->pluck('id')
-                ->toArray();
-
-            $assignments = $assignments->filter(function ($assignment) use ($conflictedIds) {
-                return !in_array($assignment->jury_member_id, $conflictedIds);
-            });
+        if ($available->isEmpty()) {
+            return null;
         }
 
-        return $assignments;
+        $userIds = $available->pluck('user_id')->toArray();
+        $workload = $this->calculateWorkloadForUsers($userIds);
+
+        // Ordenar por menor carga
+        $bestAssignment = $available->sortBy(function($assignment) use ($workload) {
+            return $workload[$assignment->user_id] ?? 0;
+        })->first();
+
+        return [
+            'assignment_id' => $bestAssignment->id,
+            'user_id' => $bestAssignment->user_id,
+            'name' => $bestAssignment->user_name,
+            'role' => $bestAssignment->role_in_jury?->label(),
+            'current_workload' => $workload[$bestAssignment->user_id] ?? 0,
+        ];
     }
 }

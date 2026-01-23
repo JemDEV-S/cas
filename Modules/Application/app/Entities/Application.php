@@ -298,4 +298,9 @@ class Application extends Model
         return $query->where('is_eligible', true)
                      ->whereNull('assigned_vacancy_id');
     }
+
+    public function evaluatorAssignments()
+    {
+        return $this->hasMany(\Modules\Evaluation\Entities\EvaluatorAssignment::class);
+    }
 }

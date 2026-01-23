@@ -8,6 +8,7 @@ use Modules\User\Repositories\UserRepository;
 use Modules\Core\Exceptions\BusinessRuleException;
 use Modules\Core\Exceptions\ValidationException;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Database\Eloquent\Builder;
 
 class UserService extends BaseService
 {
@@ -109,5 +110,12 @@ class UserService extends BaseService
         if (!empty($errors)) {
             throw new ValidationException('Datos de usuario inválidos', $errors);
         }
+    }
+
+    public function juryUsersQuery():Builder
+    {
+        return User::whereHas('roles', function ($query){
+            $query->where('slug', 'jury');
+        });
     }
 }

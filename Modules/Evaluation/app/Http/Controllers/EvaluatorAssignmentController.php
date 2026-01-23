@@ -25,18 +25,17 @@ class EvaluatorAssignmentController extends Controller
     public function index(Request $request)
     {
         try {
-            // Query base con relaciones Jury
+            // Query base con relaciones optimizadas
             $query = EvaluatorAssignment::with([
-                'juryMember.user',
-                'juryAssignment',
-                'application.jobPosting',
+                'user',
+                'application.jobProfile.jobPosting',
                 'phase',
                 'assignedBy'
             ]);
 
             // Filtros
-            if ($request->has('evaluator_id')) {
-                $query->byEvaluator($request->input('evaluator_id'));
+            if ($request->has('user_id')) {
+                $query->byUser($request->input('user_id'));
             }
 
             if ($request->has('phase_id')) {
@@ -44,9 +43,7 @@ class EvaluatorAssignmentController extends Controller
             }
 
             if ($request->has('job_posting_id')) {
-                $query->whereHas('application', function($q) use ($request) {
-                    $q->where('job_profile_vacancy_id', $request->input('job_posting_id'));
-                });
+                $query->where('job_posting_id', $request->input('job_posting_id'));
             }
 
             if ($request->has('status')) {
@@ -68,7 +65,7 @@ class EvaluatorAssignmentController extends Controller
             // Búsqueda por evaluador
             if ($request->has('evaluator')) {
                 $search = $request->input('evaluator');
-                $query->whereHas('juryMember.user', function($q) use ($search) {
+                $query->whereHas('user', function($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
                       ->orWhere('email', 'like', "%{$search}%");
                 });
@@ -90,47 +87,44 @@ class EvaluatorAssignmentController extends Controller
                     ->count(),
             ];
 
-            // Carga de trabajo por evaluador (simplificado)
+            // Carga de trabajo por evaluador
             $workloadStats = collect([]);
 
             try {
-                // Query simplificado sin joins complejos
                 $workloadData = \DB::table('evaluator_assignments')
                     ->select(
-                        'evaluator_id',
+                        'user_id',
                         \DB::raw('COUNT(*) as total'),
                         \DB::raw('SUM(CASE WHEN status = "PENDING" THEN 1 ELSE 0 END) as pending'),
                         \DB::raw('SUM(CASE WHEN status = "COMPLETED" THEN 1 ELSE 0 END) as completed')
                     )
                     ->whereNull('deleted_at')
-                    ->groupBy('evaluator_id')
+                    ->groupBy('user_id')
                     ->get();
 
-                // Enriquecer con datos de jury
+                // Enriquecer con datos de usuario y jury assignment
                 $workloadStats = $workloadData->map(function($item) {
-                    $juryMember = \Modules\Jury\Entities\JuryMember::with('user')
-                        ->find($item->evaluator_id);
+                    $user = \Modules\User\Entities\User::find($item->user_id);
 
-                    if (!$juryMember) {
+                    if (!$user) {
                         return null;
                     }
 
-                    $juryAssignment = \Modules\Jury\Entities\JuryAssignment::where('jury_member_id', $item->evaluator_id)
-                        ->where('is_active', true)
+                    // Obtener una asignación activa del jurado (puede tener varias)
+                    $juryAssignment = \Modules\Jury\Entities\JuryAssignment::where('user_id', $item->user_id)
+                        ->where('status', 'ACTIVE')
                         ->first();
 
                     return (object)[
-                        'evaluator_name' => $juryMember->full_name ?? 'N/A',
-                        'specialty' => $juryMember->specialty,
-                        'member_type' => $juryAssignment?->member_type?->value,
-                        'role' => $juryAssignment?->role_in_jury?->value,
+                        'user_id' => $item->user_id,
+                        'evaluator_name' => $user->getFullNameAttribute() ?? 'N/A',
+                        'email' => $user->email ?? 'N/A',
+                        'role' => $juryAssignment?->role_in_jury?->label() ?? 'N/A',
                         'total' => $item->total,
                         'pending' => $item->pending,
                         'completed' => $item->completed,
-                        'current_load' => $juryAssignment?->current_evaluations ?? 0,
-                        'max_load' => $juryAssignment?->max_evaluations ?? 0,
-                        'workload_percentage' => $juryAssignment && $juryAssignment->max_evaluations > 0
-                            ? round(($juryAssignment->current_evaluations / $juryAssignment->max_evaluations) * 100, 0)
+                        'completion_rate' => $item->total > 0
+                            ? round(($item->completed / $item->total) * 100, 0)
                             : 0,
                     ];
                 })->filter()->values();
@@ -140,7 +134,7 @@ class EvaluatorAssignmentController extends Controller
             }
 
             // Job Postings para filtros
-            $jobPostings = \Modules\JobPosting\Entities\JobPosting::where('status', 'PUBLISHED')
+            $jobPostings = \Modules\JobPosting\Entities\JobPosting::where('status', 'PUBLICADA')
                 ->orderBy('created_at', 'desc')
                 ->limit(50)
                 ->get(['id', 'title', 'code']);
@@ -204,8 +198,9 @@ class EvaluatorAssignmentController extends Controller
     {
         $validated = $request->validate([
             'application_id' => ['required', 'string', 'exists:applications,id'],
-            'evaluator_id' => ['required', 'string', 'exists:jury_members,id'],
+            'user_id' => ['required', 'integer', 'exists:users,id'],
             'phase_id' => ['required', 'string', 'exists:process_phases,id'],
+            'deadline_at' => ['nullable', 'date', 'after:today'],
         ]);
 
         try {
@@ -269,33 +264,35 @@ class EvaluatorAssignmentController extends Controller
     }
 
     /**
-     * Asignación automática
-     * ACTUALIZADO: Usa balanceo de carga
+     * Asignación automática masiva
+     * Distribuye todas las postulaciones de una convocatoria entre los jurados
      */
     public function autoAssign(Request $request)
     {
         $validated = $request->validate([
             'job_posting_id' => ['required', 'string', 'exists:job_postings,id'],
             'phase_id' => ['required', 'string', 'exists:process_phases,id'],
+            'only_unassigned' => ['nullable', 'boolean'],
         ]);
 
         try {
-            $result = $this->assignmentService->autoAssignMultiple(
+            $result = $this->assignmentService->distributeByJobPosting(
                 $validated['job_posting_id'],
-                $validated['phase_id']
+                $validated['phase_id'],
+                $validated['only_unassigned'] ?? true
             );
 
             if ($request->wantsJson() || $request->is('api/*')) {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Asignación automática completada',
+                    'message' => $result['message'],
                     'data' => $result,
                 ]);
             }
 
-            $assigned = $result['assigned'] ?? 0;
-            return redirect()->route('evaluator-assignments.index')
-                ->with('success', "Se asignaron {$assigned} evaluaciones automáticamente");
+            return redirect()->route('evaluator-assignments.index', [
+                'job_posting_id' => $validated['job_posting_id']
+            ])->with('success', $result['message']);
 
         } catch (\Exception $e) {
             \Log::error('Error in auto-assign: ' . $e->getMessage());
@@ -320,20 +317,8 @@ class EvaluatorAssignmentController extends Controller
         try {
             $assignment = EvaluatorAssignment::findOrFail($id);
 
-            // Decrementar carga del jurado si existe
-            try {
-                $juryAssignment = \Modules\Jury\Entities\JuryAssignment::where('jury_member_id', $assignment->evaluator_id)
-                    ->where('is_active', true)
-                    ->first();
-
-                if ($juryAssignment) {
-                    $juryAssignment->decrementWorkload(1);
-                }
-            } catch (\Exception $e) {
-                \Log::warning('Could not decrement workload: ' . $e->getMessage());
-            }
-
-            $assignment->delete();
+            // Cancelar la asignación (soft delete)
+            $assignment->cancel('Cancelado por administrador');
 
             if (request()->wantsJson() || request()->is('api/*')) {
                 return response()->json([
@@ -368,8 +353,7 @@ class EvaluatorAssignmentController extends Controller
     {
         try {
             $assignment = EvaluatorAssignment::with([
-                'juryMember.user',
-                'juryAssignment',
+                'user',
                 'application.jobPosting',
                 'application.applicant',
                 'phase',

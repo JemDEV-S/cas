@@ -5,10 +5,7 @@ namespace Modules\Jury\Enums;
 enum AssignmentStatus: string
 {
     case ACTIVE = 'ACTIVE';
-    case REPLACED = 'REPLACED';
-    case EXCUSED = 'EXCUSED';
-    case REMOVED = 'REMOVED';
-    case SUSPENDED = 'SUSPENDED';
+    case INACTIVE = 'INACTIVE';
 
     /**
      * Get display name
@@ -17,10 +14,7 @@ enum AssignmentStatus: string
     {
         return match($this) {
             self::ACTIVE => 'Activo',
-            self::REPLACED => 'Reemplazado',
-            self::EXCUSED => 'Excusado',
-            self::REMOVED => 'Removido',
-            self::SUSPENDED => 'Suspendido',
+            self::INACTIVE => 'Inactivo',
         };
     }
 
@@ -31,10 +25,7 @@ enum AssignmentStatus: string
     {
         return match($this) {
             self::ACTIVE => 'Asignación activa y vigente',
-            self::REPLACED => 'Ha sido reemplazado por otro jurado',
-            self::EXCUSED => 'Excusado de la asignación',
-            self::REMOVED => 'Removido de la asignación',
-            self::SUSPENDED => 'Temporalmente suspendido',
+            self::INACTIVE => 'Asignación desactivada',
         };
     }
 
@@ -45,10 +36,7 @@ enum AssignmentStatus: string
     {
         return match($this) {
             self::ACTIVE => 'success',
-            self::REPLACED => 'warning',
-            self::EXCUSED => 'info',
-            self::REMOVED => 'danger',
-            self::SUSPENDED => 'secondary',
+            self::INACTIVE => 'secondary',
         };
     }
 
@@ -65,7 +53,7 @@ enum AssignmentStatus: string
      */
     public function isInactive(): bool
     {
-        return in_array($this, [self::REPLACED, self::EXCUSED, self::REMOVED]);
+        return $this === self::INACTIVE;
     }
 
     /**
@@ -99,10 +87,6 @@ enum AssignmentStatus: string
      */
     public static function inactiveStatuses(): array
     {
-        return [
-            self::REPLACED->value,
-            self::EXCUSED->value,
-            self::REMOVED->value,
-        ];
+        return [self::INACTIVE->value];
     }
 }
