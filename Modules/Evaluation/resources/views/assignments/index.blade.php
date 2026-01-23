@@ -559,7 +559,7 @@ function assignmentManager() {
             formData.append('only_unassigned', this.distribution.only_unassigned ? '1' : '0');
 
             try {
-                const response = await fetch('/evaluator-assignments/auto-assign', {
+                const response = await fetch('{{ route('evaluator-assignments.auto-assign') }}', {
                     method: 'POST',
                     headers: {
                         'Accept': 'application/json',
@@ -589,7 +589,8 @@ function assignmentManager() {
             }
 
             try {
-                const response = await fetch(`/evaluator-assignments/${assignmentId}`, {
+                const url = '{{ route('evaluator-assignments.destroy', ':id') }}'.replace(':id', assignmentId);
+                const response = await fetch(url, {
                     method: 'DELETE',
                     headers: {
                         'X-CSRF-TOKEN': '{{ csrf_token() }}',
