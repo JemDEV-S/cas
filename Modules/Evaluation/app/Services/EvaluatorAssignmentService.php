@@ -70,14 +70,16 @@ class EvaluatorAssignmentService
             throw new \Exception('El jurado no puede evaluar en este momento');
         }
 
-        // 2. Verificar conflictos de interés
-        $hasConflict = JuryConflict::hasConflict($data['user_id'], $data['application_id']);
-        if ($hasConflict) {
+        // 2. Verificar todos los conflictos (manuales + automáticos)
+        $conflictCheck = $this->conflictService->checkAllAutomaticConflicts($data['user_id'], $data['application_id']);
+        if ($conflictCheck['has_conflict']) {
+            $reasons = implode('. ', $conflictCheck['reasons']);
             Log::warning("Conflicto de interés detectado", [
                 'userId' => $data['user_id'],
                 'applicationId' => $data['application_id'],
+                'reasons' => $conflictCheck['reasons'],
             ]);
-            throw new \Exception('El jurado tiene un conflicto de interés declarado con esta postulación');
+            throw new \Exception("El jurado tiene conflictos de interés con esta postulación: {$reasons}");
         }
 
         // 3. Verificar si ya existe asignación para esta combinación

@@ -6,38 +6,44 @@ use Illuminate\Support\Facades\DB;
 use Modules\Evaluation\Entities\{Evaluation, EvaluationDetail, EvaluationHistory};
 use Modules\Evaluation\Enums\EvaluationStatusEnum;
 use Modules\Evaluation\Exceptions\EvaluationException;
+use Modules\Evaluation\Entities\EvaluatorAssignment;
 
 class EvaluationService
 {
     /**
-     * Crear una nueva evaluación
+     * Crear una nueva evaluación a partir de una asignación
      */
-    public function createEvaluation(array $data): Evaluation
+    public function createEvaluation(EvaluatorAssignment $assignment): Evaluation
     {
-        return DB::transaction(function () use ($data) {
+        return DB::transaction(function () use ($assignment) {
             $evaluation = Evaluation::create([
-                'application_id' => $data['application_id'],
-                'evaluator_id' => $data['evaluator_id'],
-                'phase_id' => $data['phase_id'],
-                'job_posting_id' => $data['job_posting_id'],
+                'evaluator_assignment_id' => $assignment->id,
+                'application_id' => $assignment->application_id,
+                'evaluator_id' => $assignment->user_id,
+                'phase_id' => $assignment->phase_id,
+                'job_posting_id' => $assignment->job_posting_id,
                 'status' => EvaluationStatusEnum::ASSIGNED,
-                'deadline_at' => $data['deadline_at'] ?? null,
-                'is_anonymous' => $data['is_anonymous'] ?? false,
-                'is_collaborative' => $data['is_collaborative'] ?? false,
+                'deadline_at' => $assignment->deadline_at,
+                'is_anonymous' => $assignment->metadata['is_anonymous'] ?? false,
+                'is_collaborative' => $assignment->metadata['is_collaborative'] ?? false,
             ]);
 
+            // Marcar asignación como en progreso
+            if ($assignment->status === \Modules\Evaluation\Enums\AssignmentStatusEnum::PENDING) {
+                $assignment->markAsInProgress();
+            }
+
             // Registrar en historial
-            // Si no hay usuario autenticado (ej: comando de consola), usar el evaluator_id
-            $userId = auth()->id() ?? $data['evaluator_id'];
+            $userId = auth()->id() ?? $assignment->user_id;
 
             EvaluationHistory::logChange(
                 $evaluation->id,
                 $userId,
                 'CREATED',
-                'Evaluación creada y asignada'
+                'Evaluación creada desde asignación'
             );
 
-            return $evaluation->fresh('details', 'phase', 'evaluator');
+            return $evaluation->fresh('details', 'phase', 'evaluator', 'evaluatorAssignment');
         });
     }
 
@@ -148,20 +154,12 @@ class EvaluationService
             $evaluation->submit();
             $evaluation->updateScores();
 
-            // Marcar asignación como completada (si existe el evaluador y tiene asignaciones)
-            if ($evaluation->evaluator) {
-                $assignment = $evaluation->evaluator->assignments()
-                    ->where('application_id', $evaluation->application_id)
-                    ->where('phase_id', $evaluation->phase_id)
-                    ->first();
-
-                if ($assignment) {
-                    $assignment->markAsCompleted();
-                }
+            // Marcar asignación como completada
+            if ($evaluation->evaluatorAssignment) {
+                $evaluation->evaluatorAssignment->markAsCompleted();
             }
 
             // Registrar en historial
-            // Si no hay usuario autenticado, usar el evaluator_id
             $userId = auth()->id() ?? $evaluation->evaluator_id;
 
             EvaluationHistory::logChange(
@@ -274,12 +272,16 @@ class EvaluationService
     }
 
     /**
-     * Obtener evaluaciones de un evaluador
+     * Obtener asignaciones de un evaluador (con sus evaluaciones si existen)
      */
-    public function getEvaluatorEvaluations(string $evaluatorId, array $filters = [])
+    public function getEvaluatorAssignments(string $evaluatorId, array $filters = [])
     {
-        $query = Evaluation::with(['application', 'phase', 'jobPosting'])
-            ->byEvaluator($evaluatorId);
+        $query = EvaluatorAssignment::with([
+            'application.jobProfile.jobPosting',
+            'application.jobProfile.requestingUnit',
+            'phase',
+            'jobPosting',
+        ])->byEvaluator($evaluatorId);
 
         if (isset($filters['status'])) {
             $query->byStatus($filters['status']);
@@ -287,6 +289,12 @@ class EvaluationService
 
         if (isset($filters['phase_id'])) {
             $query->byPhase($filters['phase_id']);
+        }
+
+        if (isset($filters['requesting_unit_id'])) {
+            $query->whereHas('application.jobProfile', function($q) use ($filters) {
+                $q->where('requesting_unit_id', $filters['requesting_unit_id']);
+            });
         }
 
         if (isset($filters['pending_only']) && $filters['pending_only']) {

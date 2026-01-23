@@ -52,11 +52,11 @@ class ConflictDetectionService
     /**
      * Verificar si existe conflicto entre un jurado y una postulación
      *
-     * @param int $userId
+     * @param int|string $userId
      * @param string $applicationId
      * @return bool
      */
-    public function hasConflict(int $userId, string $applicationId): bool
+    public function hasConflict(int|string $userId, string $applicationId): bool
     {
         return JuryConflict::hasConflict($userId, $applicationId);
     }
@@ -64,10 +64,10 @@ class ConflictDetectionService
     /**
      * Obtener conflictos de un usuario
      *
-     * @param int $userId
+     * @param int|string $userId
      * @return Collection
      */
-    public function getConflictsByUser(int $userId): Collection
+    public function getConflictsByUser(int|string $userId): Collection
     {
         return JuryConflict::byUser($userId)
             ->with(['application'])
@@ -103,10 +103,10 @@ class ConflictDetectionService
     /**
      * Eliminar un conflicto
      *
-     * @param string $conflictId
+     * @param int|string $conflictId
      * @return bool
      */
-    public function deleteConflict(string $conflictId): bool
+    public function deleteConflict(int|string $conflictId): bool
     {
         $conflict = JuryConflict::findOrFail($conflictId);
         return $conflict->delete();
@@ -115,11 +115,11 @@ class ConflictDetectionService
     /**
      * Actualizar descripción de conflicto
      *
-     * @param string $conflictId
+     * @param int|string $conflictId
      * @param string $description
      * @return JuryConflict
      */
-    public function updateDescription(string $conflictId, string $description): JuryConflict
+    public function updateDescription(int|string $conflictId, string $description): JuryConflict
     {
         $conflict = JuryConflict::findOrFail($conflictId);
         $conflict->update(['description' => $description]);
@@ -161,35 +161,129 @@ class ConflictDetectionService
     }
 
     /**
-     * Verificar conflictos automáticos basados en dependencia
-     * (Conflicto automático: jurado.dependencia == perfil.dependencia)
+     * Verificar conflictos automáticos basados en unidad organizacional del perfil
+     * (Conflicto automático: jurado pertenece a la unidad organizacional donde está asignado el perfil)
      *
-     * @param int $userId
+     * @param int|string $userId
      * @param string $applicationId
      * @return bool
      */
-    public function checkAutomaticDependencyConflict(int $userId, string $applicationId): bool
+    public function checkAutomaticDependencyConflict(int|string $userId, string $applicationId): bool
     {
-        $application = \Modules\Application\Entities\Application::with('profile')->findOrFail($applicationId);
-        $user = User::with('dependency')->findOrFail($userId);
+        // Obtener la postulación con su perfil
+        $application = \Modules\Application\Entities\Application::with('jobProfile.organizationalUnit')
+            ->findOrFail($applicationId);
 
-        // Si el jurado tiene una dependencia y coincide con la del perfil, hay conflicto automático
-        if ($user->dependency_id && $application->profile && $application->profile->dependency_id) {
-            return $user->dependency_id == $application->profile->dependency_id;
+        if (!$application->jobProfile || !$application->jobProfile->organizational_unit_id) {
+            // Si no hay unidad organizacional asignada al perfil, no hay conflicto
+            return false;
         }
 
-        return false;
+        $organizationalUnitId = $application->jobProfile->organizational_unit_id;
+
+        // Obtener usuario con sus unidades organizacionales
+        $user = \Modules\User\Entities\User::findOrFail($userId);
+
+        // Obtener todos los IDs de unidades del jurado (incluyendo descendientes)
+        $jurorUnitIds = $user->getAllOrganizationUnitIds();
+
+        if (empty($jurorUnitIds)) {
+            // Si el jurado no tiene unidades asignadas, no hay conflicto
+            return false;
+        }
+
+        // Verificar si la unidad organizacional del perfil está en la lista de unidades del jurado
+        // (esto incluye su propia unidad y todas sus descendientes)
+        return in_array($organizationalUnitId, $jurorUnitIds);
+    }
+
+    /**
+     * Verificar conflicto por unidad orgánica
+     * Un jurado NO puede evaluar postulaciones de:
+     * 1. Su propia unidad orgánica
+     * 2. Unidades orgánicas descendientes (hijas) de su unidad
+     *
+     * @param int|string $userId
+     * @param string $applicationId
+     * @return bool
+     */
+    public function checkOrganizationalUnitConflict(int|string $userId, string $applicationId): bool
+    {
+        // Obtener la postulación con su perfil y unidad solicitante
+        $application = \Modules\Application\Entities\Application::with('jobProfile.requestingUnit')
+            ->findOrFail($applicationId);
+
+        if (!$application->jobProfile || !$application->jobProfile->requesting_unit_id) {
+            // Si no hay unidad solicitante, no hay conflicto
+            return false;
+        }
+
+        $requestingUnitId = $application->jobProfile->requesting_unit_id;
+
+        // Obtener usuario con sus unidades orgánicas
+        $user = \Modules\User\Entities\User::findOrFail($userId);
+
+        // Obtener todos los IDs de unidades del jurado (incluyendo descendientes)
+        $jurorUnitIds = $user->getAllOrganizationUnitIds();
+
+        if (empty($jurorUnitIds)) {
+            // Si el jurado no tiene unidades asignadas, no hay conflicto
+            return false;
+        }
+
+        // Verificar si la unidad solicitante está en la lista de unidades del jurado
+        // (esto incluye su propia unidad y todas sus descendientes)
+        return in_array($requestingUnitId, $jurorUnitIds);
+    }
+
+    /**
+     * Verificar todos los conflictos automáticos (dependencia + unidad orgánica)
+     *
+     * @param int|string $userId
+     * @param string $applicationId
+     * @return array ['has_conflict' => bool, 'reasons' => array]
+     */
+    public function checkAllAutomaticConflicts(int|string $userId, string $applicationId): array
+    {
+        $reasons = [];
+        $hasConflict = false;
+
+        // Verificar conflicto por dependencia
+        if ($this->checkAutomaticDependencyConflict($userId, $applicationId)) {
+            $hasConflict = true;
+            $reasons[] = 'El jurado pertenece a la misma dependencia que el perfil del puesto';
+        }
+
+        // Verificar conflicto por unidad orgánica
+        if ($this->checkOrganizationalUnitConflict($userId, $applicationId)) {
+            $hasConflict = true;
+            $reasons[] = 'El jurado pertenece a la unidad orgánica solicitante o una de sus unidades descendientes';
+        }
+
+        // Verificar conflicto manual reportado
+        if ($this->hasConflict($userId, $applicationId)) {
+            $hasConflict = true;
+            $conflict = JuryConflict::where('user_id', $userId)
+                ->where('application_id', $applicationId)
+                ->first();
+            $reasons[] = "Conflicto manual: {$conflict->type_label} - {$conflict->description}";
+        }
+
+        return [
+            'has_conflict' => $hasConflict,
+            'reasons' => $reasons,
+        ];
     }
 
     /**
      * Buscar conflictos potenciales (sugerencias) para revisar manualmente
-     * Nota: Los conflictos automáticos por dependencia se manejan en JuryAssignmentService
+     * Nota: Los conflictos automáticos se manejan en JuryAssignmentService
      *
-     * @param int $userId
+     * @param int|string $userId
      * @param string $applicationId
      * @return array
      */
-    public function suggestPotentialConflicts(int $userId, string $applicationId): array
+    public function suggestPotentialConflicts(int|string $userId, string $applicationId): array
     {
         $suggestions = [];
 
@@ -199,6 +293,16 @@ class ConflictDetectionService
                 'type' => 'DEPENDENCY',
                 'severity' => 'AUTOMATIC',
                 'description' => 'El jurado pertenece a la misma dependencia que el perfil del puesto',
+                'prevents_assignment' => true,
+            ];
+        }
+
+        // Verificar conflicto automático por unidad orgánica
+        if ($this->checkOrganizationalUnitConflict($userId, $applicationId)) {
+            $suggestions[] = [
+                'type' => 'ORGANIZATIONAL_UNIT',
+                'severity' => 'AUTOMATIC',
+                'description' => 'El jurado pertenece a la unidad orgánica solicitante o una de sus unidades descendientes',
                 'prevents_assignment' => true,
             ];
         }

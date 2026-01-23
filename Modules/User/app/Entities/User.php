@@ -106,6 +106,39 @@ class User extends Authenticatable
             ->get();
     }
 
+    /**
+     * Obtener todos los IDs de unidades organizacionales del usuario
+     * incluyendo todas las unidades descendientes (hijas, nietas, etc.)
+     *
+     * @return array
+     */
+    public function getAllOrganizationUnitIds(): array
+    {
+        $userUnits = $this->activeOrganizationUnits();
+
+        if ($userUnits->isEmpty()) {
+            return [];
+        }
+
+        $allUnitIds = [];
+
+        foreach ($userUnits as $unit) {
+            // Agregar la unidad del usuario
+            $allUnitIds[] = $unit->id;
+
+            // Obtener todas las descendientes usando la closure table
+            $descendants = \DB::table('organizational_unit_closure')
+                ->where('ancestor_id', $unit->id)
+                ->where('descendant_id', '!=', $unit->id) // Excluir self-reference
+                ->pluck('descendant_id')
+                ->toArray();
+
+            $allUnitIds = array_merge($allUnitIds, $descendants);
+        }
+
+        return array_unique($allUnitIds);
+    }
+
     public function roles(): BelongsToMany
     {
         return $this->belongsToMany(

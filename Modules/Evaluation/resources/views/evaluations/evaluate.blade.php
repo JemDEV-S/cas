@@ -3,7 +3,7 @@
 @section('title', 'Evaluar Postulante')
 
 @section('page-title')
-    Evaluación - {{ $evaluation->application->user->name ?? 'Postulante' }}
+    Evaluación - {{ $evaluation->evaluatorAssignment->application->full_name ?? 'Postulante' }}
 @endsection
 
 @section('breadcrumbs')
@@ -13,194 +13,295 @@
 @endsection
 
 @section('content')
-<div class="row">
-    <div class="col-md-8">
-        <!-- Información del Postulante -->
-        <div class="card mb-3">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0">
-                    <i class="fas fa-user me-2"></i>
-                    Información del Postulante
-                </h5>
+<div class="flex h-screen bg-gray-50" x-data="evaluationApp()" x-init="init()">
+    <!-- Panel Izquierdo: CV -->
+    <div class="w-1/2 bg-white border-r border-gray-200 flex flex-col">
+        <!-- Header del CV -->
+        <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700">
+            <div class="flex items-center justify-between">
+                <div class="text-white">
+                    <h3 class="text-lg font-semibold">Curriculum Vitae</h3>
+                    <p class="text-sm text-blue-100 mt-1">
+                        {{ $evaluation->evaluatorAssignment->application->full_name ?? 'N/A' }}
+                    </p>
+                </div>
+                @if($cvDocument)
+                <a href="{{ route('application.documents.download', $cvDocument->id) }}"
+                   class="px-4 py-2 bg-white text-blue-700 rounded-lg hover:bg-blue-50 transition-colors flex items-center gap-2 text-sm font-medium">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                    </svg>
+                    Descargar CV
+                </a>
+                @endif
             </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <p><strong>Nombre:</strong> {{ $evaluation->application->user->name ?? 'N/A' }}</p>
-                        <p><strong>Convocatoria:</strong> {{ $evaluation->jobPosting->title }}</p>
+        </div>
+
+        <!-- Visor de PDF -->
+        <div class="flex-1 overflow-hidden bg-gray-100">
+            @if($cvDocument && $cvDocument->fileExists())
+                <iframe
+                    src="{{ route('evaluation.view-cv', $evaluation->id) }}"
+                    class="w-full h-full border-0"
+                    title="Curriculum Vitae">
+                </iframe>
+            @else
+                <div class="flex items-center justify-center h-full">
+                    <div class="text-center text-gray-500">
+                        <svg class="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        <p class="text-lg font-medium">CV no disponible</p>
+                        <p class="text-sm mt-1">El postulante no ha cargado su CV</p>
                     </div>
-                    <div class="col-md-6">
-                        <p><strong>Código:</strong> {{ $evaluation->application->code ?? 'N/A' }}</p>
-                        <p><strong>Fase:</strong> {{ $evaluation->phase->name }}</p>
+                </div>
+            @endif
+        </div>
+    </div>
+
+    <!-- Panel Derecho: Formulario de Evaluación -->
+    <div class="w-1/2 flex flex-col bg-gray-50">
+        <!-- Header del formulario -->
+        <div class="px-6 py-4 bg-white border-b border-gray-200 shadow-sm">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900">Formulario de Evaluación</h3>
+                    <p class="text-sm text-gray-600 mt-1">
+                        {{ $evaluation->evaluatorAssignment->application->jobProfile->jobPosting->title ?? 'Convocatoria' }} -
+                        {{ $evaluation->phase->name }}
+                    </p>
+                </div>
+
+                <!-- Resumen de progreso -->
+                <div class="text-right">
+                    <div class="text-2xl font-bold text-blue-600" x-text="totalScore.toFixed(2)">0.00</div>
+                    <p class="text-xs text-gray-500">de {{ number_format($maxTotalScore, 2) }} pts</p>
+                    <div class="mt-1 w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div class="h-full bg-blue-600 transition-all duration-300" :style="`width: ${progress}%`"></div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Formulario de Evaluación -->
-        <form id="evaluationForm">
-            @foreach($criteria as $criterion)
-            <div class="card mb-3 criterion-card" data-criterion-id="{{ $criterion->id }}">
-                <div class="card-header">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h6 class="mb-0">
-                            {{ $criterion->order }}. {{ $criterion->name }}
-                        </h6>
-                        <span class="badge bg-secondary">
-                            Peso: {{ $criterion->weight }}x
-                        </span>
-                    </div>
-                    @if($criterion->description)
-                        <small class="text-muted">{{ $criterion->description }}</small>
-                    @endif
-                </div>
-                <div class="card-body">
-                    <!-- Rango de puntaje -->
-                    <div class="mb-3">
-                        <label class="form-label">
-                            Puntaje
-                            <span class="text-danger">*</span>
-                            <small class="text-muted">(Rango: {{ $criterion->min_score }} - {{ $criterion->max_score }})</small>
-                        </label>
-                        <input type="number"
-                               class="form-control score-input"
-                               name="criteria[{{ $criterion->id }}][score]"
-                               data-min="{{ $criterion->min_score }}"
-                               data-max="{{ $criterion->max_score }}"
-                               min="{{ $criterion->min_score }}"
-                               max="{{ $criterion->max_score }}"
-                               step="0.5"
-                               value="{{ $details[$criterion->id]->score ?? '' }}"
-                               {{ $criterion->requires_comment ? 'required' : '' }}>
-                        <div class="invalid-feedback">
-                            El puntaje debe estar entre {{ $criterion->min_score }} y {{ $criterion->max_score }}
+        <!-- Contenido del formulario con scroll -->
+        <div class="flex-1 overflow-y-auto px-6 py-6">
+            <form id="evaluationForm">
+                <!-- Criterios de evaluación -->
+                <div class="space-y-4">
+                    @foreach($criteria as $criterion)
+                    <div class="bg-white rounded-lg border border-gray-200 shadow-sm"
+                         data-criterion-id="{{ $criterion->id }}">
+                        <!-- Header del criterio -->
+                        <div class="px-5 py-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <h4 class="text-base font-semibold text-gray-900">
+                                        {{ $criterion->order }}. {{ $criterion->name }}
+                                    </h4>
+                                    @if($criterion->description)
+                                        <p class="text-sm text-gray-600 mt-1">{{ $criterion->description }}</p>
+                                    @endif
+                                </div>
+                                <span class="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
+                                    Peso: {{ $criterion->weight }}x
+                                </span>
+                            </div>
                         </div>
-                    </div>
 
-                    <!-- Guía de evaluación -->
-                    @if($criterion->evaluation_guide)
-                    <div class="alert alert-info small mb-3">
-                        <strong>Guía de evaluación:</strong>
-                        <pre class="mb-0 mt-2" style="white-space: pre-line; font-size: 0.85em;">{{ $criterion->evaluation_guide }}</pre>
-                    </div>
-                    @endif
-
-                    <!-- Comentarios -->
-                    <div class="mb-3">
-                        <label class="form-label">
-                            Comentarios
-                            @if($criterion->requires_comment)
-                                <span class="text-danger">*</span>
+                        <!-- Cuerpo del criterio -->
+                        <div class="px-5 py-4 space-y-4">
+                            <!-- Guía de evaluación -->
+                            @if($criterion->evaluation_guide)
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                <div class="flex gap-3">
+                                    <svg class="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    <div class="flex-1">
+                                        <h5 class="text-sm font-semibold text-blue-900 mb-1">Guía de evaluación:</h5>
+                                        <pre class="text-sm text-blue-800 whitespace-pre-line font-sans">{{ $criterion->evaluation_guide }}</pre>
+                                    </div>
+                                </div>
+                            </div>
                             @endif
-                        </label>
-                        <textarea class="form-control"
-                                  name="criteria[{{ $criterion->id }}][comments]"
-                                  rows="3"
-                                  {{ $criterion->requires_comment ? 'required' : '' }}>{{ $details[$criterion->id]->comments ?? '' }}</textarea>
-                    </div>
 
-                    <!-- Evidencia -->
-                    @if($criterion->requires_evidence)
-                    <div class="mb-3">
-                        <label class="form-label">
-                            Evidencia <span class="text-danger">*</span>
-                        </label>
-                        <textarea class="form-control"
-                                  name="criteria[{{ $criterion->id }}][evidence]"
-                                  rows="2"
-                                  required>{{ $details[$criterion->id]->evidence ?? '' }}</textarea>
+                            <!-- Criterios con escalas (opciones múltiples) -->
+                            @if($criterion->score_scales && count($criterion->score_scales) > 0)
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-3">
+                                        Seleccione las opciones que cumple el postulante
+                                        <span class="text-red-500">*</span>
+                                    </label>
+                                    <div class="space-y-2">
+                                        @foreach($criterion->score_scales as $scale)
+                                        <label class="flex items-start gap-3 p-4 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg cursor-pointer transition-colors">
+                                            <input type="checkbox"
+                                                   class="scale-checkbox mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                                   name="criteria[{{ $criterion->id }}][options][]"
+                                                   value="{{ $scale['puntos'] }}"
+                                                   data-criterion-id="{{ $criterion->id }}"
+                                                   data-max-score="{{ $criterion->max_score }}"
+                                                   @change="handleCheckboxChange($event)">
+                                            <div class="flex-1">
+                                                <div class="flex items-center justify-between">
+                                                    <span class="text-sm font-medium text-gray-900">{{ $scale['descripcion'] }}</span>
+                                                    <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded">
+                                                        +{{ $scale['puntos'] }} pts
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </label>
+                                        @endforeach
+                                    </div>
+
+                                    <input type="hidden"
+                                           class="score-input"
+                                           name="criteria[{{ $criterion->id }}][score]"
+                                           data-min="{{ $criterion->min_score }}"
+                                           data-max="{{ $criterion->max_score }}"
+                                           value="{{ $details[$criterion->id]->score ?? 0 }}">
+
+                                    <div class="mt-3 flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                        <span class="text-sm font-medium text-gray-700">Puntaje calculado:</span>
+                                        <div>
+                                            <span class="calculated-score text-xl font-bold text-blue-600">{{ $details[$criterion->id]->score ?? 0 }}</span>
+                                            <span class="text-sm text-gray-600"> / {{ number_format($criterion->max_score, 2) }} pts</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            <!-- Criterios numéricos (sin escalas) -->
+                            @else
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Puntaje
+                                        <span class="text-red-500">*</span>
+                                        <span class="text-gray-500 font-normal">(Rango: {{ $criterion->min_score }} - {{ $criterion->max_score }})</span>
+                                    </label>
+                                    <input type="number"
+                                           class="score-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                           name="criteria[{{ $criterion->id }}][score]"
+                                           data-min="{{ $criterion->min_score }}"
+                                           data-max="{{ $criterion->max_score }}"
+                                           min="{{ $criterion->min_score }}"
+                                           max="{{ $criterion->max_score }}"
+                                           step="0.5"
+                                           value="{{ $details[$criterion->id]->score ?? '' }}"
+                                           @change="handleScoreChange($event)"
+                                           {{ $criterion->requires_comment ? 'required' : '' }}>
+                                    <p class="invalid-feedback text-red-500 text-sm mt-1 hidden">
+                                        El puntaje debe estar entre {{ $criterion->min_score }} y {{ $criterion->max_score }}
+                                    </p>
+
+                                    @if(isset($criterion->metadata['puntaje_minimo_aprobatorio']))
+                                    <div class="mt-2 flex items-center gap-2 text-red-600">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                        </svg>
+                                        <span class="text-sm">Puntaje mínimo aprobatorio: {{ $criterion->metadata['puntaje_minimo_aprobatorio'] }} puntos</span>
+                                    </div>
+                                    @endif
+                                </div>
+                            @endif
+
+                            <!-- Comentarios -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Comentarios
+                                    @if($criterion->requires_comment)
+                                        <span class="text-red-500">*</span>
+                                    @endif
+                                </label>
+                                <textarea class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                          name="criteria[{{ $criterion->id }}][comments]"
+                                          rows="3"
+                                          placeholder="Observaciones sobre este criterio..."
+                                          {{ $criterion->requires_comment ? 'required' : '' }}>{{ $details[$criterion->id]->comments ?? '' }}</textarea>
+                            </div>
+
+                            <!-- Evidencia -->
+                            @if($criterion->requires_evidence)
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Evidencia <span class="text-red-500">*</span>
+                                </label>
+                                <textarea class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                          name="criteria[{{ $criterion->id }}][evidence]"
+                                          rows="2"
+                                          placeholder="Describa la evidencia encontrada..."
+                                          required>{{ $details[$criterion->id]->evidence ?? '' }}</textarea>
+                            </div>
+                            @endif
+
+                            <!-- Puntaje ponderado -->
+                            <div class="flex items-center justify-end pt-2 border-t border-gray-100">
+                                <span class="text-sm text-gray-600">Puntaje ponderado: </span>
+                                <span class="ml-2 text-base font-semibold text-gray-900 weighted-score">0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+
+                <!-- Comentarios Generales -->
+                <div class="mt-6 bg-white rounded-lg border border-gray-200 shadow-sm">
+                    <div class="px-5 py-4 border-b border-gray-100">
+                        <h4 class="text-base font-semibold text-gray-900">Comentarios Generales</h4>
+                    </div>
+                    <div class="px-5 py-4">
+                        <textarea class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                  name="general_comments"
+                                  rows="4"
+                                  placeholder="Observaciones generales sobre la evaluación...">{{ $evaluation->general_comments }}</textarea>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Footer con botones de acción -->
+        <div class="px-6 py-4 bg-white border-t border-gray-200 shadow-lg">
+            <div class="flex items-center justify-between gap-4">
+                <div class="flex items-center gap-3 text-sm text-gray-600">
+                    <div class="flex items-center gap-2">
+                        <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        <span>Auto-guardado activo</span>
+                    </div>
+                    @if($evaluation->deadline_at)
+                    <div class="flex items-center gap-2 {{ $evaluation->isOverdue() ? 'text-red-600' : '' }}">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <span>Vence: {{ $evaluation->deadline_at->format('d/m/Y H:i') }}</span>
                     </div>
                     @endif
-
-                    <!-- Puntaje ponderado (calculado) -->
-                    <div class="text-end">
-                        <small class="text-muted">
-                            Puntaje ponderado: <strong class="weighted-score">0.00</strong>
-                        </small>
-                    </div>
-                </div>
-            </div>
-            @endforeach
-
-            <!-- Comentarios Generales -->
-            <div class="card mb-3">
-                <div class="card-header">
-                    <h6 class="mb-0">Comentarios Generales</h6>
-                </div>
-                <div class="card-body">
-                    <textarea class="form-control" name="general_comments" rows="4"
-                              placeholder="Observaciones generales sobre la evaluación...">{{ $evaluation->general_comments }}</textarea>
-                </div>
-            </div>
-
-            <!-- Botones de acción -->
-            <div class="card">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <button type="button" class="btn btn-secondary" id="saveBtn">
-                                <i class="fas fa-save me-2"></i>Guardar Borrador
-                            </button>
-                        </div>
-                        <div>
-                            <a href="{{ route('evaluation.my-evaluations') }}" class="btn btn-outline-secondary me-2">
-                                <i class="fas fa-times me-2"></i>Cancelar
-                            </a>
-                            <button type="button" class="btn btn-success" id="submitBtn"
-                                    {{ !$evaluation->canEdit() ? 'disabled' : '' }}>
-                                <i class="fas fa-paper-plane me-2"></i>Enviar Evaluación
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </form>
-    </div>
-
-    <!-- Sidebar - Resumen -->
-    <div class="col-md-4">
-        <div class="card sticky-top" style="top: 20px;">
-            <div class="card-header bg-light">
-                <h6 class="mb-0">Resumen de Evaluación</h6>
-            </div>
-            <div class="card-body">
-                <div class="mb-3">
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>Criterios evaluados:</span>
-                        <strong id="criteriaCount">0 / {{ $criteria->count() }}</strong>
-                    </div>
-                    <div class="progress" style="height: 8px;">
-                        <div class="progress-bar" role="progressbar" id="progressBar" style="width: 0%"></div>
-                    </div>
                 </div>
 
-                <hr>
+                <div class="flex items-center gap-3">
+                    <button type="button"
+                            @click="saveDraft()"
+                            :disabled="isSaving"
+                            class="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
+                        </svg>
+                        <span x-text="isSaving ? 'Guardando...' : 'Guardar Borrador'">Guardar Borrador</span>
+                    </button>
 
-                <div class="mb-3">
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>Puntaje Total:</span>
-                        <h4 class="mb-0" id="totalScore">0.00</h4>
-                    </div>
-                    <small class="text-muted">
-                        Máximo posible: {{ number_format($maxScore, 2) }}
-                    </small>
-                </div>
+                    <a href="{{ route('evaluation.my-evaluations') }}"
+                       class="px-5 py-2.5 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-lg border border-gray-300 transition-colors">
+                        Cancelar
+                    </a>
 
-                <div class="alert alert-warning small">
-                    <i class="fas fa-info-circle me-2"></i>
-                    Los puntajes se guardan automáticamente mientras trabajas.
+                    <button type="button"
+                            @click="submitEvaluation()"
+                            :disabled="!canSubmit || isSubmitting"
+                            class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                        </svg>
+                        <span x-text="isSubmitting ? 'Enviando...' : 'Enviar Evaluación'">Enviar Evaluación</span>
+                    </button>
                 </div>
-
-                @if($evaluation->deadline_at)
-                <div class="alert {{ $evaluation->isOverdue() ? 'alert-danger' : 'alert-info' }} small">
-                    <i class="fas fa-clock me-2"></i>
-                    <strong>Fecha límite:</strong><br>
-                    {{ $evaluation->deadline_at->format('d/m/Y H:i') }}
-                    @if($evaluation->isOverdue())
-                        <br><span class="text-danger"><strong>¡VENCIDA!</strong></span>
-                    @endif
-                </div>
-                @endif
             </div>
         </div>
     </div>
@@ -209,157 +310,260 @@
 
 @push('scripts')
 <script>
-const evaluationId = {{ $evaluation->id }};
-const criteria = @json($criteria);
-let saveTimeout;
-
-// Calcular puntajes ponderados
-function calculateWeightedScores() {
-    let total = 0;
-    let count = 0;
-
-    document.querySelectorAll('.criterion-card').forEach(card => {
-        const criterionId = card.dataset.criterionId;
-        const criterion = criteria.find(c => c.id == criterionId);
-        const scoreInput = card.querySelector('.score-input');
-        const score = parseFloat(scoreInput.value) || 0;
-
-        if (score > 0) {
-            count++;
-            const weighted = score * criterion.weight;
-            card.querySelector('.weighted-score').textContent = weighted.toFixed(2);
-            total += weighted;
-        }
-    });
-
-    // Actualizar resumen
-    document.getElementById('totalScore').textContent = total.toFixed(2);
-    document.getElementById('criteriaCount').textContent = `${count} / ${criteria.length}`;
-
-    const progress = (count / criteria.length) * 100;
-    document.getElementById('progressBar').style.width = progress + '%';
+// Configurar CSRF token para axios
+if (typeof axios !== 'undefined') {
+    axios.defaults.headers.common['X-CSRF-TOKEN'] = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 }
 
-// Guardar detalle de criterio
-async function saveCriterionDetail(criterionId, score, comments, evidence) {
-    try {
-        const response = await axios.post(`/api/evaluation/evaluations/${evaluationId}/details`, {
-            criterion_id: criterionId,
-            score: score,
-            comments: comments,
-            evidence: evidence
-        });
+function evaluationApp() {
+    return {
+        evaluationId: {{ $evaluation->id }},
+        criteria: @json($criteria),
+        totalScore: 0,
+        progress: 0,
+        evaluatedCount: 0,
+        isSaving: false,
+        isSubmitting: false,
+        canSubmit: {{ $evaluation->canEdit() ? 'true' : 'false' }},
+        saveTimeout: null,
 
-        return response.data;
-    } catch (error) {
-        console.error('Error guardando criterio:', error);
-        throw error;
-    }
-}
+        init() {
+            // Inicializar checkboxes guardados
+            this.initializeCheckboxes();
+            // Calcular puntajes
+            this.calculateWeightedScores();
+        },
 
-// Auto-guardar al cambiar puntaje
-document.querySelectorAll('.score-input').forEach(input => {
-    input.addEventListener('change', function() {
-        clearTimeout(saveTimeout);
-        calculateWeightedScores();
+        initializeCheckboxes() {
+            // Para criterios con checkboxes, restaurar el puntaje calculado y marcar checkboxes
+            document.querySelectorAll('[data-criterion-id]').forEach(card => {
+                const scoreInput = card.querySelector('input.score-input[type="hidden"]');
+                if (scoreInput) {
+                    const savedScore = parseFloat(scoreInput.value) || 0;
+                    const calculatedSpan = card.querySelector('.calculated-score');
+                    if (calculatedSpan) {
+                        calculatedSpan.textContent = savedScore.toFixed(2);
+                    }
 
-        const card = this.closest('.criterion-card');
-        const criterionId = card.dataset.criterionId;
-        const score = parseFloat(this.value);
-        const comments = card.querySelector('textarea[name*="comments"]').value;
-        const evidenceInput = card.querySelector('textarea[name*="evidence"]');
-        const evidence = evidenceInput ? evidenceInput.value : null;
+                    // Si hay checkboxes y un score guardado, intentar marcar los checkboxes correspondientes
+                    // Nota: esto es una aproximación, idealmente deberíamos guardar qué checkboxes fueron marcados
+                    if (savedScore > 0) {
+                        const checkboxes = card.querySelectorAll('.scale-checkbox');
+                        if (checkboxes.length > 0) {
+                            // Marcar checkboxes hasta alcanzar el score guardado
+                            let accumulated = 0;
+                            checkboxes.forEach(cb => {
+                                const points = parseFloat(cb.value);
+                                if (accumulated + points <= savedScore) {
+                                    cb.checked = true;
+                                    accumulated += points;
+                                }
+                            });
+                        }
+                    }
+                }
+            });
+        },
 
-        // Validar rango
-        const min = parseFloat(this.dataset.min);
-        const max = parseFloat(this.dataset.max);
+        calculateWeightedScores() {
+            let total = 0;
+            let count = 0;
 
-        if (score < min || score > max) {
-            this.classList.add('is-invalid');
-            return;
-        } else {
-            this.classList.remove('is-invalid');
-        }
+            document.querySelectorAll('[data-criterion-id]').forEach(card => {
+                const criterionId = card.dataset.criterionId;
+                const criterion = this.criteria.find(c => c.id == criterionId);
 
-        // Guardar después de 1 segundo
-        saveTimeout = setTimeout(() => {
-            saveCriterionDetail(criterionId, score, comments, evidence)
-                .then(() => {
-                    // Mostrar indicador de guardado
-                    const indicator = document.createElement('small');
-                    indicator.className = 'text-success ms-2';
-                    indicator.innerHTML = '<i class="fas fa-check"></i> Guardado';
-                    this.parentElement.appendChild(indicator);
-                    setTimeout(() => indicator.remove(), 2000);
-                })
-                .catch(error => {
-                    alert('Error al guardar: ' + (error.response?.data?.message || 'Error desconocido'));
-                });
-        }, 1000);
-    });
-});
+                if (!criterion) {
+                    console.warn('Criterion not found:', criterionId);
+                    return;
+                }
 
-// Guardar borrador
-document.getElementById('saveBtn').addEventListener('click', async function() {
-    this.disabled = true;
-    this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Guardando...';
+                // Buscar el input de score (puede ser hidden o number)
+                // Primero intenta buscar el hidden (para checkboxes), si no encuentra busca el number
+                let scoreInput = card.querySelector('input.score-input[type="hidden"]');
+                if (!scoreInput) {
+                    scoreInput = card.querySelector('input.score-input[type="number"]');
+                }
 
-    try {
-        // Guardar todos los criterios
-        const promises = [];
-        document.querySelectorAll('.criterion-card').forEach(card => {
+                if (!scoreInput) {
+                    console.warn('Score input not found for criterion:', criterionId);
+                    return;
+                }
+
+                const score = parseFloat(scoreInput.value) || 0;
+
+                // Actualizar puntaje ponderado individual (siempre, incluso si es 0)
+                const weighted = score * (parseFloat(criterion.weight) || 1);
+                const weightedSpan = card.querySelector('.weighted-score');
+                if (weightedSpan) {
+                    weightedSpan.textContent = weighted.toFixed(2);
+                }
+
+                // Sumar al total y contar si hay puntaje
+                if (score > 0) {
+                    count++;
+                }
+                total += weighted;
+            });
+
+            this.totalScore = total;
+            this.evaluatedCount = count;
+            this.progress = this.criteria.length > 0 ? (count / this.criteria.length) * 100 : 0;
+
+            console.log('Calculated:', { total, count, progress: this.progress });
+        },
+
+        handleCheckboxChange(event) {
+            const checkbox = event.target;
+            const card = checkbox.closest('[data-criterion-id]');
+            const criterionId = checkbox.dataset.criterionId;
+            const maxScore = parseFloat(checkbox.dataset.maxScore);
+
+            const checkboxes = card.querySelectorAll('.scale-checkbox:checked');
+            let total = 0;
+            checkboxes.forEach(cb => {
+                total += parseFloat(cb.value);
+            });
+
+            if (total > maxScore) {
+                checkbox.checked = false;
+                alert(`El puntaje máximo para este criterio es ${maxScore} puntos`);
+                return;
+            }
+
+            // Buscar el input hidden específicamente para criterios con checkboxes
+            const scoreInput = card.querySelector('input.score-input[type="hidden"]');
+            if (!scoreInput) {
+                console.error('Hidden score input not found for criterion:', criterionId);
+                return;
+            }
+
+            scoreInput.value = total;
+
+            const calculatedSpan = card.querySelector('.calculated-score');
+            if (calculatedSpan) {
+                calculatedSpan.textContent = total.toFixed(2);
+            }
+
+            this.calculateWeightedScores();
+            this.autoSave(card, criterionId);
+        },
+
+        handleScoreChange(event) {
+            const input = event.target;
+            const card = input.closest('[data-criterion-id]');
             const criterionId = card.dataset.criterionId;
-            const scoreInput = card.querySelector('.score-input');
-            const score = parseFloat(scoreInput.value);
+            const score = parseFloat(input.value);
+            const min = parseFloat(input.dataset.min);
+            const max = parseFloat(input.dataset.max);
 
-            if (score && score > 0) {
-                const comments = card.querySelector('textarea[name*="comments"]').value;
+            // Validar rango solo si hay un valor
+            if (input.value && (isNaN(score) || score < min || score > max)) {
+                input.classList.add('border-red-500');
+                const feedback = input.nextElementSibling;
+                if (feedback && feedback.classList.contains('invalid-feedback')) {
+                    feedback.classList.remove('hidden');
+                }
+                return;
+            } else {
+                input.classList.remove('border-red-500');
+                const feedback = input.nextElementSibling;
+                if (feedback && feedback.classList.contains('invalid-feedback')) {
+                    feedback.classList.add('hidden');
+                }
+            }
+
+            this.calculateWeightedScores();
+            this.autoSave(card, criterionId);
+        },
+
+        autoSave(card, criterionId) {
+            clearTimeout(this.saveTimeout);
+
+            this.saveTimeout = setTimeout(() => {
+                const scoreInput = card.querySelector('.score-input');
+                const score = parseFloat(scoreInput.value);
+                const comments = card.querySelector('textarea[name*="comments"]')?.value || '';
                 const evidenceInput = card.querySelector('textarea[name*="evidence"]');
                 const evidence = evidenceInput ? evidenceInput.value : null;
 
-                promises.push(saveCriterionDetail(criterionId, score, comments, evidence));
+                this.saveCriterionDetail(criterionId, score, comments, evidence);
+            }, 1000);
+        },
+
+        async saveCriterionDetail(criterionId, score, comments, evidence) {
+            try {
+                const response = await axios.post(`/evaluations/${this.evaluationId}/details`, {
+                    criterion_id: criterionId,
+                    score: score,
+                    comments: comments,
+                    evidence: evidence
+                });
+
+                return response.data;
+            } catch (error) {
+                console.error('Error guardando criterio:', error);
+                throw error;
             }
-        });
+        },
 
-        await Promise.all(promises);
+        async saveDraft() {
+            this.isSaving = true;
 
-        alert('Evaluación guardada como borrador');
-        this.innerHTML = '<i class="fas fa-check me-2"></i>Guardado';
-    } catch (error) {
-        alert('Error al guardar: ' + (error.response?.data?.message || 'Error desconocido'));
-        this.innerHTML = '<i class="fas fa-save me-2"></i>Guardar Borrador';
-    } finally {
-        this.disabled = false;
+            try {
+                const promises = [];
+                document.querySelectorAll('[data-criterion-id]').forEach(card => {
+                    const criterionId = card.dataset.criterionId;
+                    const scoreInput = card.querySelector('.score-input');
+                    const score = parseFloat(scoreInput.value);
+
+                    if (score && score > 0) {
+                        const comments = card.querySelector('textarea[name*="comments"]')?.value || '';
+                        const evidenceInput = card.querySelector('textarea[name*="evidence"]');
+                        const evidence = evidenceInput ? evidenceInput.value : null;
+
+                        promises.push(this.saveCriterionDetail(criterionId, score, comments, evidence));
+                    }
+                });
+
+                await Promise.all(promises);
+
+                this.$dispatch('notify', {
+                    type: 'success',
+                    message: 'Evaluación guardada como borrador'
+                });
+            } catch (error) {
+                this.$dispatch('notify', {
+                    type: 'error',
+                    message: 'Error al guardar: ' + (error.response?.data?.message || 'Error desconocido')
+                });
+            } finally {
+                this.isSaving = false;
+            }
+        },
+
+        async submitEvaluation() {
+            if (!confirm('¿Está seguro de enviar la evaluación? No podrá modificarla después.')) {
+                return;
+            }
+
+            this.isSubmitting = true;
+
+            try {
+                const generalComments = document.querySelector('textarea[name="general_comments"]').value;
+
+                const response = await axios.post(`/evaluations/${this.evaluationId}/submit`, {
+                    general_comments: generalComments
+                });
+
+                alert('Evaluación enviada exitosamente');
+                window.location.href = '{{ route("evaluation.my-evaluations") }}';
+            } catch (error) {
+                alert('Error: ' + (error.response?.data?.error || 'Error desconocido'));
+                this.isSubmitting = false;
+            }
+        }
     }
-});
-
-// Enviar evaluación
-document.getElementById('submitBtn').addEventListener('click', async function() {
-    if (!confirm('¿Está seguro de enviar la evaluación? No podrá modificarla después.')) {
-        return;
-    }
-
-    this.disabled = true;
-    this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Enviando...';
-
-    try {
-        const generalComments = document.querySelector('textarea[name="general_comments"]').value;
-
-        const response = await axios.post(`/api/evaluation/evaluations/${evaluationId}/submit`, {
-            confirm: true,
-            general_comments: generalComments
-        });
-
-        alert('Evaluación enviada exitosamente');
-        window.location.href = '{{ route("evaluation.my-evaluations") }}';
-    } catch (error) {
-        alert('Error: ' + (error.response?.data?.error || 'Error desconocido'));
-        this.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Enviar Evaluación';
-        this.disabled = false;
-    }
-});
-
-// Calcular al cargar
-calculateWeightedScores();
+}
 </script>
 @endpush

@@ -93,6 +93,11 @@ class EvaluatorAssignment extends Model
             ->where('job_posting_id', $this->job_posting_id);
     }
 
+    public function evaluation()
+    {
+        return $this->hasOne(Evaluation::class, 'evaluator_assignment_id');
+    }
+
     public function isEvaluatorAvailable(): bool
     {
         if (!$this->user) {

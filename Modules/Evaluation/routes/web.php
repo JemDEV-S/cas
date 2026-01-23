@@ -30,11 +30,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('my-evaluations', [EvaluationController::class, 'myEvaluations'])
             ->name('my-evaluations');
 
+        // Crear evaluación desde una asignación
+        Route::get('create', [EvaluationController::class, 'create'])->name('create');
+        Route::post('create', [EvaluationController::class, 'store'])->name('store');
+
         // Ver evaluación específica
         Route::get('{id}', [EvaluationController::class, 'show'])->name('show');
 
         // Formulario de evaluación
         Route::get('{id}/evaluate', [EvaluationController::class, 'evaluate'])->name('evaluate');
+
+        // Ver CV del postulante (iframe)
+        Route::get('{id}/view-cv', [EvaluationController::class, 'viewCV'])->name('view-cv');
+
+        // Guardar detalles de evaluación (AJAX)
+        Route::post('{id}/details', [EvaluationController::class, 'saveDetail'])->name('save-detail');
+
+        // Enviar evaluación
+        Route::post('{id}/submit', [EvaluationController::class, 'submit'])->name('submit');
 
         // Ver historial
         Route::get('{id}/history', [EvaluationController::class, 'history'])->name('history');

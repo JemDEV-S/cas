@@ -182,7 +182,8 @@ class JuryAssignmentService
      *
      * Retorna jurados que:
      * - Están asignados activamente a la convocatoria
-     * - No tienen conflictos con la postulación
+     * - No tienen conflictos manuales con la postulación
+     * - No tienen conflictos automáticos (dependencia, unidad orgánica)
      * - Respetan el dependency_scope si está configurado
      */
     public function getAvailableEvaluators(
@@ -196,12 +197,15 @@ class JuryAssignmentService
 
         // Si hay application_id, excluir jurados con conflictos
         if ($applicationId) {
-            $conflictedUserIds = JuryConflict::where('application_id', $applicationId)
-                ->pluck('user_id')
-                ->toArray();
+            $assignments = $assignments->filter(function ($assignment) use ($applicationId) {
+                // Verificar todos los conflictos (manuales + automáticos)
+                $conflictCheck = $this->conflictService->checkAllAutomaticConflicts(
+                    $assignment->user_id,
+                    $applicationId
+                );
 
-            $assignments = $assignments->filter(function ($assignment) use ($conflictedUserIds) {
-                return !in_array($assignment->user_id, $conflictedUserIds);
+                // Solo incluir si NO tiene conflictos
+                return !$conflictCheck['has_conflict'];
             });
 
             // Filtrar por dependency_scope si está configurado

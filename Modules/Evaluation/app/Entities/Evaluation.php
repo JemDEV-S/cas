@@ -18,6 +18,7 @@ class Evaluation extends Model
 
     protected $fillable = [
         'uuid',
+        'evaluator_assignment_id',
         'application_id',
         'evaluator_id',
         'phase_id',
@@ -67,6 +68,15 @@ class Evaluation extends Model
 
     /**
      * Relaciones
+     */
+    public function evaluatorAssignment(): BelongsTo
+    {
+        return $this->belongsTo(EvaluatorAssignment::class, 'evaluator_assignment_id');
+    }
+
+    /**
+     * Relaciones de compatibilidad con datos antiguos
+     * TODO: Deprecar cuando todas las evaluaciones tengan evaluator_assignment_id
      */
     public function application(): BelongsTo
     {

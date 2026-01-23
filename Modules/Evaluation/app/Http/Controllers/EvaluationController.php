@@ -42,16 +42,24 @@ class EvaluationController extends Controller
         $filters = [
             'status' => $request->input('status'),
             'phase_id' => $request->input('phase_id'),
+            'requesting_unit_id' => $request->input('requesting_unit_id'),
             'pending_only' => $request->boolean('pending_only'),
             'completed_only' => $request->boolean('completed_only'),
             'per_page' => $request->input('per_page', 15),
         ];
 
-        $evaluations = $this->evaluationService->getEvaluatorEvaluations($evaluatorId, $filters);
+        // Obtener asignaciones del evaluador (no evaluaciones directamente)
+        $assignments = $this->evaluationService->getEvaluatorAssignments($evaluatorId, $filters);
+
+        // Obtener unidades orgánicas para el filtro
+        $organizationalUnits = \Modules\Organization\Entities\OrganizationalUnit::where('is_active', true)
+            ->orderBy('name')
+            ->get();
 
         return view('evaluation::index', [
-            'evaluations' => $evaluations,
+            'assignments' => $assignments,
             'filters' => $filters,
+            'organizationalUnits' => $organizationalUnits,
         ]);
     }
 
@@ -66,52 +74,250 @@ class EvaluationController extends Controller
         $filters = [
             'status' => $request->input('status'),
             'phase_id' => $request->input('phase_id'),
+            'requesting_unit_id' => $request->input('requesting_unit_id'),
             'pending_only' => $request->boolean('pending_only'),
             'completed_only' => $request->boolean('completed_only'),
             'per_page' => $request->input('per_page', 15),
         ];
 
-        $evaluations = $this->evaluationService->getEvaluatorEvaluations($evaluatorId, $filters);
+        $assignments = $this->evaluationService->getEvaluatorAssignments($evaluatorId, $filters);
 
         return response()->json([
             'success' => true,
-            'data' => EvaluationResource::collection($evaluations),
+            'data' => $assignments->items(),
             'meta' => [
-                'current_page' => $evaluations->currentPage(),
-                'total' => $evaluations->total(),
-                'per_page' => $evaluations->perPage(),
+                'current_page' => $assignments->currentPage(),
+                'total' => $assignments->total(),
+                'per_page' => $assignments->perPage(),
             ],
         ]);
     }
 
     /**
-     * Store a newly created evaluation.
-     * POST /api/evaluations
+     * Create and start a new evaluation from an assignment (WEB).
+     * GET /evaluations/create?assignment_id={id}
      */
-    public function store(StoreEvaluationRequest $request): JsonResponse
+    public function create(Request $request)
     {
         try {
-            $evaluation = $this->evaluationService->createEvaluation($request->validated());
+            // Obtener el assignment_id
+            $assignmentId = $request->input('assignment_id');
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Evaluación creada exitosamente',
-                'data' => new EvaluationResource($evaluation),
-            ], 201);
+            if (!$assignmentId) {
+                return redirect()->route('evaluation.index')
+                    ->with('error', 'No se especificó una asignación válida');
+            }
+
+            // Buscar la asignación
+            $assignment = \Modules\Evaluation\Entities\EvaluatorAssignment::findOrFail($assignmentId);
+
+            // Verificar que el usuario autenticado sea el evaluador asignado
+            if ($assignment->user_id != auth()->id()) {
+                return redirect()->route('evaluation.index')
+                    ->with('error', 'No tienes permiso para iniciar esta evaluación');
+            }
+
+            // Verificar que no exista ya una evaluación para esta asignación
+            if ($assignment->evaluation) {
+                return redirect()->route('evaluation.evaluate', $assignment->evaluation->id)
+                    ->with('info', 'Esta evaluación ya fue iniciada');
+            }
+
+            // Crear la evaluación
+            $evaluation = $this->evaluationService->createEvaluation($assignment);
+
+            // Redirigir al formulario de evaluación
+            return redirect()->route('evaluation.evaluate', $evaluation->id)
+                ->with('success', 'Evaluación iniciada exitosamente');
+
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al crear la evaluación',
-                'error' => $e->getMessage(),
-            ], 422);
+            \Log::error('Error al crear evaluación: ' . $e->getMessage());
+
+            return redirect()->route('evaluation.index')
+                ->with('error', 'Error al iniciar la evaluación: ' . $e->getMessage());
         }
     }
 
     /**
-     * Display the specified evaluation.
+     * Store a newly created evaluation from an assignment (API).
+     * POST /api/evaluations
+     */
+    public function store(StoreEvaluationRequest $request)
+    {
+        try {
+            // Buscar la asignación
+            $assignment = \Modules\Evaluation\Entities\EvaluatorAssignment::findOrFail(
+                $request->input('evaluator_assignment_id')
+            );
+
+            // Verificar que no exista ya una evaluación para esta asignación
+            if ($assignment->evaluation) {
+                if ($request->wantsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Ya existe una evaluación para esta asignación',
+                    ], 422);
+                }
+
+                return redirect()->route('evaluation.evaluate', $assignment->evaluation->id)
+                    ->with('info', 'Esta evaluación ya fue iniciada');
+            }
+
+            $evaluation = $this->evaluationService->createEvaluation($assignment);
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Evaluación creada exitosamente',
+                    'data' => new EvaluationResource($evaluation),
+                ], 201);
+            }
+
+            return redirect()->route('evaluation.evaluate', $evaluation->id)
+                ->with('success', 'Evaluación creada exitosamente');
+
+        } catch (\Exception $e) {
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error al crear la evaluación',
+                    'error' => $e->getMessage(),
+                ], 422);
+            }
+
+            return redirect()->back()
+                ->with('error', 'Error al crear la evaluación: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Show evaluation form (WEB).
+     * GET /evaluations/{id}/evaluate
+     */
+    public function evaluate(int $id)
+    {
+        try {
+            $evaluation = Evaluation::with([
+                'details.criterion',
+                'evaluatorAssignment.application.jobProfile.positionCode',
+                'evaluatorAssignment.application.jobProfile.jobPosting',
+                'evaluatorAssignment.application.documents',
+                'evaluatorAssignment.phase',
+                'phase'
+            ])->findOrFail($id);
+
+            // Verificar que el usuario autenticado sea el evaluador
+            if ($evaluation->evaluatorAssignment && $evaluation->evaluatorAssignment->user_id != auth()->id()) {
+                return redirect()->route('evaluation.index')
+                    ->with('error', 'No tienes permiso para evaluar esta postulación');
+            }
+
+            // Obtener el código del puesto desde la postulación
+            $positionCode = null;
+            if ($evaluation->evaluatorAssignment &&
+                $evaluation->evaluatorAssignment->application &&
+                $evaluation->evaluatorAssignment->application->jobProfile) {
+
+                $jobProfile = $evaluation->evaluatorAssignment->application->jobProfile;
+
+                // Intentar obtener el código del puesto
+                if ($jobProfile->positionCode) {
+                    $positionCode = $jobProfile->positionCode->code;
+                }
+            }
+
+            // Obtener el CV del postulante
+            $cvDocument = null;
+            if ($evaluation->evaluatorAssignment && $evaluation->evaluatorAssignment->application) {
+                $cvDocument = $evaluation->evaluatorAssignment->application->documents()
+                    ->where('document_type', 'DOC_CV')
+                    ->first();
+            }
+
+            // Obtener criterios de evaluación para la fase y el puesto específico
+            $criteriaQuery = \Modules\Evaluation\Entities\EvaluationCriterion::where('phase_id', $evaluation->phase_id)
+                ->where('is_active', true);
+
+            // Filtrar por position_code si existe
+            if ($positionCode) {
+                $criteriaQuery->whereJsonContains('metadata->position_code', $positionCode);
+            }
+
+            $criteria = $criteriaQuery->orderBy('order')->get();
+
+            // Calcular puntaje máximo total
+            $maxTotalScore = $criteria->sum('max_score');
+
+            // Crear array con detalles indexados por criterion_id
+            $details = [];
+            foreach ($evaluation->details as $detail) {
+                $details[$detail->criterion_id] = $detail;
+            }
+
+            return view('evaluation::evaluations.evaluate', [
+                'evaluation' => $evaluation,
+                'criteria' => $criteria,
+                'positionCode' => $positionCode,
+                'maxTotalScore' => $maxTotalScore,
+                'cvDocument' => $cvDocument,
+                'details' => $details,
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error al cargar formulario de evaluación: ' . $e->getMessage());
+
+            return redirect()->route('evaluation.index')
+                ->with('error', 'Error al cargar la evaluación');
+        }
+    }
+
+    /**
+     * View CV document in evaluation.
+     * GET /evaluations/{id}/view-cv
+     */
+    public function viewCV(int $id)
+    {
+        try {
+            $evaluation = Evaluation::with([
+                'evaluatorAssignment.application.documents'
+            ])->findOrFail($id);
+
+            // Verificar permisos
+            if ($evaluation->evaluatorAssignment && $evaluation->evaluatorAssignment->user_id != auth()->id()) {
+                abort(403, 'No tienes permiso para ver este documento');
+            }
+
+            // Buscar el CV
+            if (!$evaluation->evaluatorAssignment || !$evaluation->evaluatorAssignment->application) {
+                abort(404, 'No se encontró la postulación');
+            }
+
+            $cvDocument = $evaluation->evaluatorAssignment->application->documents()
+                ->where('document_type', 'DOC_CV')
+                ->first();
+
+            if (!$cvDocument || !$cvDocument->fileExists()) {
+                abort(404, 'CV no encontrado');
+            }
+
+            $filePath = storage_path('app/' . $cvDocument->file_path);
+
+            return response()->file($filePath, [
+                'Content-Type' => $cvDocument->mime_type,
+                'Content-Disposition' => 'inline; filename="' . $cvDocument->file_name . '"'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error al ver CV: ' . $e->getMessage());
+            abort(404, 'Documento no disponible');
+        }
+    }
+
+    /**
+     * Display the specified evaluation (API/JSON).
      * GET /api/evaluations/{id}
      */
-    public function show(int $id): JsonResponse
+    public function show(int $id)
     {
         try {
             $evaluation = Evaluation::with([
@@ -119,22 +325,37 @@ class EvaluationController extends Controller
                 'evaluator',
                 'application',
                 'phase',
-                'jobPosting'
+                'jobPosting',
+                'evaluatorAssignment'
             ])->findOrFail($id);
 
             // Verificar autorización
             $this->authorize('view', $evaluation);
 
-            return response()->json([
-                'success' => true,
-                'data' => new EvaluationResource($evaluation),
+            // Si es petición JSON
+            if (request()->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'data' => new EvaluationResource($evaluation),
+                ]);
+            }
+
+            // Si es petición web, mostrar vista de detalle
+            return view('evaluation::show', [
+                'evaluation' => $evaluation,
             ]);
+
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al obtener la evaluación',
-                'error' => $e->getMessage(),
-            ], 404);
+            if (request()->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error al obtener la evaluación',
+                    'error' => $e->getMessage(),
+                ], 404);
+            }
+
+            return redirect()->route('evaluation.index')
+                ->with('error', 'Evaluación no encontrada');
         }
     }
 

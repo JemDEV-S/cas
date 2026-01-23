@@ -484,7 +484,7 @@
                             <div class="space-y-2 max-h-40 overflow-y-auto">
                                 <template x-for="juror in juryPreview" :key="juror.id">
                                     <div class="flex items-center justify-between text-sm bg-white px-3 py-2 rounded-md">
-                                        <span class="font-medium text-gray-900" x-text="juror.name"></span>
+                                        <span class="font-medium text-gray-900" x-text="juror.firts_name"></span>
                                         <span class="text-xs text-gray-500" x-text="'Carga: ' + juror.workload"></span>
                                     </div>
                                 </template>
