@@ -97,7 +97,10 @@ class JuryAssignmentService
             'status' => AssignmentStatus::ACTIVE,
         ]));
 
-        return $assignment->fresh(['user', 'jobPosting']);
+        // Cargar relaciones y retornar
+        $assignment->load(['user', 'jobPosting']);
+
+        return $assignment;
     }
 
     /**
@@ -162,8 +165,9 @@ class JuryAssignmentService
     {
         $assignment = JuryAssignment::findOrFail($assignmentId);
         $assignment->deactivate();
+        $assignment->refresh();
 
-        return $assignment->fresh();
+        return $assignment;
     }
 
     /**
@@ -173,8 +177,9 @@ class JuryAssignmentService
     {
         $assignment = JuryAssignment::findOrFail($assignmentId);
         $assignment->activate();
+        $assignment->refresh();
 
-        return $assignment->fresh();
+        return $assignment;
     }
 
     /**
