@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Application\Http\Controllers\ApplicationController;
+use Modules\Application\Http\Controllers\ApplicationDocumentController;
 use Modules\Application\Http\Controllers\Admin\ApplicationEvaluationController;
 use Modules\Application\Http\Controllers\Admin\EligibilityOverrideController;
 
@@ -26,11 +27,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Ver historial de cambios
         Route::get('{id}/history', [ApplicationController::class, 'history'])->name('history');
 
-        // Gestión de documentos (se implementarán después)
+        // Gestión de documentos
         // Route::get('{id}/documents', [ApplicationDocumentController::class, 'index'])->name('documents.index');
         // Route::post('{id}/documents', [ApplicationDocumentController::class, 'store'])->name('documents.store');
         // Route::delete('documents/{documentId}', [ApplicationDocumentController::class, 'destroy'])->name('documents.destroy');
-        // Route::get('documents/{documentId}/download', [ApplicationDocumentController::class, 'download'])->name('documents.download');
+        Route::get('documents/{documentId}/download', [ApplicationDocumentController::class, 'download'])->name('documents.download');
     });
 });
 

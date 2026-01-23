@@ -380,4 +380,25 @@ class ApplicationService
             return $application;
         });
     }
+
+    /**
+     * Download application document
+     *
+     * @param string $documentId
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
+     */
+    public function downloadDocument(string $documentId)
+    {
+        $document = \Modules\Application\Entities\ApplicationDocument::findOrFail($documentId);
+
+        // Verificar que el archivo existe
+        if (!\Illuminate\Support\Facades\Storage::disk('local')->exists($document->file_path)) {
+            throw new \Exception('Archivo no encontrado');
+        }
+
+        return \Illuminate\Support\Facades\Storage::disk('local')->download(
+            $document->file_path,
+            $document->file_name
+        );
+    }
 }
