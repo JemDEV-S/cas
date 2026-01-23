@@ -315,11 +315,22 @@ class EvaluationService
      */
     protected function validateEvaluationComplete(Evaluation $evaluation): void
     {
+        // Obtener el position_code_id desde la postulación
+        $positionCodeId = $evaluation->application
+            ? $evaluation->application->jobProfile?->position_code_id
+            : null;
+
         // Obtener criterios requeridos para esta fase
-        $requiredCriteria = \Modules\Evaluation\Entities\EvaluationCriterion::active()
+        $query = \Modules\Evaluation\Entities\EvaluationCriterion::active()
             ->byPhase($evaluation->phase_id)
-            ->byJobPosting($evaluation->job_posting_id)
-            ->get();
+            ->byJobPosting($evaluation->job_posting_id);
+
+        // Filtrar por position_code si existe
+        if ($positionCodeId) {
+            $query->byPositionCode($positionCodeId);
+        }
+
+        $requiredCriteria = $query->get();
 
         // Verificar que todos tengan calificación
         foreach ($requiredCriteria as $criterion) {
@@ -347,12 +358,12 @@ class EvaluationService
                 );
             }
 
-            // Validar evidencia requerida
-            if ($criterion->requiresEvidence() && empty($detail->evidence)) {
-                throw new EvaluationException(
-                    "El criterio '{$criterion->name}' requiere evidencia"
-                );
-            }
+            // Evidencia ahora es opcional - comentado la validación
+            // if ($criterion->requiresEvidence() && empty($detail->evidence)) {
+            //     throw new EvaluationException(
+            //         "El criterio '{$criterion->name}' requiere evidencia"
+            //     );
+            // }
         }
     }
 

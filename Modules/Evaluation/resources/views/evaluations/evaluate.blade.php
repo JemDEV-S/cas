@@ -70,6 +70,13 @@
                         {{ $evaluation->evaluatorAssignment->application->jobProfile->jobPosting->title ?? 'Convocatoria' }} -
                         {{ $evaluation->phase->name }}
                     </p>
+                    @if($positionCode)
+                    <p class="text-xs text-gray-500 mt-1">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                            Código de Puesto: {{ $positionCode }}
+                        </span>
+                    </p>
+                    @endif
                 </div>
 
                 <!-- Resumen de progreso -->
@@ -223,13 +230,12 @@
                             @if($criterion->requires_evidence)
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    Evidencia <span class="text-red-500">*</span>
+                                    Evidencia
                                 </label>
                                 <textarea class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                           name="criteria[{{ $criterion->id }}][evidence]"
                                           rows="2"
-                                          placeholder="Describa la evidencia encontrada..."
-                                          required>{{ $details[$criterion->id]->evidence ?? '' }}</textarea>
+                                          placeholder="Describa la evidencia encontrada...">{{ $details[$criterion->id]->evidence ?? '' }}</textarea>
                             </div>
                             @endif
 
@@ -287,7 +293,7 @@
                         <span x-text="isSaving ? 'Guardando...' : 'Guardar Borrador'">Guardar Borrador</span>
                     </button>
 
-                    <a href="{{ route('evaluation.my-evaluations') }}"
+                    <a href="{{ route('evaluation.index') }}"
                        class="px-5 py-2.5 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-lg border border-gray-300 transition-colors">
                         Cancelar
                     </a>
@@ -310,9 +316,15 @@
 
 @push('scripts')
 <script>
-// Configurar CSRF token para axios
+// Configurar CSRF token para axios (por si se usa en otros lugares)
 if (typeof axios !== 'undefined') {
-    axios.defaults.headers.common['X-CSRF-TOKEN'] = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    if (csrfToken) {
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = csrfToken;
+        axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+    } else {
+        console.error('CSRF token meta tag not found!');
+    }
 }
 
 function evaluationApp() {
@@ -326,12 +338,24 @@ function evaluationApp() {
         isSubmitting: false,
         canSubmit: {{ $evaluation->canEdit() ? 'true' : 'false' }},
         saveTimeout: null,
+        csrfTokenExpired: false,
 
         init() {
+            // Verificar CSRF token al inicio
+            this.verifyCsrfToken();
             // Inicializar checkboxes guardados
             this.initializeCheckboxes();
             // Calcular puntajes
             this.calculateWeightedScores();
+        },
+
+        verifyCsrfToken() {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            if (!csrfToken) {
+                console.error('CSRF token not found in meta tag');
+                alert('Error de configuración: Token CSRF no encontrado. Por favor, recarga la página.');
+                this.csrfTokenExpired = true;
+            }
         },
 
         initializeCheckboxes() {
@@ -378,19 +402,18 @@ function evaluationApp() {
                     return;
                 }
 
-                // Buscar el input de score (puede ser hidden o number)
-                // Primero intenta buscar el hidden (para checkboxes), si no encuentra busca el number
-                let scoreInput = card.querySelector('input.score-input[type="hidden"]');
-                if (!scoreInput) {
-                    scoreInput = card.querySelector('input.score-input[type="number"]');
-                }
+                // Buscar el input de score dentro de la card del criterio
+                // Usando clase porque el selector por name con corchetes puede fallar
+                const scoreInput = card.querySelector('input.score-input');
 
                 if (!scoreInput) {
                     console.warn('Score input not found for criterion:', criterionId);
                     return;
                 }
 
-                const score = parseFloat(scoreInput.value) || 0;
+                // Obtener el valor actualizado del input
+                const rawValue = scoreInput.value;
+                const score = parseFloat(rawValue) || 0;
 
                 // Actualizar puntaje ponderado individual (siempre, incluso si es 0)
                 const weighted = score * (parseFloat(criterion.weight) || 1);
@@ -409,15 +432,19 @@ function evaluationApp() {
             this.totalScore = total;
             this.evaluatedCount = count;
             this.progress = this.criteria.length > 0 ? (count / this.criteria.length) * 100 : 0;
-
-            console.log('Calculated:', { total, count, progress: this.progress });
         },
 
         handleCheckboxChange(event) {
             const checkbox = event.target;
-            const card = checkbox.closest('[data-criterion-id]');
+            // Buscar el div contenedor del criterio (no el checkbox)
+            const card = checkbox.closest('div.bg-white[data-criterion-id]');
             const criterionId = checkbox.dataset.criterionId;
             const maxScore = parseFloat(checkbox.dataset.maxScore);
+
+            if (!card) {
+                console.error('Criterion card not found for checkbox');
+                return;
+            }
 
             const checkboxes = card.querySelectorAll('.scale-checkbox:checked');
             let total = 0;
@@ -431,21 +458,26 @@ function evaluationApp() {
                 return;
             }
 
-            // Buscar el input hidden específicamente para criterios con checkboxes
-            const scoreInput = card.querySelector('input.score-input[type="hidden"]');
+            // Buscar el input de score dentro de la card del criterio
+            const scoreInput = card.querySelector('input.score-input');
             if (!scoreInput) {
-                console.error('Hidden score input not found for criterion:', criterionId);
+                console.error('Score input not found for criterion:', criterionId);
                 return;
             }
 
+            // Actualizar el valor del input hidden
             scoreInput.value = total;
 
+            // Actualizar el puntaje calculado mostrado
             const calculatedSpan = card.querySelector('.calculated-score');
             if (calculatedSpan) {
                 calculatedSpan.textContent = total.toFixed(2);
             }
 
+            // Recalcular todos los puntajes ponderados y el total
             this.calculateWeightedScores();
+
+            // Guardar automáticamente
             this.autoSave(card, criterionId);
         },
 
@@ -481,8 +513,8 @@ function evaluationApp() {
             clearTimeout(this.saveTimeout);
 
             this.saveTimeout = setTimeout(() => {
-                const scoreInput = card.querySelector('.score-input');
-                const score = parseFloat(scoreInput.value);
+                const scoreInput = card.querySelector('input.score-input');
+                const score = scoreInput ? parseFloat(scoreInput.value) || 0 : 0;
                 const comments = card.querySelector('textarea[name*="comments"]')?.value || '';
                 const evidenceInput = card.querySelector('textarea[name*="evidence"]');
                 const evidence = evidenceInput ? evidenceInput.value : null;
@@ -492,18 +524,102 @@ function evaluationApp() {
         },
 
         async saveCriterionDetail(criterionId, score, comments, evidence) {
+            // No intentar guardar si el token CSRF ya expiró
+            if (this.csrfTokenExpired) {
+                console.warn('Guardado omitido: CSRF token expirado');
+                return;
+            }
+
+            // Validar que el criterio tenga los datos requeridos
+            const criterion = this.criteria.find(c => c.id == criterionId);
+            if (criterion) {
+                // Evidencia ahora es opcional
+                // if (criterion.requires_evidence && !evidence) {
+                //     console.warn('Guardado omitido: El criterio requiere evidencia obligatoria');
+                //     return;
+                // }
+                if (criterion.requires_comment && !comments) {
+                    console.warn('Guardado omitido: El criterio requiere comentarios obligatorios');
+                    return;
+                }
+            }
+
             try {
-                const response = await axios.post(`/evaluations/${this.evaluationId}/details`, {
+                // Obtener el token CSRF para esta petición específica
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+                if (!csrfToken) {
+                    console.error('No se pudo obtener el token CSRF');
+                    this.csrfTokenExpired = true;
+                    alert('Error: No se pudo obtener el token de seguridad. Por favor, recarga la página.');
+                    return;
+                }
+
+                // Validar que el score esté dentro del rango del criterio
+                const minScore = parseFloat(criterion.min_score) || 0;
+                const maxScore = parseFloat(criterion.max_score) || 100;
+
+                if (score < minScore || score > maxScore) {
+                    console.log('Guardado omitido: Score fuera del rango permitido');
+                    return;
+                }
+
+                console.log('Guardando criterio:', criterionId, 'Score:', score);
+
+                // Preparar datos para enviar
+                const bodyData = {
                     criterion_id: criterionId,
                     score: score,
-                    comments: comments,
-                    evidence: evidence
+                    comments: comments || null,
+                    evidence: evidence || null
+                };
+
+                console.log('Datos a enviar:', bodyData);
+
+                // Usar la ruta de Laravel
+                const response = await fetch('{{ route("evaluation.save-detail", $evaluation->id) }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify(bodyData)
                 });
 
-                return response.data;
+                if (!response.ok) {
+                    if (response.status === 419) {
+                        this.csrfTokenExpired = true;
+                        console.warn('CSRF token expirado. La sesión ha caducado.');
+                        alert('Tu sesión ha expirado. Por favor, recarga la página para continuar.');
+                        return;
+                    }
+
+                    if (response.status === 422) {
+                        const errorData = await response.json();
+                        console.error('Error de validación 422:', errorData);
+                        console.error('Datos enviados:', {
+                            criterion_id: criterionId,
+                            score: score,
+                            comments: comments ? comments.substring(0, 50) + '...' : '(vacío)',
+                            evidence: evidence ? evidence.substring(0, 50) + '...' : '(vacío/null)'
+                        });
+                        // No mostrar alert para errores de validación en auto-guardado
+                        return;
+                    }
+
+                    const errorData = await response.json().catch(() => ({}));
+                    console.error('Error del servidor:', errorData);
+                    return;
+                }
+
+                const data = await response.json();
+                console.log('✓ Criterio guardado:', criterionId);
+                return data;
             } catch (error) {
                 console.error('Error guardando criterio:', error);
-                throw error;
             }
         },
 
@@ -514,16 +630,16 @@ function evaluationApp() {
                 const promises = [];
                 document.querySelectorAll('[data-criterion-id]').forEach(card => {
                     const criterionId = card.dataset.criterionId;
-                    const scoreInput = card.querySelector('.score-input');
-                    const score = parseFloat(scoreInput.value);
+                    const scoreInput = card.querySelector('input.score-input');
+                    const score = scoreInput ? parseFloat(scoreInput.value) || 0 : 0;
 
-                    if (score && score > 0) {
-                        const comments = card.querySelector('textarea[name*="comments"]')?.value || '';
-                        const evidenceInput = card.querySelector('textarea[name*="evidence"]');
-                        const evidence = evidenceInput ? evidenceInput.value : null;
+                    // Guardar todos los criterios, incluso los que tienen score 0
+                    // La validación de rango se hace en saveCriterionDetail
+                    const comments = card.querySelector('textarea[name*="comments"]')?.value || '';
+                    const evidenceInput = card.querySelector('textarea[name*="evidence"]');
+                    const evidence = evidenceInput ? evidenceInput.value : null;
 
-                        promises.push(this.saveCriterionDetail(criterionId, score, comments, evidence));
-                    }
+                    promises.push(this.saveCriterionDetail(criterionId, score, comments, evidence));
                 });
 
                 await Promise.all(promises);
@@ -550,16 +666,47 @@ function evaluationApp() {
             this.isSubmitting = true;
 
             try {
+                // Obtener el token CSRF
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+                if (!csrfToken) {
+                    alert('Error: No se pudo obtener el token de seguridad. Por favor, recarga la página.');
+                    this.isSubmitting = false;
+                    return;
+                }
+
                 const generalComments = document.querySelector('textarea[name="general_comments"]').value;
 
-                const response = await axios.post(`/evaluations/${this.evaluationId}/submit`, {
-                    general_comments: generalComments
+                const response = await fetch('{{ route("evaluation.submit", $evaluation->id) }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({
+                        confirm: true,
+                        general_comments: generalComments
+                    })
                 });
 
+                if (!response.ok) {
+                    if (response.status === 419) {
+                        alert('Tu sesión ha expirado. Por favor, recarga la página para continuar.');
+                        this.isSubmitting = false;
+                        return;
+                    }
+
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error || errorData.message || 'Error desconocido');
+                }
+
                 alert('Evaluación enviada exitosamente');
-                window.location.href = '{{ route("evaluation.my-evaluations") }}';
+                window.location.href = '{{ route("evaluation.index") }}';
             } catch (error) {
-                alert('Error: ' + (error.response?.data?.error || 'Error desconocido'));
+                alert('Error: ' + error.message);
                 this.isSubmitting = false;
             }
         }

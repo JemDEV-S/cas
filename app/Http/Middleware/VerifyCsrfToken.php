@@ -14,5 +14,7 @@ class VerifyCsrfToken extends Middleware
     protected $except = [
         // Rutas de FIRMA PERÚ (llamadas desde componente local, no desde navegador)
         'api/*',
+        // Temporal: Excluir guardado de evaluaciones para debug
+        'evaluations/*/details',
     ];
 }

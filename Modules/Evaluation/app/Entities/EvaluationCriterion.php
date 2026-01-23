@@ -20,6 +20,7 @@ class EvaluationCriterion extends Model
         'uuid',
         'phase_id',
         'job_posting_id',
+        'position_code_id',
         'code',
         'name',
         'description',
@@ -78,6 +79,11 @@ class EvaluationCriterion extends Model
         return $this->belongsTo(JobPosting::class, 'job_posting_id');
     }
 
+    public function positionCode(): BelongsTo
+    {
+        return $this->belongsTo(\Modules\JobProfile\Entities\PositionCode::class, 'position_code_id');
+    }
+
     public function details(): HasMany
     {
         return $this->hasMany(EvaluationDetail::class, 'criterion_id');
@@ -101,6 +107,14 @@ class EvaluationCriterion extends Model
         return $query->where(function ($q) use ($jobPostingId) {
             $q->where('job_posting_id', $jobPostingId)
               ->orWhereNull('job_posting_id');
+        });
+    }
+
+    public function scopeByPositionCode($query, $positionCodeId)
+    {
+        return $query->where(function ($q) use ($positionCodeId) {
+            $q->where('position_code_id', $positionCodeId)
+              ->orWhereNull('position_code_id');
         });
     }
 

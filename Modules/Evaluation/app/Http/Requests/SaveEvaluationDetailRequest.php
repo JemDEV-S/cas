@@ -54,13 +54,13 @@ class SaveEvaluationDetailRequest extends FormRequest
                         );
                     }
 
-                    // Validar evidencia requerida
-                    if ($criterion->requires_evidence && empty($this->evidence)) {
-                        $validator->errors()->add(
-                            'evidence',
-                            "Este criterio requiere evidencia obligatoria"
-                        );
-                    }
+                    // Evidencia ahora es opcional - comentado la validación
+                    // if ($criterion->requires_evidence && empty($this->evidence)) {
+                    //     $validator->errors()->add(
+                    //         'evidence',
+                    //         "Este criterio requiere evidencia obligatoria"
+                    //     );
+                    // }
                 }
             }
         });

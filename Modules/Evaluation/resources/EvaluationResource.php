@@ -41,7 +41,7 @@ class EvaluationResource extends JsonResource
             // Comentarios
             'general_comments' => $this->general_comments,
             'internal_notes' => $this->when(
-                $request->user()?->hasRole(['Administrador General', 'Administrador de RRHH']),
+                $request->user()?->hasAnyRole(['Administrador General', 'Administrador de RRHH']),
                 $this->internal_notes
             ),
             

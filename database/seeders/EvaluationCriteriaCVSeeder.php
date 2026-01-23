@@ -220,6 +220,16 @@ class EvaluationCriteriaCVSeeder extends Seeder
     {
         $this->command->line("Creando criterios para puesto: {$positionCode}");
 
+        // Buscar el position_code_id por el código
+        $positionCodeEntity = \Modules\JobProfile\Entities\PositionCode::where('code', $positionCode)->first();
+
+        if (!$positionCodeEntity) {
+            $this->command->warn("⚠ No se encontró el código de puesto: {$positionCode}. Los criterios se crearán sin position_code_id.");
+            $positionCodeId = null;
+        } else {
+            $positionCodeId = $positionCodeEntity->id;
+        }
+
         // 1. Formación Académica - Requisitos Mínimos
         EvaluationCriterion::updateOrCreate(
             [
@@ -228,6 +238,7 @@ class EvaluationCriteriaCVSeeder extends Seeder
             [
                 'phase_id' => $phaseUuid,
                 'job_posting_id' => null, // General para todos
+                'position_code_id' => $positionCodeId,
                 'name' => 'Formación Académica - Requisitos Mínimos',
                 'description' => 'Evaluación de formación académica según requisitos mínimos del puesto',
                 'min_score' => 0,
@@ -263,6 +274,7 @@ class EvaluationCriteriaCVSeeder extends Seeder
             [
                 'phase_id' => $phaseUuid,
                 'job_posting_id' => null,
+                'position_code_id' => $positionCodeId,
                 'name' => 'Formación Académica - Requisitos Adicionales',
                 'description' => 'Evaluación de formación académica adicional',
                 'min_score' => 0,
@@ -292,6 +304,7 @@ class EvaluationCriteriaCVSeeder extends Seeder
             [
                 'phase_id' => $phaseUuid,
                 'job_posting_id' => null,
+                'position_code_id' => $positionCodeId,
                 'name' => 'Experiencia Específica - Requisitos Mínimos',
                 'description' => 'Evaluación de experiencia específica según requisitos mínimos del puesto',
                 'min_score' => 0,
@@ -327,6 +340,7 @@ class EvaluationCriteriaCVSeeder extends Seeder
             [
                 'phase_id' => $phaseUuid,
                 'job_posting_id' => null,
+                'position_code_id' => $positionCodeId,
                 'name' => 'Experiencia Específica - Requisitos Adicionales',
                 'description' => 'Evaluación de experiencia adicional',
                 'min_score' => 0,

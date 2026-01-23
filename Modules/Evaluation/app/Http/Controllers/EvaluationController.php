@@ -2,6 +2,7 @@
 
 namespace Modules\Evaluation\Http\Controllers;
 
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -18,6 +19,8 @@ use Modules\Evaluation\Resources\EvaluationResource;
 
 class EvaluationController extends Controller
 {
+    use AuthorizesRequests;
+
     protected EvaluationService $evaluationService;
 
     public function __construct(EvaluationService $evaluationService)
@@ -212,7 +215,8 @@ class EvaluationController extends Controller
                     ->with('error', 'No tienes permiso para evaluar esta postulación');
             }
 
-            // Obtener el código del puesto desde la postulación
+            // Obtener el position_code_id y código desde la postulación
+            $positionCodeId = null;
             $positionCode = null;
             if ($evaluation->evaluatorAssignment &&
                 $evaluation->evaluatorAssignment->application &&
@@ -220,7 +224,10 @@ class EvaluationController extends Controller
 
                 $jobProfile = $evaluation->evaluatorAssignment->application->jobProfile;
 
-                // Intentar obtener el código del puesto
+                // Obtener el ID y código del puesto
+                if ($jobProfile->position_code_id) {
+                    $positionCodeId = $jobProfile->position_code_id;
+                }
                 if ($jobProfile->positionCode) {
                     $positionCode = $jobProfile->positionCode->code;
                 }
@@ -235,15 +242,15 @@ class EvaluationController extends Controller
             }
 
             // Obtener criterios de evaluación para la fase y el puesto específico
-            $criteriaQuery = \Modules\Evaluation\Entities\EvaluationCriterion::where('phase_id', $evaluation->phase_id)
-                ->where('is_active', true);
+            $criteriaQuery = \Modules\Evaluation\Entities\EvaluationCriterion::active()
+                ->byPhase($evaluation->phase_id);
 
-            // Filtrar por position_code si existe
-            if ($positionCode) {
-                $criteriaQuery->whereJsonContains('metadata->position_code', $positionCode);
+            // Filtrar por position_code_id si existe
+            if ($positionCodeId) {
+                $criteriaQuery->byPositionCode($positionCodeId);
             }
 
-            $criteria = $criteriaQuery->orderBy('order')->get();
+            $criteria = $criteriaQuery->ordered()->get();
 
             // Calcular puntaje máximo total
             $maxTotalScore = $criteria->sum('max_score');
