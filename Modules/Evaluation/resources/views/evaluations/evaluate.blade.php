@@ -593,37 +593,51 @@
                                     </div>
                                 </div>
 
-                            <!-- Criterios numéricos (sin escalas) -->
+                            <!-- Criterios sin escalas (UN SOLO CHECKBOX CON VALOR FIJO = MAX_SCORE) -->
                             @else
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                                        Puntaje
-                                        <span class="text-red-500">*</span>
-                                        <span class="text-gray-500 font-normal">(Rango: {{ $criterion->min_score }} - {{ $criterion->max_score }})</span>
+                                    @if(isset($criterion->metadata['puntaje_minimo_aprobatorio']))
+                                    <div class="mb-3 flex items-center gap-2 text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
+                                        <svg class="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                        </svg>
+                                        <span class="text-sm font-medium">Puntaje mínimo aprobatorio: {{ $criterion->metadata['puntaje_minimo_aprobatorio'] }} puntos</span>
+                                    </div>
+                                    @endif
+
+                                    <label class="flex items-start gap-3 p-4 bg-gray-50 hover:bg-gray-100 border-2 border-gray-200 rounded-lg cursor-pointer transition-colors">
+                                        <input type="checkbox"
+                                               class="scale-checkbox mt-1 w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                               name="criteria[{{ $criterion->id }}][options][]"
+                                               value="{{ $criterion->max_score }}"
+                                               data-criterion-id="{{ $criterion->id }}"
+                                               data-max-score="{{ $criterion->max_score }}"
+                                               @change="handleCheckboxChange($event)"
+                                               {{ ($details[$criterion->id]->score ?? 0) == $criterion->max_score ? 'checked' : '' }}>
+                                        <div class="flex-1">
+                                            <div class="flex items-center justify-between">
+                                                <span class="text-sm font-semibold text-gray-900">Cumple este criterio</span>
+                                                <span class="px-3 py-1 bg-green-100 text-green-700 text-sm font-bold rounded">
+                                                    {{ number_format($criterion->max_score, 2) }} pts
+                                                </span>
+                                            </div>
+                                        </div>
                                     </label>
-                                    <input type="number"
-                                           class="score-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+
+                                    <input type="hidden"
+                                           class="score-input"
                                            name="criteria[{{ $criterion->id }}][score]"
                                            data-min="{{ $criterion->min_score }}"
                                            data-max="{{ $criterion->max_score }}"
-                                           min="{{ $criterion->min_score }}"
-                                           max="{{ $criterion->max_score }}"
-                                           step="0.5"
-                                           value="{{ $details[$criterion->id]->score ?? '' }}"
-                                           @change="handleScoreChange($event)"
-                                           {{ $criterion->requires_comment ? 'required' : '' }}>
-                                    <p class="invalid-feedback text-red-500 text-sm mt-1 hidden">
-                                        El puntaje debe estar entre {{ $criterion->min_score }} y {{ $criterion->max_score }}
-                                    </p>
+                                           value="{{ $details[$criterion->id]->score ?? 0 }}">
 
-                                    @if(isset($criterion->metadata['puntaje_minimo_aprobatorio']))
-                                    <div class="mt-2 flex items-center gap-2 text-red-600">
-                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                                        </svg>
-                                        <span class="text-sm">Puntaje mínimo aprobatorio: {{ $criterion->metadata['puntaje_minimo_aprobatorio'] }} puntos</span>
+                                    <div class="mt-3 flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                        <span class="text-sm font-medium text-gray-700">Puntaje calculado:</span>
+                                        <div>
+                                            <span class="calculated-score text-xl font-bold text-blue-600">{{ $details[$criterion->id]->score ?? 0 }}</span>
+                                            <span class="text-sm text-gray-600"> / {{ number_format($criterion->max_score, 2) }} pts</span>
+                                        </div>
                                     </div>
-                                    @endif
                                 </div>
                             @endif
 
@@ -954,14 +968,23 @@ function evaluationApp() {
                     if (savedScore > 0) {
                         const checkboxes = card.querySelectorAll('.scale-checkbox');
                         if (checkboxes.length > 0) {
-                            let accumulated = 0;
-                            checkboxes.forEach(cb => {
-                                const points = parseFloat(cb.value);
-                                if (accumulated + points <= savedScore) {
-                                    cb.checked = true;
-                                    accumulated += points;
+                            // Para criterios sin escala (un solo checkbox), marcar si el score coincide con el max
+                            if (checkboxes.length === 1) {
+                                const maxScore = parseFloat(checkboxes[0].dataset.maxScore);
+                                if (savedScore === maxScore) {
+                                    checkboxes[0].checked = true;
                                 }
-                            });
+                            } else {
+                                // Para criterios con múltiples checkboxes (escalas)
+                                let accumulated = 0;
+                                checkboxes.forEach(cb => {
+                                    const points = parseFloat(cb.value);
+                                    if (accumulated + points <= savedScore) {
+                                        cb.checked = true;
+                                        accumulated += points;
+                                    }
+                                });
+                            }
                         }
                     }
                 }
@@ -1025,9 +1048,34 @@ function evaluationApp() {
                 return;
             }
 
-            const checkboxes = card.querySelectorAll('.scale-checkbox:checked');
+            const checkboxes = card.querySelectorAll('.scale-checkbox');
+
+            // Si es un solo checkbox (criterio sin escala)
+            if (checkboxes.length === 1) {
+                const scoreInput = card.querySelector('input.score-input');
+                if (!scoreInput) {
+                    console.error('Score input not found for criterion:', criterionId);
+                    return;
+                }
+
+                // Si está marcado, asignar max_score; si no, asignar 0
+                const newScore = checkbox.checked ? maxScore : 0;
+                scoreInput.value = newScore;
+
+                const calculatedSpan = card.querySelector('.calculated-score');
+                if (calculatedSpan) {
+                    calculatedSpan.textContent = newScore.toFixed(2);
+                }
+
+                this.calculateWeightedScores();
+                this.autoSave(card, criterionId);
+                return;
+            }
+
+            // Para múltiples checkboxes (criterios con escala)
+            const checkedBoxes = card.querySelectorAll('.scale-checkbox:checked');
             let total = 0;
-            checkboxes.forEach(cb => {
+            checkedBoxes.forEach(cb => {
                 total += parseFloat(cb.value);
             });
 
@@ -1048,33 +1096,6 @@ function evaluationApp() {
             const calculatedSpan = card.querySelector('.calculated-score');
             if (calculatedSpan) {
                 calculatedSpan.textContent = total.toFixed(2);
-            }
-
-            this.calculateWeightedScores();
-            this.autoSave(card, criterionId);
-        },
-
-        handleScoreChange(event) {
-            const input = event.target;
-            const card = input.closest('[data-criterion-id]');
-            const criterionId = card.dataset.criterionId;
-            const score = parseFloat(input.value);
-            const min = parseFloat(input.dataset.min);
-            const max = parseFloat(input.dataset.max);
-
-            if (input.value && (isNaN(score) || score < min || score > max)) {
-                input.classList.add('border-red-500');
-                const feedback = input.nextElementSibling;
-                if (feedback && feedback.classList.contains('invalid-feedback')) {
-                    feedback.classList.remove('hidden');
-                }
-                return;
-            } else {
-                input.classList.remove('border-red-500');
-                const feedback = input.nextElementSibling;
-                if (feedback && feedback.classList.contains('invalid-feedback')) {
-                    feedback.classList.add('hidden');
-                }
             }
 
             this.calculateWeightedScores();

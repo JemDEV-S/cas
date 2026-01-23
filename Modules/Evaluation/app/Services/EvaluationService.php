@@ -343,8 +343,14 @@ class EvaluationService
             $query->completed();
         }
 
-        return $query->orderBy('deadline_at', 'asc')
-            ->orderBy('created_at', 'desc')
+        // Ordenar por unidad orgánica (nombre de la unidad solicitante), luego por deadline y fecha de creación
+        return $query->join('applications', 'evaluator_assignments.application_id', '=', 'applications.id')
+            ->join('job_profiles', 'applications.job_profile_id', '=', 'job_profiles.id')
+            ->join('organizational_units', 'job_profiles.requesting_unit_id', '=', 'organizational_units.id')
+            ->select('evaluator_assignments.*')
+            ->orderBy('organizational_units.name', 'asc')
+            ->orderBy('evaluator_assignments.deadline_at', 'asc')
+            ->orderBy('evaluator_assignments.created_at', 'desc')
             ->paginate($filters['per_page'] ?? 15);
     }
 

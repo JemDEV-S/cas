@@ -13,6 +13,42 @@ class EvaluationCriteriaCVSeeder extends Seeder
      * Criterios de evaluación CV por código de puesto
      */
     private $criteriosPorPuesto = [
+        'PA I' => [
+            'formacion_academica' => [
+                'puntaje_minimo' => 17,
+                'opciones_adicionales' => [
+                    ['descripcion' => 'Egresado de Maestría', 'puntos' => 4],
+                    ['descripcion' => 'Grado de Magíster', 'puntos' => 4],
+                ],
+                'subtotal_adicional_max' => 8
+            ],
+            'experiencia_especifica' => [
+                'puntaje_minimo' => 18,
+                'opciones_adicionales' => [
+                    ['descripcion' => 'Experiencia laboral mayor a 3 años y menor a 5 años en gestión pública', 'puntos' => 3],
+                    ['descripcion' => 'Experiencia laboral mayor a 5 años en gestión pública', 'puntos' => 4],
+                ],
+                'subtotal_adicional_max' => 7
+            ]
+        ],
+        'PA II' => [
+            'formacion_academica' => [
+                'puntaje_minimo' => 17,
+                'opciones_adicionales' => [
+                    ['descripcion' => 'Egresado de Maestría', 'puntos' => 4],
+                    ['descripcion' => 'Grado de Magíster', 'puntos' => 4],
+                ],
+                'subtotal_adicional_max' => 8
+            ],
+            'experiencia_especifica' => [
+                'puntaje_minimo' => 18,
+                'opciones_adicionales' => [
+                    ['descripcion' => 'Experiencia laboral mayor a 2 años y menor a 3 años en gestión pública', 'puntos' => 3],
+                    ['descripcion' => 'Experiencia laboral mayor a 3 años en gestión pública', 'puntos' => 4],
+                ],
+                'subtotal_adicional_max' => 7
+            ]
+        ],
         'ESP I' => [
             'formacion_academica' => [
                 'puntaje_minimo' => 17,
