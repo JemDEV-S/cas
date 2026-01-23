@@ -15,7 +15,7 @@ use Modules\Evaluation\Http\Requests\{
     SubmitEvaluationRequest,
     ModifySubmittedEvaluationRequest
 };
-use Modules\Evaluation\Resources\EvaluationResource;
+use Modules\Evaluation\Http\Resources\EvaluationResource;
 
 class EvaluationController extends Controller
 {

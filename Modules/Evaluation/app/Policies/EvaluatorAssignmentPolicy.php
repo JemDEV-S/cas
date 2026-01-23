@@ -28,7 +28,7 @@ class EvaluatorAssignmentPolicy
     public function view(User $user, EvaluatorAssignment $assignment): bool
     {
         // Admin puede ver todas
-        if ($user->hasRole(['Administrador General', 'Administrador de RRHH'])) {
+        if ($user->hasAnyRole(['Administrador General', 'Administrador de RRHH'])) {
             return true;
         }
 
@@ -75,7 +75,7 @@ class EvaluatorAssignmentPolicy
     public function reassign(User $user, EvaluatorAssignment $assignment): bool
     {
         // Solo admin puede reasignar
-        if (!$user->hasRole(['Administrador General', 'Administrador de RRHH'])) {
+        if (!$user->hasAnyRole(['Administrador General', 'Administrador de RRHH'])) {
             return false;
         }
 
@@ -89,7 +89,7 @@ class EvaluatorAssignmentPolicy
     public function cancel(User $user, EvaluatorAssignment $assignment): bool
     {
         // Solo admin puede cancelar
-        if (!$user->hasRole(['Administrador General', 'Administrador de RRHH'])) {
+        if (!$user->hasAnyRole(['Administrador General', 'Administrador de RRHH'])) {
             return false;
         }
 

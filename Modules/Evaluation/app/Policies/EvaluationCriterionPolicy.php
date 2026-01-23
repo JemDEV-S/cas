@@ -25,7 +25,7 @@ class EvaluationCriterionPolicy
     public function view(User $user, EvaluationCriterion $criterion): bool
     {
         // Todos pueden ver criterios activos
-        return $criterion->is_active || $user->hasRole(['Administrador General', 'Administrador de RRHH']);
+        return $criterion->is_active || $user->hasAnyRole(['Administrador General', 'Administrador de RRHH']);
     }
 
     /**
@@ -45,7 +45,7 @@ class EvaluationCriterionPolicy
     public function update(User $user, EvaluationCriterion $criterion): bool
     {
         // Solo admin puede actualizar
-        if (!$user->hasRole(['Administrador General', 'Administrador de RRHH'])) {
+        if (!$user->hasAnyRole(['Administrador General', 'Administrador de RRHH'])) {
             return false;
         }
 
@@ -59,7 +59,7 @@ class EvaluationCriterionPolicy
     public function delete(User $user, EvaluationCriterion $criterion): bool
     {
         // Solo admin puede eliminar
-        if (!$user->hasRole(['Administrador General', 'Administrador de RRHH'])) {
+        if (!$user->hasAnyRole(['Administrador General', 'Administrador de RRHH'])) {
             return false;
         }
 
@@ -78,7 +78,7 @@ class EvaluationCriterionPolicy
     public function toggleActive(User $user, EvaluationCriterion $criterion): bool
     {
         // Solo admin puede cambiar estado
-        if (!$user->hasRole(['Administrador General', 'Administrador de RRHH'])) {
+        if (!$user->hasAnyRole(['Administrador General', 'Administrador de RRHH'])) {
             return false;
         }
 

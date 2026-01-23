@@ -12,7 +12,7 @@ class ModifySubmittedEvaluationRequest extends FormRequest
     public function authorize(): bool
     {
         // Solo administradores pueden modificar evaluaciones enviadas
-        return auth()->user()->hasRole(['Administrador General', 'Administrador de RRHH']);
+        return auth()->user()->hasAnyRole(['Administrador General', 'Administrador de RRHH']);
     }
 
     /**
