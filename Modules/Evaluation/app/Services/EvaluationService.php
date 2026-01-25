@@ -394,25 +394,25 @@ class EvaluationService
                 ->where('criterion_id', $criterion->id)
                 ->first();
 
-            if (!$detail) {
-                throw new EvaluationException(
-                    "Falta calificar el criterio: {$criterion->name}"
-                );
-            }
+            // if (!$detail) {
+            //     throw new EvaluationException(
+            //         "Falta calificar el criterio: {$criterion->name}"
+            //     );
+            // }
 
-            // Validar puntaje
-            if (!$criterion->validateScore($detail->score)) {
-                throw new EvaluationException(
-                    "El puntaje del criterio '{$criterion->name}' debe estar entre {$criterion->min_score} y {$criterion->max_score}"
-                );
-            }
+            // // Validar puntaje
+            // if (!$criterion->validateScore($detail->score)) {
+            //     throw new EvaluationException(
+            //         "El puntaje del criterio '{$criterion->name}' debe estar entre {$criterion->min_score} y {$criterion->max_score}"
+            //     );
+            // }
 
-            // Validar comentario requerido
-            if ($criterion->requiresComment() && empty($detail->comments)) {
-                throw new EvaluationException(
-                    "El criterio '{$criterion->name}' requiere comentarios"
-                );
-            }
+            // // Validar comentario requerido
+            // if ($criterion->requiresComment() && empty($detail->comments)) {
+            //     throw new EvaluationException(
+            //         "El criterio '{$criterion->name}' requiere comentarios"
+            //     );
+            // }
 
             // Evidencia ahora es opcional - comentado la validación
             // if ($criterion->requiresEvidence() && empty($detail->evidence)) {
