@@ -125,6 +125,7 @@
                 <thead class="bg-gray-50">
                     <tr>
                         <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Convocatoria</th>
+                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Perfil</th>
                         <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unidad Orgánica</th>
                         <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Postulante</th>
                         <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fase</th>
@@ -140,6 +141,17 @@
                         <td class="px-6 py-4">
                             <div class="text-sm font-medium text-gray-900">{{ $assignment->jobPosting->title ?? 'N/A' }}</div>
                             <div class="text-xs text-gray-500">{{ $assignment->jobPosting->code ?? 'N/A' }}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-sm font-medium text-gray-900">
+                                {{ $assignment->application->jobProfile->profile_name ?? 'N/A' }}
+                            </div>
+                            <div class="text-xs text-gray-500">
+                                {{ $assignment->application->jobProfile->positionCode->code ?? '' }}
+                                @if($assignment->application->jobProfile->positionCode->name ?? null)
+                                    - {{ $assignment->application->jobProfile->positionCode->name }}
+                                @endif
+                            </div>
                         </td>
                         <td class="px-6 py-4">
                             <div class="text-sm text-gray-900">
@@ -221,7 +233,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="8" class="px-6 py-12 text-center">
+                        <td colspan="9" class="px-6 py-12 text-center">
                             <div class="flex flex-col items-center">
                                 <i class="fas fa-inbox text-gray-300 text-5xl mb-4"></i>
                                 <p class="text-gray-500 text-lg">No hay asignaciones disponibles</p>

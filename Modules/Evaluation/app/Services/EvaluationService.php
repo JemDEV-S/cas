@@ -317,6 +317,7 @@ class EvaluationService
         $query = EvaluatorAssignment::with([
             'application.jobProfile.jobPosting',
             'application.jobProfile.requestingUnit',
+            'application.jobProfile.positionCode',
             'phase',
             'jobPosting',
         ])->byEvaluator($evaluatorId);
@@ -343,11 +344,13 @@ class EvaluationService
             $query->completed();
         }
 
-        // Ordenar por unidad orgánica (nombre de la unidad solicitante), luego por deadline y fecha de creación
+        // Ordenar por código de posición, luego por unidad orgánica, deadline y fecha de creación
         return $query->join('applications', 'evaluator_assignments.application_id', '=', 'applications.id')
             ->join('job_profiles', 'applications.job_profile_id', '=', 'job_profiles.id')
             ->join('organizational_units', 'job_profiles.requesting_unit_id', '=', 'organizational_units.id')
+            ->leftJoin('position_codes', 'job_profiles.position_code_id', '=', 'position_codes.id')
             ->select('evaluator_assignments.*')
+            ->orderBy('position_codes.code', 'asc')
             ->orderBy('organizational_units.name', 'asc')
             ->orderBy('evaluator_assignments.deadline_at', 'asc')
             ->orderBy('evaluator_assignments.created_at', 'desc')
