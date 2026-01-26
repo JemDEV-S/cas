@@ -16,6 +16,8 @@ use Modules\Evaluation\Http\Requests\{
     ModifySubmittedEvaluationRequest
 };
 use Modules\Evaluation\Http\Resources\EvaluationResource;
+use Modules\Evaluation\Enums\EvaluationStatusEnum;
+
 
 class EvaluationController extends Controller
 {
@@ -525,28 +527,65 @@ class EvaluationController extends Controller
 
     /**
      * Remove the specified evaluation.
-     * DELETE /api/evaluations/{id}
+     * DELETE /evaluations/{id} (WEB)
+     * DELETE /api/evaluations/{id} (API)
      */
-    public function destroy(int $id): JsonResponse
+    public function destroy(Request $request, int $id)
     {
         try {
             $evaluation = Evaluation::findOrFail($id);
 
-            // Verificar autorización
-            $this->authorize('delete', $evaluation);
+            // Verificar que el usuario sea el dueño de la evaluación
+            if ($evaluation->evaluator_id != auth()->id()) {
+                if ($request->wantsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'No tienes permiso para eliminar esta evaluación',
+                    ], 403);
+                }
+
+                return redirect()->route('evaluation.my-evaluations')
+                    ->with('error', 'No tienes permiso para eliminar esta evaluación');
+            }
+
+            // Verificar que la evaluación esté completada
+            if (!in_array($evaluation->status, [EvaluationStatusEnum::SUBMITTED, EvaluationStatusEnum::MODIFIED])) {
+                if ($request->wantsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Solo puedes eliminar evaluaciones completadas',
+                    ], 422);
+                }
+
+                return redirect()->route('evaluation.my-evaluations')
+                    ->with('error', 'Solo puedes eliminar evaluaciones completadas');
+            }
 
             $this->evaluationService->deleteEvaluation($evaluation);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Evaluación eliminada exitosamente',
-            ]);
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Evaluación eliminada exitosamente. Puedes volver a evaluar esta postulación.',
+                ]);
+            }
+
+            return redirect()->route('evaluation.my-evaluations')
+                ->with('success', 'Evaluación eliminada exitosamente. Puedes volver a evaluar esta postulación.');
+
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al eliminar la evaluación',
-                'error' => $e->getMessage(),
-            ], 422);
+            \Log::error('Error al eliminar evaluación: ' . $e->getMessage());
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error al eliminar la evaluación',
+                    'error' => $e->getMessage(),
+                ], 422);
+            }
+
+            return redirect()->route('evaluation.my-evaluations')
+                ->with('error', 'Error al eliminar la evaluación: ' . $e->getMessage());
         }
     }
 
@@ -611,76 +650,109 @@ class EvaluationController extends Controller
 
     /**
      * Get my evaluations (authenticated evaluator).
+     * Solo muestra evaluaciones completadas (SUBMITTED, MODIFIED).
      * GET /evaluations/my-evaluations (WEB)
      * GET /api/evaluations/my-evaluations (API)
      */
     public function myEvaluations(Request $request)
     {
         try {
-            // Obtener el jury_member_id del usuario autenticado
-            $juryMember = \Modules\Jury\Entities\JuryMember::where('user_id', auth()->id())->first();
+            $userId = auth()->id();
 
-            if (!$juryMember) {
-                // Si es API
-                if ($request->wantsJson() || $request->is('api/*')) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'No estás registrado como jurado evaluador',
-                    ], 403);
-                }
+            // Obtener evaluaciones completadas del usuario
+            $query = Evaluation::with([
+                'evaluatorAssignment.application.jobProfile.positionCode',
+                'evaluatorAssignment.application.jobProfile.requestingUnit',
+                'evaluatorAssignment.application.jobProfile.jobPosting',
+                'evaluatorAssignment.application',
+                'evaluatorAssignment.phase',
+                'phase'
+            ])
+            ->where('evaluator_id', $userId)
+            ->whereIn('status', [EvaluationStatusEnum::SUBMITTED, EvaluationStatusEnum::MODIFIED]);
 
-                // Si es WEB
-                return view('evaluation::my-evaluations', [
-                    'assignments' => new \Illuminate\Pagination\LengthAwarePaginator([], 0, 15),
-                    'stats' => ['total' => 0, 'pending' => 0, 'completed' => 0, 'overdue' => 0],
-                ])->with('warning', 'No estás registrado como jurado evaluador');
+            // Filtro de búsqueda
+            if ($request->has('search') && $request->input('search') != '') {
+                $search = $request->input('search');
+                $query->where(function($q) use ($search) {
+                    // Buscar por nombre del postulante
+                    $q->whereHas('evaluatorAssignment.application', function($subQuery) use ($search) {
+                        $subQuery->where('full_name', 'like', "%{$search}%")
+                                 ->orWhere('dni', 'like', "%{$search}%");
+                    })
+                    // Buscar por unidad orgánica
+                    ->orWhereHas('evaluatorAssignment.application.jobProfile.requestingUnit', function($subQuery) use ($search) {
+                        $subQuery->where('name', 'like', "%{$search}%")
+                                 ->orWhere('code', 'like', "%{$search}%");
+                    });
+                });
             }
 
-            // Obtener asignaciones del evaluador
-            $query = \Modules\Evaluation\Entities\EvaluatorAssignment::with([
-                'application.jobPosting',
-                'application.applicant',
-                'phase',
-                'juryAssignment'
-            ])->where('evaluator_id', $juryMember->id);
-
-            // Filtros
-            if ($request->has('status')) {
-                $query->where('status', $request->input('status'));
+            // Filtros adicionales
+            if ($request->has('phase_id') && $request->input('phase_id') != '') {
+                $query->where('phase_id', $request->input('phase_id'));
             }
 
-            if ($request->boolean('pending_only')) {
-                $query->pending();
+            if ($request->has('requesting_unit_id') && $request->input('requesting_unit_id') != '') {
+                $query->whereHas('evaluatorAssignment.application.jobProfile', function($subQuery) use ($request) {
+                    $subQuery->where('requesting_unit_id', $request->input('requesting_unit_id'));
+                });
             }
 
-            $assignments = $query->orderBy('deadline_at', 'asc')
-                ->orderBy('created_at', 'desc')
+            if ($request->has('job_posting_id') && $request->input('job_posting_id') != '') {
+                $query->where('job_posting_id', $request->input('job_posting_id'));
+            }
+
+            $evaluations = $query->orderBy('submitted_at', 'desc')
                 ->paginate($request->input('per_page', 15));
+
+            // Obtener unidades orgánicas para filtros
+            $organizationalUnits = \Modules\Organization\Entities\OrganizationalUnit::where('is_active', true)
+                ->orderBy('name')
+                ->get();
+
+            // Obtener fases para filtros
+            $phases = \Modules\JobPosting\Entities\ProcessPhase::where('is_active', true)
+                ->orderBy('order')
+                ->get();
 
             // Stats
             $stats = [
-                'total' => \Modules\Evaluation\Entities\EvaluatorAssignment::where('evaluator_id', $juryMember->id)->count(),
-                'pending' => \Modules\Evaluation\Entities\EvaluatorAssignment::where('evaluator_id', $juryMember->id)->pending()->count(),
-                'completed' => \Modules\Evaluation\Entities\EvaluatorAssignment::where('evaluator_id', $juryMember->id)->where('status', 'COMPLETED')->count(),
-                'overdue' => \Modules\Evaluation\Entities\EvaluatorAssignment::where('evaluator_id', $juryMember->id)->overdue()->count(),
+                'total' => Evaluation::where('evaluator_id', $userId)
+                    ->whereIn('status', [EvaluationStatusEnum::SUBMITTED, EvaluationStatusEnum::MODIFIED])
+                    ->count(),
+                'submitted' => Evaluation::where('evaluator_id', $userId)
+                    ->where('status', EvaluationStatusEnum::SUBMITTED)
+                    ->count(),
+                'modified' => Evaluation::where('evaluator_id', $userId)
+                    ->where('status', EvaluationStatusEnum::MODIFIED)
+                    ->count(),
+                'average_score' => Evaluation::where('evaluator_id', $userId)
+                    ->whereIn('status', [EvaluationStatusEnum::SUBMITTED, EvaluationStatusEnum::MODIFIED])
+                    ->avg('percentage') ?? 0,
             ];
 
             // Si es petición API
             if ($request->wantsJson() || $request->is('api/*')) {
                 return response()->json([
                     'success' => true,
-                    'data' => $assignments->items(),
+                    'data' => $evaluations->items(),
                     'stats' => $stats,
                     'meta' => [
-                        'current_page' => $assignments->currentPage(),
-                        'total' => $assignments->total(),
-                        'per_page' => $assignments->perPage(),
+                        'current_page' => $evaluations->currentPage(),
+                        'total' => $evaluations->total(),
+                        'per_page' => $evaluations->perPage(),
                     ],
                 ]);
             }
 
             // Retornar vista WEB
-            return view('evaluation::my-evaluations', compact('assignments', 'stats', 'juryMember'));
+            return view('evaluation::my-evaluations', compact(
+                'evaluations',
+                'stats',
+                'organizationalUnits',
+                'phases'
+            ));
 
         } catch (\Exception $e) {
             \Log::error('Error in myEvaluations: ' . $e->getMessage());
@@ -694,8 +766,10 @@ class EvaluationController extends Controller
             }
 
             return view('evaluation::my-evaluations', [
-                'assignments' => new \Illuminate\Pagination\LengthAwarePaginator([], 0, 15),
-                'stats' => ['total' => 0, 'pending' => 0, 'completed' => 0, 'overdue' => 0],
+                'evaluations' => new \Illuminate\Pagination\LengthAwarePaginator([], 0, 15),
+                'stats' => ['total' => 0, 'submitted' => 0, 'modified' => 0, 'average_score' => 0],
+                'organizationalUnits' => collect([]),
+                'phases' => collect([]),
             ])->with('error', 'Error al cargar tus evaluaciones');
         }
     }

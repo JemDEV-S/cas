@@ -289,22 +289,33 @@ class EvaluationService
     }
 
     /**
-     * Eliminar evaluación
+     * Eliminar evaluación, sus detalles y resetear assignment
      */
     public function deleteEvaluation(Evaluation $evaluation): bool
     {
         return DB::transaction(function () use ($evaluation) {
             // Registrar en historial antes de eliminar
-            // Si no hay usuario autenticado, usar el evaluator_id
             $userId = auth()->id() ?? $evaluation->evaluator_id;
 
             EvaluationHistory::logChange(
                 $evaluation->id,
                 $userId,
                 'CANCELLED',
-                'Evaluación eliminada'
+                'Evaluación eliminada - El evaluador podrá volver a evaluar'
             );
 
+            // Eliminar todos los detalles de evaluación
+            $evaluation->details()->delete();
+
+            // Resetear el assignment a PENDING si existe
+            if ($evaluation->evaluatorAssignment) {
+                $evaluation->evaluatorAssignment->update([
+                    'status' => \Modules\Evaluation\Enums\AssignmentStatusEnum::PENDING,
+                    'completed_at' => null,
+                ]);
+            }
+
+            // Eliminar la evaluación
             return $evaluation->delete();
         });
     }

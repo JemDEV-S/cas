@@ -37,6 +37,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Ver evaluación específica
         Route::get('{id}', [EvaluationController::class, 'show'])->name('show');
 
+        // Eliminar evaluación completada
+        Route::delete('{id}', [EvaluationController::class, 'destroy'])->name('destroy');
+
         // Formulario de evaluación
         Route::get('{id}/evaluate', [EvaluationController::class, 'evaluate'])->name('evaluate');
 
