@@ -7,6 +7,13 @@
             <h2 class="text-2xl font-semibold mb-1">Publicaciones de Resultados</h2>
             <p class="text-gray-500 text-sm">Gestión de resultados con firma digital</p>
         </div>
+        <div>
+            <a href="{{ route('admin.results.cv-processing.list') }}"
+               class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                <i class="fas fa-calculator mr-2"></i>
+                Procesar Evaluaciones CV
+            </a>
+        </div>
     </div>
 
     {{-- Filtros --}}

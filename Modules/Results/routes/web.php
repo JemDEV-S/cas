@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Results\Http\Controllers\Admin\ResultPublicationController;
+use Modules\Results\Http\Controllers\Admin\CvResultProcessingController;
 use Modules\Results\Http\Controllers\Applicant\MyResultsController;
 
 /*
@@ -10,6 +11,8 @@ use Modules\Results\Http\Controllers\Applicant\MyResultsController;
 |--------------------------------------------------------------------------
 */
 Route::prefix('admin')->middleware(['auth'])->name('admin.results.')->group(function () {
+    Route::get('results/cv-processing', [CvResultProcessingController::class, 'list'])
+        ->name('cv-processing.list');
 
     // Dashboard de publicaciones
     Route::get('results', [ResultPublicationController::class, 'index'])
@@ -42,6 +45,15 @@ Route::prefix('admin')->middleware(['auth'])->name('admin.results.')->group(func
     Route::post('postings/{posting}/results/phase9', [ResultPublicationController::class, 'storePhase9'])
         ->name('store-phase9')
         ->can('publishPhase9', \Modules\Results\Policies\ResultPublicationPolicy::class);
+
+    // Procesamiento de Resultados CV (Fase 6 -> 7)
+
+    Route::get('postings/{posting}/results/cv-processing', [CvResultProcessingController::class, 'index'])
+        ->name('cv-processing');
+    Route::post('postings/{posting}/results/cv-processing/preview', [CvResultProcessingController::class, 'preview'])
+        ->name('cv-processing.preview');
+    Route::post('postings/{posting}/results/cv-processing/execute', [CvResultProcessingController::class, 'execute'])
+        ->name('cv-processing.execute');
 
     // Acciones sobre publicaciones
     Route::post('results/{publication}/unpublish', [ResultPublicationController::class, 'unpublish'])

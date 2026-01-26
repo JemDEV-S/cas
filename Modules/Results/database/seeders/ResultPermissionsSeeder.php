@@ -28,6 +28,14 @@ class ResultPermissionsSeeder extends Seeder
                 'description' => 'Publicar resultados de evaluación de requisitos mínimos (APTO/NO APTO)',
             ],
 
+            // Procesar resultados CV
+            [
+                'name' => 'Procesar Resultados CV',
+                'slug' => 'results.process.cv',
+                'module' => 'results',
+                'description' => 'Procesar y transferir puntajes de evaluación curricular',
+            ],
+
             // Publicar resultados Fase 7
             [
                 'name' => 'Publicar Resultados Fase 7 (Evaluación Curricular)',
