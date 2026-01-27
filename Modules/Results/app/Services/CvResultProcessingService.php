@@ -178,6 +178,7 @@ class CvResultProcessingService
                     $app->curriculum_score = $score;
 
                     // Determinar nuevo estado
+                    $willPass = false;
                     if ($score >= self::MIN_PASSING_SCORE) {
                         // Mantiene APTO (o vuelve a APTO si fue re-procesado)
                         if ($app->status === ApplicationStatus::NOT_ELIGIBLE) {
@@ -185,14 +186,14 @@ class CvResultProcessingService
                             $app->is_eligible = true;
                             $app->ineligibility_reason = null;
                         }
-                        $passed++;
+                        $willPass = true;
                     } else {
                         // Pasa a NO_APTO
                         $app->status = ApplicationStatus::NOT_ELIGIBLE;
                         $app->is_eligible = false;
                         $app->ineligibility_reason = $evaluation->general_comments
                             ?: "Puntaje curricular ({$score}/50) menor al minimo requerido (35)";
-                        $failed++;
+                        $willPass = false;
                     }
 
                     $app->save();
@@ -200,7 +201,13 @@ class CvResultProcessingService
                     // Registrar en historial
                     $this->logProcessing($app, $oldScore, $score, $oldStatus, $app->status);
 
+                    // Incrementar contadores DESPUÉS de que todo sea exitoso
                     $processed++;
+                    if ($willPass) {
+                        $passed++;
+                    } else {
+                        $failed++;
+                    }
 
                 } catch (\Exception $e) {
                     $errors[] = [
@@ -279,7 +286,7 @@ class CvResultProcessingService
         }
 
         $application->history()->create([
-            'action_type' => 'CV_RESULT_PROCESSED',
+            'event_type' => 'CV_RESULT_PROCESSED',
             'description' => $description,
             'performed_by' => auth()->id(),
             'performed_at' => now(),
