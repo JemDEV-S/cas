@@ -3,6 +3,9 @@
 use Illuminate\Support\Facades\Route;
 use Modules\Results\Http\Controllers\Admin\ResultPublicationController;
 use Modules\Results\Http\Controllers\Admin\CvResultProcessingController;
+use Modules\Results\Http\Controllers\Admin\InterviewResultProcessingController;
+use Modules\Results\Http\Controllers\Admin\FinalResultCalculationController;
+use Modules\Results\Http\Controllers\Admin\WinnerAssignmentController;
 use Modules\Results\Http\Controllers\Applicant\MyResultsController;
 
 /*
@@ -47,7 +50,6 @@ Route::prefix('admin')->middleware(['auth'])->name('admin.results.')->group(func
         ->can('publishPhase9', \Modules\Results\Policies\ResultPublicationPolicy::class);
 
     // Procesamiento de Resultados CV (Fase 6 -> 7)
-
     Route::get('postings/{posting}/results/cv-processing', [CvResultProcessingController::class, 'index'])
         ->name('cv-processing');
     Route::post('postings/{posting}/results/cv-processing/preview', [CvResultProcessingController::class, 'preview'])
@@ -56,6 +58,30 @@ Route::prefix('admin')->middleware(['auth'])->name('admin.results.')->group(func
         ->name('cv-processing.execute');
     Route::get('postings/{posting}/results/cv-processing/download-pdf', [CvResultProcessingController::class, 'downloadPdf'])
         ->name('cv-processing.download-pdf');
+
+    // Procesamiento de Entrevistas (Fase 8)
+    Route::get('postings/{posting}/results/interview-processing', [InterviewResultProcessingController::class, 'index'])
+        ->name('interview-processing');
+    Route::post('postings/{posting}/results/interview-processing/preview', [InterviewResultProcessingController::class, 'preview'])
+        ->name('interview-processing.preview');
+    Route::post('postings/{posting}/results/interview-processing/execute', [InterviewResultProcessingController::class, 'execute'])
+        ->name('interview-processing.execute');
+
+    // Calculo de Resultados Finales
+    Route::get('postings/{posting}/results/final-calculation', [FinalResultCalculationController::class, 'index'])
+        ->name('final-calculation');
+    Route::post('postings/{posting}/results/final-calculation/preview', [FinalResultCalculationController::class, 'preview'])
+        ->name('final-calculation.preview');
+    Route::post('postings/{posting}/results/final-calculation/execute', [FinalResultCalculationController::class, 'execute'])
+        ->name('final-calculation.execute');
+
+    // Asignacion de Ganadores
+    Route::get('postings/{posting}/results/winner-assignment', [WinnerAssignmentController::class, 'index'])
+        ->name('winner-assignment');
+    Route::post('postings/{posting}/results/winner-assignment/preview', [WinnerAssignmentController::class, 'preview'])
+        ->name('winner-assignment.preview');
+    Route::post('postings/{posting}/results/winner-assignment/execute', [WinnerAssignmentController::class, 'execute'])
+        ->name('winner-assignment.execute');
 
     // Acciones sobre publicaciones
     Route::post('results/{publication}/unpublish', [ResultPublicationController::class, 'unpublish'])

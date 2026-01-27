@@ -128,121 +128,86 @@ class EvaluationCriteriaSeeder extends Seeder
             );
         }
 
-        // Criterios para Entrevista Personal (PHASE_08)
+        // Criterios para Entrevista Personal (PHASE_08) - Actualizado según normativa municipal
         $interviewCriteria = [
             [
                 'code' => 'INT_KNOWLEDGE',
-                'name' => 'Conocimientos del Puesto',
-                'description' => 'Dominio de conocimientos técnicos y teóricos relacionados al cargo',
+                'name' => 'Dominio y conocimiento de las funciones del puesto',
+                'description' => 'Destreza y conocimiento teórico-práctico sobre las funciones del puesto al que postula',
                 'min_score' => 0,
-                'max_score' => 25,
-                'weight' => 0.30,
+                'max_score' => 12.5,
+                'weight' => 0.25,
                 'order' => 1,
                 'requires_comment' => true,
                 'requires_evidence' => true,
                 'score_type' => 'NUMERIC',
                 'evaluation_guide' => '
-                    25 pts: Demuestra dominio excepcional
-                    20 pts: Conocimiento sólido y preciso
-                    15 pts: Conocimiento adecuado
-                    10 pts: Conocimiento básico
-                    5 pts: Conocimiento insuficiente
-                    0 pts: No demuestra conocimientos
+                    12.5 pts: Demuestra dominio excepcional y conocimiento profundo de las funciones
+                    10.0 pts: Conocimiento sólido y preciso de las funciones del puesto
+                    7.5 pts: Conocimiento adecuado de las funciones principales
+                    5.0 pts: Conocimiento básico de las funciones
+                    2.5 pts: Conocimiento insuficiente
+                    0 pts: No demuestra conocimientos requeridos
                 ',
             ],
             [
-                'code' => 'INT_COMMUNICATION',
-                'name' => 'Habilidades de Comunicación',
-                'description' => 'Expresión oral, claridad, capacidad de argumentación',
+                'code' => 'INT_ANALYSIS',
+                'name' => 'Grado de Análisis',
+                'description' => 'Capacidad para comprender situaciones y resolver problemas. Poseer la habilidad para realizar un análisis lógico, la capacidad de identificar problemas, reconocer información significativa',
                 'min_score' => 0,
-                'max_score' => 20,
+                'max_score' => 12.5,
                 'weight' => 0.25,
                 'order' => 2,
                 'requires_comment' => true,
                 'requires_evidence' => true,
                 'score_type' => 'NUMERIC',
                 'evaluation_guide' => '
-                    20 pts: Excelente comunicación, clara y persuasiva
-                    15 pts: Buena comunicación y expresión
-                    10 pts: Comunicación adecuada
-                    5 pts: Dificultades de expresión
-                    0 pts: Comunicación deficiente
+                    12.5 pts: Análisis excepcional, identifica problemas complejos y propone soluciones innovadoras
+                    10.0 pts: Buen análisis lógico y propuestas viables
+                    7.5 pts: Análisis adecuado de situaciones
+                    5.0 pts: Análisis básico con algunas dificultades
+                    2.5 pts: Dificultad para analizar situaciones
+                    0 pts: No puede realizar análisis de problemas
                 ',
             ],
             [
-                'code' => 'INT_PROBLEM_SOLVING',
-                'name' => 'Resolución de Problemas',
-                'description' => 'Capacidad analítica y pensamiento crítico',
+                'code' => 'INT_ETHICS',
+                'name' => 'Ética y Actitud',
+                'description' => 'Capacidad de enfrentar situaciones que pueden afectar la integridad del servidor público. Capacidad para orientarse a los resultados. Actitud para finalizar las tareas y cumplir los objetivos, aún en situaciones más exigentes en cuanto a plazos',
                 'min_score' => 0,
-                'max_score' => 20,
+                'max_score' => 12.5,
                 'weight' => 0.25,
                 'order' => 3,
                 'requires_comment' => true,
                 'requires_evidence' => true,
                 'score_type' => 'NUMERIC',
                 'evaluation_guide' => '
-                    20 pts: Análisis excepcional, soluciones innovadoras
-                    15 pts: Buen análisis y propuestas viables
-                    10 pts: Análisis básico adecuado
-                    5 pts: Dificultad para analizar situaciones
-                    0 pts: No puede resolver problemas planteados
+                    12.5 pts: Demuestra sólida ética profesional, alta orientación a resultados y actitud proactiva
+                    10.0 pts: Buena ética y actitud orientada al cumplimiento
+                    7.5 pts: Ética y actitud adecuadas
+                    5.0 pts: Ética y actitud aceptables con observaciones menores
+                    2.5 pts: Dudas sobre ética o actitud
+                    0 pts: Actitud inapropiada o falta de ética profesional
                 ',
             ],
             [
-                'code' => 'INT_TEAMWORK',
-                'name' => 'Trabajo en Equipo',
-                'description' => 'Actitud colaborativa y habilidades interpersonales',
+                'code' => 'INT_COMMUNICATION',
+                'name' => 'Comunicación',
+                'description' => 'Capacidad de expresar oralmente sus ideas, información y opiniones de forma clara y comprensible, escuchando y siendo receptivo a las propuestas de los demás',
                 'min_score' => 0,
-                'max_score' => 15,
-                'weight' => 0.15,
+                'max_score' => 12.5,
+                'weight' => 0.25,
                 'order' => 4,
                 'requires_comment' => true,
-                'requires_evidence' => false,
+                'requires_evidence' => true,
                 'score_type' => 'NUMERIC',
                 'evaluation_guide' => '
-                    15 pts: Excelente orientación al trabajo en equipo
-                    10 pts: Buena disposición colaborativa
-                    5 pts: Actitud neutral hacia el trabajo en equipo
-                    2 pts: Prefiere trabajo individual
-                    0 pts: Dificultades para trabajar en equipo
-                ',
-            ],
-            [
-                'code' => 'INT_MOTIVATION',
-                'name' => 'Motivación y Compromiso',
-                'description' => 'Interés genuino por el puesto y la institución',
-                'min_score' => 0,
-                'max_score' => 10,
-                'weight' => 0.10,
-                'order' => 5,
-                'requires_comment' => true,
-                'requires_evidence' => false,
-                'score_type' => 'NUMERIC',
-                'evaluation_guide' => '
-                    10 pts: Alta motivación y compromiso evidente
-                    7 pts: Buena motivación e interés
-                    5 pts: Motivación adecuada
-                    2 pts: Motivación dudosa
-                    0 pts: Sin interés real
-                ',
-            ],
-            [
-                'code' => 'INT_PRESENTATION',
-                'name' => 'Presentación Personal',
-                'description' => 'Presencia, puntualidad y profesionalismo',
-                'min_score' => 0,
-                'max_score' => 10,
-                'weight' => 0.10,
-                'order' => 6,
-                'requires_comment' => false,
-                'requires_evidence' => false,
-                'score_type' => 'NUMERIC',
-                'evaluation_guide' => '
-                    10 pts: Excelente presentación y profesionalismo
-                    7 pts: Buena presentación
-                    5 pts: Presentación adecuada
-                    2 pts: Presentación deficiente
-                    0 pts: Presentación inapropiada
+                    12.5 pts: Excelente comunicación, clara, persuasiva y receptiva
+                    10.0 pts: Buena comunicación y expresión oral
+                    7.5 pts: Comunicación adecuada
+                    5.0 pts: Comunicación aceptable con algunas dificultades
+                    2.5 pts: Dificultades de expresión y escucha
+                    0 pts: Comunicación deficiente
                 ',
             ],
         ];

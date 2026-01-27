@@ -270,7 +270,16 @@ class EvaluationController extends Controller
             $application = $evaluation->evaluatorAssignment->application ?? null;
             $jobProfile = $application ? $application->jobProfile : null;
 
-            return view('evaluation::evaluations.evaluate', [
+            // Detectar si es evaluación de entrevista (PHASE_08)
+            $isInterviewEvaluation = $evaluation->phase &&
+                                    $evaluation->phase->code === 'PHASE_08_INTERVIEW';
+
+            // Seleccionar la vista apropiada
+            $viewName = $isInterviewEvaluation
+                ? 'evaluation::evaluations.evaluate-interview'
+                : 'evaluation::evaluations.evaluate';
+
+            return view($viewName, [
                 'evaluation' => $evaluation,
                 'criteria' => $criteria,
                 'positionCode' => $positionCode,

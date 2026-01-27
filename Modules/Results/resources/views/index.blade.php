@@ -5,8 +5,8 @@
     {{-- Header --}}
     <div class="flex justify-between items-center mb-6">
         <div>
-            <h2 class="text-2xl font-semibold mb-1">Procesamiento de Resultados CV</h2>
-            <p class="text-gray-500 text-sm">Seleccione una convocatoria para procesar las evaluaciones curriculares</p>
+            <h2 class="text-2xl font-semibold mb-1">Procesamiento de Resultados</h2>
+            <p class="text-gray-500 text-sm">Seleccione una convocatoria y el proceso que desea ejecutar</p>
         </div>
         <a href="{{ route('admin.results.index') }}"
            class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
@@ -14,17 +14,34 @@
         </a>
     </div>
 
-    {{-- Información --}}
-    <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6">
-        <div class="flex">
-            <i class="fas fa-info-circle text-blue-500 mr-3 mt-1"></i>
-            <div>
-                <p class="font-medium text-blue-800">¿Qué hace el procesamiento de resultados CV?</p>
-                <p class="text-sm text-blue-700 mt-1">
-                    Esta herramienta transfiere automáticamente los puntajes de las evaluaciones curriculares completadas (Fase 6)
-                    a las postulaciones, actualiza los estados según el puntaje mínimo requerido (35 puntos), y registra todo en el historial.
-                </p>
-            </div>
+    {{-- Información sobre los procesos --}}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <!-- Procesar CV -->
+        <div class="bg-white p-5 rounded-lg shadow border hover:shadow-lg transition-shadow">
+            <div class="text-blue-600 text-3xl mb-3"><i class="fas fa-file-alt"></i></div>
+            <h3 class="font-semibold text-lg mb-2">Procesar CV</h3>
+            <p class="text-sm text-gray-600 mb-3">Fase 6 - Evaluación Curricular. Puntaje mínimo: 35 puntos.</p>
+        </div>
+
+        <!-- Procesar Entrevistas -->
+        <div class="bg-white p-5 rounded-lg shadow border hover:shadow-lg transition-shadow">
+            <div class="text-purple-600 text-3xl mb-3"><i class="fas fa-users"></i></div>
+            <h3 class="font-semibold text-lg mb-2">Procesar Entrevistas</h3>
+            <p class="text-sm text-gray-600 mb-3">Fase 8 - Entrevista Personal. Incluye bonus joven (+10%).</p>
+        </div>
+
+        <!-- Calcular Puntaje Final -->
+        <div class="bg-white p-5 rounded-lg shadow border hover:shadow-lg transition-shadow">
+            <div class="text-green-600 text-3xl mb-3"><i class="fas fa-calculator"></i></div>
+            <h3 class="font-semibold text-lg mb-2">Calcular Puntaje Final</h3>
+            <p class="text-sm text-gray-600 mb-3">Bonificaciones y Total. Puntaje mínimo final: 70 puntos.</p>
+        </div>
+
+        <!-- Asignar Ganadores -->
+        <div class="bg-white p-5 rounded-lg shadow border hover:shadow-lg transition-shadow">
+            <div class="text-yellow-600 text-3xl mb-3"><i class="fas fa-trophy"></i></div>
+            <h3 class="font-semibold text-lg mb-2">Asignar Ganadores</h3>
+            <p class="text-sm text-gray-600 mb-3">Ganadores y Accesitarios según ranking.</p>
         </div>
     </div>
 
@@ -80,12 +97,29 @@
                             <td class="px-6 py-4 text-sm text-gray-500">
                                 {{ $posting->created_at->format('d/m/Y') }}
                             </td>
-                            <td class="px-6 py-4 text-center">
-                                <a href="{{ route('admin.results.cv-processing', $posting) }}"
-                                   class="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors">
-                                    <i class="fas fa-calculator mr-2"></i>
-                                    Procesar CV
-                                </a>
+                            <td class="px-6 py-4">
+                                <div class="flex flex-wrap gap-2">
+                                    <a href="{{ route('admin.results.cv-processing', $posting) }}"
+                                       class="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition-colors"
+                                       title="Procesar evaluaciones curriculares">
+                                        <i class="fas fa-file-alt mr-1"></i> CV
+                                    </a>
+                                    <a href="{{ route('admin.results.interview-processing', $posting) }}"
+                                       class="inline-flex items-center px-3 py-1.5 bg-purple-600 text-white text-xs font-medium rounded hover:bg-purple-700 transition-colors"
+                                       title="Procesar entrevistas">
+                                        <i class="fas fa-users mr-1"></i> Entrevista
+                                    </a>
+                                    <a href="{{ route('admin.results.final-calculation', $posting) }}"
+                                       class="inline-flex items-center px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded hover:bg-green-700 transition-colors"
+                                       title="Calcular puntaje final">
+                                        <i class="fas fa-calculator mr-1"></i> Final
+                                    </a>
+                                    <a href="{{ route('admin.results.winner-assignment', $posting) }}"
+                                       class="inline-flex items-center px-3 py-1.5 bg-yellow-600 text-white text-xs font-medium rounded hover:bg-yellow-700 transition-colors"
+                                       title="Asignar ganadores">
+                                        <i class="fas fa-trophy mr-1"></i> Ganadores
+                                    </a>
+                                </div>
                             </td>
                         </tr>
                         @endforeach
