@@ -100,14 +100,14 @@
                             <div>
                                 <label class="text-sm text-gray-600 mb-1 block">Nombre Completo</label>
                                 <p class="font-semibold text-gray-900">
-                                    {{ $evaluation->application->applicant->full_name ?? 'N/A' }}
+                                    {{ $evaluation->application->full_name ?? 'N/A' }}
                                 </p>
                             </div>
 
                             <div>
-                                <label class="text-sm text-gray-600 mb-1 block">Número de Postulación</label>
+                                <label class="text-sm text-gray-600 mb-1 block">Codigo de Postulación</label>
                                 <p class="font-mono text-gray-900">
-                                    {{ $evaluation->application->application_number ?? 'N/A' }}
+                                    {{ $evaluation->application->code ?? 'N/A' }}
                                 </p>
                             </div>
 
