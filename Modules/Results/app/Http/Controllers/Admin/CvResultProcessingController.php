@@ -5,12 +5,14 @@ namespace Modules\Results\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Modules\Results\Services\CvResultProcessingService;
+use Modules\Document\Services\CvEvaluationReportService;
 use Modules\JobPosting\Entities\JobPosting;
 
 class CvResultProcessingController extends Controller
 {
     public function __construct(
-        private CvResultProcessingService $processingService
+        private CvResultProcessingService $processingService,
+        private CvEvaluationReportService $reportService
     ) {}
 
     /**
@@ -63,6 +65,20 @@ class CvResultProcessingController extends Controller
             return redirect()
                 ->back()
                 ->with('error', 'Error en procesamiento: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Descargar PDF con resultados de evaluación CV
+     */
+    public function downloadPdf(JobPosting $posting)
+    {
+        try {
+            return $this->reportService->downloadPdf($posting);
+        } catch (\Exception $e) {
+            return redirect()
+                ->back()
+                ->with('error', 'Error al generar PDF: ' . $e->getMessage());
         }
     }
 }

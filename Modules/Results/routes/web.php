@@ -54,6 +54,8 @@ Route::prefix('admin')->middleware(['auth'])->name('admin.results.')->group(func
         ->name('cv-processing.preview');
     Route::post('postings/{posting}/results/cv-processing/execute', [CvResultProcessingController::class, 'execute'])
         ->name('cv-processing.execute');
+    Route::get('postings/{posting}/results/cv-processing/download-pdf', [CvResultProcessingController::class, 'downloadPdf'])
+        ->name('cv-processing.download-pdf');
 
     // Acciones sobre publicaciones
     Route::post('results/{publication}/unpublish', [ResultPublicationController::class, 'unpublish'])

@@ -109,7 +109,7 @@
         <div class="p-6">
             <h3 class="text-lg font-semibold mb-4">Acciones</h3>
 
-            <div class="flex gap-4">
+            <div class="flex gap-4 flex-wrap">
                 @if($summary['evaluations_submitted'] > 0)
                     <form action="{{ route('admin.results.cv-processing.preview', $posting) }}" method="POST">
                         @csrf
@@ -126,6 +126,16 @@
                     <span class="text-sm text-gray-500 self-center">
                         No hay evaluaciones completadas para procesar
                     </span>
+                @endif
+
+                {{-- Descargar PDF de Resultados --}}
+                @if($summary['already_processed'] > 0)
+                    <a href="{{ route('admin.results.cv-processing.download-pdf', $posting) }}"
+                       class="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors inline-flex items-center"
+                       target="_blank">
+                        <i class="fas fa-file-pdf mr-2"></i>
+                        Descargar PDF de Resultados
+                    </a>
                 @endif
             </div>
         </div>
