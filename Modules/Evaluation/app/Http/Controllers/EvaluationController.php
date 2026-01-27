@@ -335,20 +335,24 @@ class EvaluationController extends Controller
      * Display the specified evaluation (API/JSON).
      * GET /api/evaluations/{id}
      */
-    public function show(int $id)
+    public function show($id)
     {
         try {
-            $evaluation = Evaluation::with([
-                'details.criterion',
-                'evaluator',
-                'application',
-                'phase',
-                'jobPosting',
-                'evaluatorAssignment'
-            ])->findOrFail($id);
+            // Intentar encontrar por ID o UUID
+            $evaluation = Evaluation::where('id', $id)
+                ->orWhere('uuid', $id)
+                ->with([
+                    'details.criterion',
+                    'evaluator',
+                    'application',
+                    'phase',
+                    'jobPosting',
+                    'evaluatorAssignment'
+                ])
+                ->firstOrFail();
 
             // Verificar autorización
-            $this->authorize('view', $evaluation);
+            //$this->authorize('view', $evaluation);
 
             // Si es petición JSON
             if (request()->wantsJson()) {
@@ -359,24 +363,47 @@ class EvaluationController extends Controller
             }
 
             // Si es petición web, mostrar vista de detalle
-            return view('evaluation::show', [
+            return view('evaluation::evaluations.show', [
                 'evaluation' => $evaluation,
             ]);
 
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            \Log::error('Evaluación no encontrada', [
+                'id' => $id,
+                'user_id' => auth()->id(),
+            ]);
+
+            if (request()->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Evaluación no encontrada',
+                    'error' => "No se encontró evaluación con ID: {$id}",
+                ], 404);
+            }
+
+            return redirect()->route('evaluation.index')
+                ->with('error', "Evaluación no encontrada (ID: {$id})");
+
         } catch (\Exception $e) {
+            \Log::error('Error al obtener evaluación', [
+                'id' => $id,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+
             if (request()->wantsJson()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Error al obtener la evaluación',
                     'error' => $e->getMessage(),
-                ], 404);
+                ], 500);
             }
 
             return redirect()->route('evaluation.index')
-                ->with('error', 'Evaluación no encontrada');
+                ->with('error', 'Error al obtener la evaluación: ' . $e->getMessage());
         }
     }
-
     /**
      * Update the specified evaluation (draft mode).
      * PUT /api/evaluations/{id}

@@ -342,7 +342,7 @@
                     <div class="ml-3 flex-1">
                         <h3 class="text-xl font-bold text-red-800 mb-2">Declarado NO APTO</h3>
                         <p class="text-sm text-red-700 mb-4">
-                            Lamentablemente, según la evaluación automática de elegibilidad, no cumples con los requisitos mínimos del perfil.
+                            Lamentablemente, según la evaluación correspondiente, no cumples con los requisitos mínimos del perfil.
                         </p>
 
                         @if($application->ineligibility_reason)

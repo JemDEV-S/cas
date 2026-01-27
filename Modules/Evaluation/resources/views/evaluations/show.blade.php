@@ -420,7 +420,7 @@
                                     {{ $evaluation->evaluator->full_name ?? 'N/A' }}
                                 </p>
                                 <p class="text-xs text-gray-600">
-                                    {{ $evaluation->evaluator->email }}
+                                    {{ $evaluation->evaluator->email ?? 'N/A' }}
                                 </p>
                             </div>
                         </div>
