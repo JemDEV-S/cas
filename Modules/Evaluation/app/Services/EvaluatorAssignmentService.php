@@ -206,7 +206,9 @@ class EvaluatorAssignmentService
     }
 
     /**
-     * Distribución automática de postulaciones entre jurados (Round-Robin)
+     * Distribución automática de postulaciones entre jurados (Round-Robin con Fallback Inteligente)
+     *
+     * MEJORADO: Ahora maneja conflictos de interés intentando con otros jurados
      *
      * @param string $jobPostingId
      * @param string $phaseId
@@ -230,32 +232,117 @@ class EvaluatorAssignmentService
         $jurorCount = $juryAssignments->count();
         $assignments = [];
         $errors = [];
+        $conflictErrors = [];
+        $unassignableApplications = [];
 
-        // Distribuir equitativamente usando round-robin
+        // Contador de asignaciones por jurado para mantener balance
+        $jurorWorkload = array_fill_keys($juryAssignments->pluck('user_id')->toArray(), 0);
+
+        // Distribuir equitativamente usando round-robin con fallback
         foreach ($applicationIds as $index => $applicationId) {
-            $jurorIndex = $index % $jurorCount;
-            $juryAssignment = $juryAssignments[$jurorIndex];
+            $assigned = false;
+            $attemptedJurors = [];
 
-            try {
-                $assignments[] = $this->assignEvaluator([
-                    'user_id' => $juryAssignment->user_id,
-                    'application_id' => $applicationId,
-                    'phase_id' => $phaseId,
-                    'assignment_type' => 'AUTOMATIC',
-                ]);
-            } catch (\Exception $e) {
-                $errors[] = [
-                    'application_id' => $applicationId,
-                    'error' => $e->getMessage(),
-                ];
+            // Intentar con el jurado que le toca por round-robin
+            $startIndex = $index % $jurorCount;
+
+            // Intentar con todos los jurados (empezando por el que le toca)
+            for ($attempt = 0; $attempt < $jurorCount; $attempt++) {
+                $jurorIndex = ($startIndex + $attempt) % $jurorCount;
+                $juryAssignment = $juryAssignments[$jurorIndex];
+                $userId = $juryAssignment->user_id;
+
+                // Evitar reintentar con el mismo jurado
+                if (in_array($userId, $attemptedJurors)) {
+                    continue;
+                }
+
+                $attemptedJurors[] = $userId;
+
+                try {
+                    $assignment = $this->assignEvaluator([
+                        'user_id' => $userId,
+                        'application_id' => $applicationId,
+                        'phase_id' => $phaseId,
+                        'assignment_type' => 'AUTOMATIC',
+                    ]);
+
+                    $assignments[] = $assignment;
+                    $jurorWorkload[$userId]++;
+                    $assigned = true;
+
+                    Log::info("Asignación exitosa", [
+                        'applicationId' => $applicationId,
+                        'userId' => $userId,
+                        'attempt' => $attempt + 1,
+                        'wasConflict' => $attempt > 0,
+                    ]);
+
+                    break; // Salir del loop de intentos
+                } catch (\Exception $e) {
+                    $errorMessage = $e->getMessage();
+
+                    // Distinguir entre conflictos de interés y otros errores
+                    if (str_contains($errorMessage, 'conflicto') || str_contains($errorMessage, 'interés')) {
+                        Log::info("Conflicto detectado, intentando con siguiente jurado", [
+                            'applicationId' => $applicationId,
+                            'userId' => $userId,
+                            'attempt' => $attempt + 1,
+                            'reason' => $errorMessage,
+                        ]);
+
+                        $conflictErrors[] = [
+                            'application_id' => $applicationId,
+                            'user_id' => $userId,
+                            'error' => $errorMessage,
+                        ];
+
+                        // Si es el último intento, registrar como no asignable
+                        if ($attempt === $jurorCount - 1) {
+                            $unassignableApplications[] = [
+                                'application_id' => $applicationId,
+                                'reason' => 'Todos los jurados tienen conflictos de interés',
+                                'attempted_jurors' => count($attemptedJurors),
+                            ];
+
+                            Log::warning("Postulación sin evaluador disponible", [
+                                'applicationId' => $applicationId,
+                                'attemptedJurors' => $attemptedJurors,
+                                'reason' => 'Todos los jurados tienen conflictos de interés',
+                            ]);
+                        }
+
+                        continue; // Intentar con siguiente jurado
+                    } else {
+                        // Error no relacionado con conflictos (ej: ya asignado)
+                        Log::error("Error no relacionado con conflictos", [
+                            'applicationId' => $applicationId,
+                            'userId' => $userId,
+                            'error' => $errorMessage,
+                        ]);
+
+                        $errors[] = [
+                            'application_id' => $applicationId,
+                            'user_id' => $userId,
+                            'error' => $errorMessage,
+                        ];
+
+                        break; // No intentar con otros jurados para errores no conflicto
+                    }
+                }
             }
         }
 
         return [
             'success' => count($assignments),
             'errors' => count($errors),
+            'conflicts' => count($conflictErrors),
+            'unassignable' => count($unassignableApplications),
             'assignments' => $assignments,
             'error_details' => $errors,
+            'conflict_details' => $conflictErrors,
+            'unassignable_details' => $unassignableApplications,
+            'juror_workload' => $jurorWorkload,
         ];
     }
 
@@ -265,7 +352,7 @@ class EvaluatorAssignmentService
      *
      * @param string $jobPostingId
      * @param string $phaseId
-     * @param bool $onlyUnassigned Si true, solo asigna postulaciones sin asignación previa
+     * @param bool $onlyUnassigned Si true, solo asigna postulaciones sin asignación previa o evaluación
      * @return array
      */
     public function distributeByJobPosting(
@@ -285,6 +372,7 @@ class EvaluatorAssignmentService
                 'message' => 'No hay perfiles de puesto en esta convocatoria',
                 'assignments' => [],
                 'error_details' => [],
+                'metrics' => [],
             ];
         }
 
@@ -294,34 +382,155 @@ class EvaluatorAssignmentService
 
         // Si solo queremos las no asignadas, filtrar
         if ($onlyUnassigned) {
+            // Excluir postulaciones con asignaciones activas
             $applicationsQuery->whereDoesntHave('evaluatorAssignments', function($query) use ($phaseId) {
                 $query->where('phase_id', $phaseId)
                       ->active();
+            });
+
+            // MEJORADO: También excluir postulaciones con evaluaciones en progreso o completadas
+            $applicationsQuery->whereDoesntHave('evaluations', function($query) use ($phaseId) {
+                $query->where('phase_id', $phaseId)
+                      ->whereIn('status', [
+                          \Modules\Evaluation\Enums\EvaluationStatusEnum::IN_PROGRESS->value,
+                          \Modules\Evaluation\Enums\EvaluationStatusEnum::SUBMITTED->value,
+                          \Modules\Evaluation\Enums\EvaluationStatusEnum::MODIFIED->value,
+                      ]);
             });
         }
 
         $applications = $applicationsQuery->get();
 
         if ($applications->isEmpty()) {
+            // Obtener métricas para entender por qué no hay postulaciones
+            $metrics = $this->getDistributionMetrics($jobPostingId, $phaseId);
+
             return [
                 'success' => 0,
                 'errors' => 0,
-                'message' => 'No hay postulaciones disponibles para asignar',
+                'message' => 'No hay postulaciones disponibles para asignar. Todas las postulaciones elegibles ya tienen asignación o evaluación.',
                 'assignments' => [],
                 'error_details' => [],
+                'metrics' => $metrics,
             ];
         }
 
         // Obtener IDs de postulaciones
         $applicationIds = $applications->pluck('id')->toArray();
 
+        // Obtener métricas antes de asignar
+        $metricsBeforeAssignment = $this->getDistributionMetrics($jobPostingId, $phaseId);
+
         // Usar el método distributeApplications existente
         $result = $this->distributeApplications($jobPostingId, $phaseId, $applicationIds);
 
         $result['total_applications'] = count($applicationIds);
         $result['message'] = "Se asignaron {$result['success']} de {$result['total_applications']} postulaciones";
+        $result['metrics'] = $metricsBeforeAssignment;
 
         return $result;
+    }
+
+    /**
+     * Obtener métricas detalladas del estado de distribución
+     *
+     * @param string $jobPostingId
+     * @param string $phaseId
+     * @return array
+     */
+    public function getDistributionMetrics(string $jobPostingId, string $phaseId): array
+    {
+        // Obtener todos los job_profile_ids que pertenecen a esta convocatoria
+        $jobProfileIds = \Modules\JobProfile\Entities\JobProfile::where('job_posting_id', $jobPostingId)
+            ->pluck('id')
+            ->toArray();
+
+        if (empty($jobProfileIds)) {
+            return [
+                'total_eligible' => 0,
+                'without_assignment' => 0,
+                'with_assignment_no_evaluation' => 0,
+                'with_evaluation_in_progress' => 0,
+                'with_evaluation_completed' => 0,
+                'available_to_assign' => 0,
+            ];
+        }
+
+        // Total de postulaciones elegibles
+        $totalEligible = \Modules\Application\Entities\Application::whereIn('job_profile_id', $jobProfileIds)
+            ->where('status', \Modules\Application\Enums\ApplicationStatus::ELIGIBLE)
+            ->count();
+
+        // Postulaciones sin asignación en esta fase
+        $withoutAssignment = \Modules\Application\Entities\Application::whereIn('job_profile_id', $jobProfileIds)
+            ->where('status', \Modules\Application\Enums\ApplicationStatus::ELIGIBLE)
+            ->whereDoesntHave('evaluatorAssignments', function($query) use ($phaseId) {
+                $query->where('phase_id', $phaseId)->active();
+            })
+            ->whereDoesntHave('evaluations', function($query) use ($phaseId) {
+                $query->where('phase_id', $phaseId);
+            })
+            ->count();
+
+        // Postulaciones con asignación pero sin evaluación creada
+        $withAssignmentNoEvaluation = \Modules\Application\Entities\Application::whereIn('job_profile_id', $jobProfileIds)
+            ->where('status', \Modules\Application\Enums\ApplicationStatus::ELIGIBLE)
+            ->whereHas('evaluatorAssignments', function($query) use ($phaseId) {
+                $query->where('phase_id', $phaseId)->active();
+            })
+            ->whereDoesntHave('evaluations', function($query) use ($phaseId) {
+                $query->where('phase_id', $phaseId);
+            })
+            ->count();
+
+        // Postulaciones con evaluación en progreso
+        $withEvaluationInProgress = \Modules\Application\Entities\Application::whereIn('job_profile_id', $jobProfileIds)
+            ->where('status', \Modules\Application\Enums\ApplicationStatus::ELIGIBLE)
+            ->whereHas('evaluations', function($query) use ($phaseId) {
+                $query->where('phase_id', $phaseId)
+                      ->whereIn('status', [
+                          \Modules\Evaluation\Enums\EvaluationStatusEnum::ASSIGNED->value,
+                          \Modules\Evaluation\Enums\EvaluationStatusEnum::IN_PROGRESS->value,
+                      ]);
+            })
+            ->count();
+
+        // Postulaciones con evaluación completada
+        $withEvaluationCompleted = \Modules\Application\Entities\Application::whereIn('job_profile_id', $jobProfileIds)
+            ->where('status', \Modules\Application\Enums\ApplicationStatus::ELIGIBLE)
+            ->whereHas('evaluations', function($query) use ($phaseId) {
+                $query->where('phase_id', $phaseId)
+                      ->whereIn('status', [
+                          \Modules\Evaluation\Enums\EvaluationStatusEnum::SUBMITTED->value,
+                          \Modules\Evaluation\Enums\EvaluationStatusEnum::MODIFIED->value,
+                      ]);
+            })
+            ->count();
+
+        // Disponibles para asignar (sin asignación activa ni evaluaciones en progreso/completadas)
+        $availableToAssign = \Modules\Application\Entities\Application::whereIn('job_profile_id', $jobProfileIds)
+            ->where('status', \Modules\Application\Enums\ApplicationStatus::ELIGIBLE)
+            ->whereDoesntHave('evaluatorAssignments', function($query) use ($phaseId) {
+                $query->where('phase_id', $phaseId)->active();
+            })
+            ->whereDoesntHave('evaluations', function($query) use ($phaseId) {
+                $query->where('phase_id', $phaseId)
+                      ->whereIn('status', [
+                          \Modules\Evaluation\Enums\EvaluationStatusEnum::IN_PROGRESS->value,
+                          \Modules\Evaluation\Enums\EvaluationStatusEnum::SUBMITTED->value,
+                          \Modules\Evaluation\Enums\EvaluationStatusEnum::MODIFIED->value,
+                      ]);
+            })
+            ->count();
+
+        return [
+            'total_eligible' => $totalEligible,
+            'without_assignment' => $withoutAssignment,
+            'with_assignment_no_evaluation' => $withAssignmentNoEvaluation,
+            'with_evaluation_in_progress' => $withEvaluationInProgress,
+            'with_evaluation_completed' => $withEvaluationCompleted,
+            'available_to_assign' => $availableToAssign,
+        ];
     }
 
     /**

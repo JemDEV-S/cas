@@ -66,17 +66,23 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             // Vistas
             Route::get('/', [EvaluatorAssignmentController::class, 'index'])->name('index');
+            Route::get('applications', [EvaluatorAssignmentController::class, 'applications'])->name('applications');
+
+            // AJAX Endpoints (retornan JSON) - DEBEN IR ANTES DE {id}
+            Route::get('available-evaluators', [EvaluatorAssignmentController::class, 'availableEvaluators'])
+                ->name('available-evaluators')
+                ->withoutMiddleware('can:assign-evaluators'); // Permitir a todos ver evaluadores
+
+            Route::get('distribution-metrics', [EvaluatorAssignmentController::class, 'distributionMetrics'])
+                ->name('distribution-metrics');
+
+            // Rutas con parámetros dinámicos - DEBEN IR AL FINAL
             Route::get('{id}', [EvaluatorAssignmentController::class, 'show'])->name('show');
 
             // Acciones
             Route::post('/', [EvaluatorAssignmentController::class, 'store'])->name('store');
             Route::post('auto-assign', [EvaluatorAssignmentController::class, 'autoAssign'])->name('auto-assign');
             Route::delete('{id}', [EvaluatorAssignmentController::class, 'destroy'])->name('destroy');
-
-            // AJAX Endpoints (retornan JSON)
-            Route::get('available-evaluators', [EvaluatorAssignmentController::class, 'availableEvaluators'])
-                ->name('available-evaluators')
-                ->withoutMiddleware('can:assign-evaluators'); // Permitir a todos ver evaluadores
         });
 
     // ========================================

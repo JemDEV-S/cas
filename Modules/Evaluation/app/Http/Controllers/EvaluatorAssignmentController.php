@@ -233,6 +233,216 @@ class EvaluatorAssignmentController extends Controller
     }
 
     /**
+     * Vista de postulaciones activas con estado de evaluación
+     * GET /evaluator-assignments/applications
+     */
+    public function applications(Request $request)
+    {
+        try {
+            // Obtener filtros
+            $jobPostingId = $request->input('job_posting_id');
+            $phaseId = $request->input('phase_id');
+            $evaluationStatus = $request->input('evaluation_status');
+            $assignmentStatus = $request->input('assignment_status');
+            $evaluatorId = $request->input('evaluator_id');
+            $search = $request->input('search');
+
+            // Query base
+            $query = \Modules\Application\Entities\Application::query()
+                ->with([
+                    'applicant',
+                    'jobProfile.jobPosting',
+                    'evaluatorAssignments' => function($q) use ($phaseId) {
+                        if ($phaseId) {
+                            $q->where('phase_id', $phaseId);
+                        }
+                        $q->with(['user', 'phase']);
+                    },
+                    'evaluations' => function($q) use ($phaseId) {
+                        if ($phaseId) {
+                            $q->where('phase_id', $phaseId);
+                        }
+                        $q->with(['evaluator', 'phase']);
+                    }
+                ])
+                ->where('status', \Modules\Application\Enums\ApplicationStatus::ELIGIBLE);
+
+            // Filtro de búsqueda por texto
+            if ($search) {
+                $query->where(function($q) use ($search) {
+                    $q->where('full_name', 'like', "%{$search}%")
+                      ->orWhere('dni', 'like', "%{$search}%")
+                      ->orWhere('code', 'like', "%{$search}%");
+                });
+            }
+
+            // Filtro por convocatoria
+            if ($jobPostingId) {
+                $query->whereHas('jobProfile', function($q) use ($jobPostingId) {
+                    $q->where('job_posting_id', $jobPostingId);
+                });
+            }
+
+            // Filtro por estado de evaluación
+            if ($evaluationStatus) {
+                if ($evaluationStatus === 'WITHOUT_EVALUATION') {
+                    $query->whereDoesntHave('evaluations', function($q) use ($phaseId) {
+                        if ($phaseId) {
+                            $q->where('phase_id', $phaseId);
+                        }
+                    });
+                } else {
+                    $query->whereHas('evaluations', function($q) use ($phaseId, $evaluationStatus) {
+                        if ($phaseId) {
+                            $q->where('phase_id', $phaseId);
+                        }
+                        $q->where('status', $evaluationStatus);
+                    });
+                }
+            }
+
+            // Filtro por estado de asignación
+            if ($assignmentStatus) {
+                if ($assignmentStatus === 'WITHOUT_ASSIGNMENT') {
+                    $query->whereDoesntHave('evaluatorAssignments', function($q) use ($phaseId) {
+                        if ($phaseId) {
+                            $q->where('phase_id', $phaseId);
+                        }
+                    });
+                } else {
+                    $query->whereHas('evaluatorAssignments', function($q) use ($phaseId, $assignmentStatus) {
+                        if ($phaseId) {
+                            $q->where('phase_id', $phaseId);
+                        }
+                        $q->where('status', $assignmentStatus);
+                    });
+                }
+            }
+
+            // Filtro por evaluador
+            if ($evaluatorId) {
+                $query->whereHas('evaluatorAssignments', function($q) use ($phaseId, $evaluatorId) {
+                    if ($phaseId) {
+                        $q->where('phase_id', $phaseId);
+                    }
+                    $q->where('user_id', $evaluatorId);
+                });
+            }
+
+            // Ordenar
+            $query->orderBy('created_at', 'desc');
+
+            $applications = $query->paginate(30);
+
+            // Obtener datos para filtros
+            $jobPostings = \Modules\JobPosting\Entities\JobPosting::where('status', 'PUBLICADA')
+                ->orderBy('created_at', 'desc')
+                ->limit(50)
+                ->get(['id', 'title', 'code']);
+
+            $phases = \Modules\JobPosting\Entities\ProcessPhase::where('is_active', true)
+                ->orderBy('order')
+                ->get(['id', 'name']);
+
+            // Obtener evaluadores (jurados) para filtro
+            $evaluators = \Modules\User\Entities\User::whereHas('juryAssignments', function($q) {
+                $q->where('status', 'ACTIVE');
+            })->get(['id', 'first_name', 'last_name', 'email']);
+
+            // Estadísticas
+            $stats = $this->calculateApplicationStats($jobPostingId, $phaseId);
+
+            return view('evaluation::assignments.applications', compact(
+                'applications',
+                'jobPostings',
+                'phases',
+                'evaluators',
+                'stats'
+            ));
+
+        } catch (\Exception $e) {
+            \Log::error('Error in applications view: ' . $e->getMessage());
+            \Log::error($e->getTraceAsString());
+
+            return view('evaluation::assignments.applications', [
+                'applications' => new \Illuminate\Pagination\LengthAwarePaginator([], 0, 30),
+                'jobPostings' => collect([]),
+                'phases' => collect([]),
+                'evaluators' => collect([]),
+                'stats' => [],
+            ])->with('error', 'Error al cargar las postulaciones: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Calcular estadísticas de postulaciones
+     */
+    private function calculateApplicationStats($jobPostingId, $phaseId): array
+    {
+        $query = \Modules\Application\Entities\Application::where('status', \Modules\Application\Enums\ApplicationStatus::ELIGIBLE);
+
+        if ($jobPostingId) {
+            $query->whereHas('jobProfile', function($q) use ($jobPostingId) {
+                $q->where('job_posting_id', $jobPostingId);
+            });
+        }
+
+        $total = $query->count();
+
+        // Con asignación
+        $withAssignment = (clone $query)->whereHas('evaluatorAssignments', function($q) use ($phaseId) {
+            if ($phaseId) {
+                $q->where('phase_id', $phaseId);
+            }
+        })->count();
+
+        // Sin asignación
+        $withoutAssignment = (clone $query)->whereDoesntHave('evaluatorAssignments', function($q) use ($phaseId) {
+            if ($phaseId) {
+                $q->where('phase_id', $phaseId);
+            }
+        })->count();
+
+        // Con evaluación
+        $withEvaluation = (clone $query)->whereHas('evaluations', function($q) use ($phaseId) {
+            if ($phaseId) {
+                $q->where('phase_id', $phaseId);
+            }
+        })->count();
+
+        // Evaluaciones completadas
+        $evaluationsCompleted = (clone $query)->whereHas('evaluations', function($q) use ($phaseId) {
+            if ($phaseId) {
+                $q->where('phase_id', $phaseId);
+            }
+            $q->whereIn('status', [
+                \Modules\Evaluation\Enums\EvaluationStatusEnum::SUBMITTED->value,
+                \Modules\Evaluation\Enums\EvaluationStatusEnum::MODIFIED->value,
+            ]);
+        })->count();
+
+        // Evaluaciones en progreso
+        $evaluationsInProgress = (clone $query)->whereHas('evaluations', function($q) use ($phaseId) {
+            if ($phaseId) {
+                $q->where('phase_id', $phaseId);
+            }
+            $q->whereIn('status', [
+                \Modules\Evaluation\Enums\EvaluationStatusEnum::ASSIGNED->value,
+                \Modules\Evaluation\Enums\EvaluationStatusEnum::IN_PROGRESS->value,
+            ]);
+        })->count();
+
+        return [
+            'total' => $total,
+            'with_assignment' => $withAssignment,
+            'without_assignment' => $withoutAssignment,
+            'with_evaluation' => $withEvaluation,
+            'evaluations_completed' => $evaluationsCompleted,
+            'evaluations_in_progress' => $evaluationsInProgress,
+        ];
+    }
+
+    /**
      * Obtener evaluadores disponibles
      * ACTUALIZADO: Ahora usa JuryAssignmentService
      */
@@ -264,8 +474,41 @@ class EvaluatorAssignmentController extends Controller
     }
 
     /**
+     * Obtener métricas de distribución antes de asignar
+     * GET /evaluator-assignments/distribution-metrics
+     */
+    public function distributionMetrics(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'job_posting_id' => ['required', 'string', 'exists:job_postings,id'],
+            'phase_id' => ['required', 'string', 'exists:process_phases,id'],
+        ]);
+
+        try {
+            $metrics = $this->assignmentService->getDistributionMetrics(
+                $validated['job_posting_id'],
+                $validated['phase_id']
+            );
+
+            return response()->json([
+                'success' => true,
+                'data' => $metrics,
+                'message' => 'Métricas obtenidas exitosamente',
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error getting distribution metrics: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    /**
      * Asignación automática masiva
      * Distribuye todas las postulaciones de una convocatoria entre los jurados
+     * MEJORADO: Ahora excluye postulaciones con evaluaciones en progreso o completadas
      */
     public function autoAssign(Request $request)
     {
@@ -282,17 +525,34 @@ class EvaluatorAssignmentController extends Controller
                 $validated['only_unassigned'] ?? true
             );
 
+            // Construir mensaje detallado
+            $message = $result['message'];
+            if (isset($result['unassignable']) && $result['unassignable'] > 0) {
+                $message .= " | {$result['unassignable']} postulaciones sin evaluador disponible (todos los jurados tienen conflictos)";
+            }
+            if (isset($result['conflicts']) && $result['conflicts'] > 0) {
+                $message .= " | {$result['conflicts']} conflictos de interés resueltos automáticamente";
+            }
+
             if ($request->wantsJson() || $request->is('api/*')) {
                 return response()->json([
                     'success' => true,
-                    'message' => $result['message'],
+                    'message' => $message,
                     'data' => $result,
                 ]);
             }
 
+            $flashMessage = $message;
+            $flashType = 'success';
+
+            // Si hay postulaciones sin asignar por conflictos, cambiar a warning
+            if (isset($result['unassignable']) && $result['unassignable'] > 0) {
+                $flashType = 'warning';
+            }
+
             return redirect()->route('evaluator-assignments.index', [
                 'job_posting_id' => $validated['job_posting_id']
-            ])->with('success', $result['message']);
+            ])->with($flashType, $flashMessage);
 
         } catch (\Exception $e) {
             \Log::error('Error in auto-assign: ' . $e->getMessage());

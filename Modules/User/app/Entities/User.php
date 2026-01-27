@@ -106,6 +106,11 @@ class User extends Authenticatable
             ->get();
     }
 
+    public function juryAssignments(): HasMany
+    {
+        return $this->hasMany(\Modules\Jury\Entities\JuryAssignment::class, 'user_id');
+    }
+
     /**
      * Obtener todos los IDs de unidades organizacionales del usuario
      * incluyendo todas las unidades descendientes (hijas, nietas, etc.)

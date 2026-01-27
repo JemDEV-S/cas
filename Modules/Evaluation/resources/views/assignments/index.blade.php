@@ -17,6 +17,11 @@
                 </div>
                 @can('assign-evaluators')
                 <div class="flex space-x-3">
+                    <a href="{{ route('evaluator-assignments.applications') }}"
+                       class="inline-flex items-center px-5 py-3 bg-white border-2 border-indigo-600 rounded-lg shadow-sm text-sm font-semibold text-indigo-600 hover:bg-indigo-50 transition-all duration-150">
+                        <i class="fas fa-clipboard-list mr-2"></i>
+                        Ver Postulaciones
+                    </a>
                     <button
                         @click="showDistributionModal = true"
                         class="inline-flex items-center px-5 py-3 bg-gradient-to-r from-green-600 to-green-700 border border-transparent rounded-lg shadow-md text-sm font-semibold text-white hover:from-green-700 hover:to-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-150">
@@ -205,6 +210,99 @@
                             </div>
                         </div>
                     </div>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+        @endif
+
+        <!-- Asignaciones por Fase -->
+        @if(isset($assignments) && $assignments->count() > 0)
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-8">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
+                <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                    <i class="fas fa-layer-group text-gray-600 mr-2"></i>
+                    Asignaciones por Fase
+                </h3>
+            </div>
+            <div class="p-6">
+                @php
+                    $assignmentsByPhase = $assignments->groupBy('phase_id');
+                @endphp
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    @foreach($assignmentsByPhase as $phaseId => $phaseAssignments)
+                        @php
+                            $phase = $phaseAssignments->first()->phase;
+                            $totalPhase = $phaseAssignments->count();
+                            $pendingPhase = $phaseAssignments->where('status', 'PENDING')->count();
+                            $inProgressPhase = $phaseAssignments->where('status', 'IN_PROGRESS')->count();
+                            $completedPhase = $phaseAssignments->where('status', 'COMPLETED')->count();
+                            $progressPercentage = $totalPhase > 0 ? round(($completedPhase / $totalPhase) * 100) : 0;
+                        @endphp
+                        <div class="bg-gradient-to-br from-white to-purple-50 rounded-lg border-2 border-purple-200 p-5 hover:shadow-xl transition-all duration-300">
+                            <div class="flex items-center justify-between mb-4">
+                                <h4 class="font-bold text-gray-900 text-lg">{{ $phase->name ?? 'Sin fase' }}</h4>
+                                <div class="bg-purple-100 rounded-full p-2">
+                                    <i class="fas fa-clipboard-check text-purple-600"></i>
+                                </div>
+                            </div>
+
+                            <div class="space-y-3 mb-4">
+                                <div class="flex justify-between items-center text-sm">
+                                    <span class="text-gray-600 flex items-center">
+                                        <i class="fas fa-list-check text-gray-400 mr-2 w-4"></i>
+                                        Total:
+                                    </span>
+                                    <span class="font-bold text-gray-900">{{ $totalPhase }}</span>
+                                </div>
+                                <div class="flex justify-between items-center text-sm">
+                                    <span class="text-gray-600 flex items-center">
+                                        <i class="fas fa-clock text-yellow-500 mr-2 w-4"></i>
+                                        Pendientes:
+                                    </span>
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                        {{ $pendingPhase }}
+                                    </span>
+                                </div>
+                                <div class="flex justify-between items-center text-sm">
+                                    <span class="text-gray-600 flex items-center">
+                                        <i class="fas fa-spinner text-blue-500 mr-2 w-4"></i>
+                                        En progreso:
+                                    </span>
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                        {{ $inProgressPhase }}
+                                    </span>
+                                </div>
+                                <div class="flex justify-between items-center text-sm">
+                                    <span class="text-gray-600 flex items-center">
+                                        <i class="fas fa-check-circle text-green-500 mr-2 w-4"></i>
+                                        Completadas:
+                                    </span>
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        {{ $completedPhase }}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="pt-4 border-t border-purple-200">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-xs font-medium text-gray-600">Progreso de fase</span>
+                                    <span class="text-xs font-bold text-purple-700">{{ $progressPercentage }}%</span>
+                                </div>
+                                <div class="w-full bg-purple-100 rounded-full h-3 overflow-hidden">
+                                    <div class="bg-gradient-to-r from-purple-500 to-purple-600 h-3 rounded-full transition-all duration-500"
+                                         style="width: {{ $progressPercentage }}%"></div>
+                                </div>
+                            </div>
+
+                            <div class="mt-4">
+                                <a href="{{ route('evaluator-assignments.index', ['phase_id' => $phaseId]) }}"
+                                   class="block w-full text-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium">
+                                    <i class="fas fa-filter mr-2"></i>
+                                    Ver asignaciones
+                                </a>
+                            </div>
+                        </div>
                     @endforeach
                 </div>
             </div>
@@ -423,6 +521,7 @@
                                 Fase de Evaluación *
                             </label>
                             <select x-model="distribution.phase_id"
+                                    @change="loadDistributionMetrics()"
                                     required
                                     class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all">
                                 <option value="">Seleccione una fase...</option>
@@ -430,6 +529,71 @@
                                     <option value="{{ $phase->id }}">{{ $phase->name }}</option>
                                 @endforeach
                             </select>
+                        </div>
+
+                        <!-- Métricas de Distribución -->
+                        <div x-show="metrics.loaded" x-cloak class="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200 rounded-xl p-5">
+                            <h4 class="text-indigo-900 font-semibold mb-4 flex items-center">
+                                <i class="fas fa-chart-pie mr-2"></i>
+                                Estado Actual de Postulaciones
+                            </h4>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="bg-white rounded-lg p-3 shadow-sm">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <p class="text-xs text-gray-600 mb-1">Total Elegibles</p>
+                                            <p class="text-2xl font-bold text-gray-900" x-text="metrics.total_eligible"></p>
+                                        </div>
+                                        <div class="bg-gray-100 rounded-full p-3">
+                                            <i class="fas fa-users text-gray-600"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="bg-white rounded-lg p-3 shadow-sm">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <p class="text-xs text-gray-600 mb-1">Disponibles</p>
+                                            <p class="text-2xl font-bold text-green-600" x-text="metrics.available_to_assign"></p>
+                                        </div>
+                                        <div class="bg-green-100 rounded-full p-3">
+                                            <i class="fas fa-check-circle text-green-600"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="bg-white rounded-lg p-3 shadow-sm">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <p class="text-xs text-gray-600 mb-1">En Progreso</p>
+                                            <p class="text-2xl font-bold text-blue-600" x-text="metrics.with_evaluation_in_progress"></p>
+                                        </div>
+                                        <div class="bg-blue-100 rounded-full p-3">
+                                            <i class="fas fa-spinner text-blue-600"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="bg-white rounded-lg p-3 shadow-sm">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <p class="text-xs text-gray-600 mb-1">Completadas</p>
+                                            <p class="text-2xl font-bold text-purple-600" x-text="metrics.with_evaluation_completed"></p>
+                                        </div>
+                                        <div class="bg-purple-100 rounded-full p-3">
+                                            <i class="fas fa-check-double text-purple-600"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Mensaje de advertencia si no hay disponibles -->
+                            <div x-show="metrics.available_to_assign === 0 && metrics.total_eligible > 0"
+                                 class="mt-4 bg-yellow-100 border border-yellow-300 rounded-lg p-3">
+                                <div class="flex items-center">
+                                    <i class="fas fa-exclamation-triangle text-yellow-600 mr-2"></i>
+                                    <p class="text-sm text-yellow-800 font-medium">
+                                        No hay postulaciones disponibles para asignar. Todas ya tienen evaluación asignada, en progreso o completada.
+                                    </p>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Opciones -->
@@ -440,7 +604,7 @@
                                     class="mt-1 rounded border-gray-300 text-green-600 shadow-sm focus:border-green-300 focus:ring focus:ring-green-200 focus:ring-opacity-50">
                                 <span class="ml-3">
                                     <span class="text-sm font-medium text-gray-900">Solo postulaciones sin asignar</span>
-                                    <span class="block text-xs text-gray-600 mt-1">Distribuir únicamente postulaciones que no tienen evaluador asignado en esta fase</span>
+                                    <span class="block text-xs text-gray-600 mt-1">Excluye postulaciones con asignación activa o con evaluaciones en progreso/completadas</span>
                                 </span>
                             </label>
                         </div>
@@ -454,23 +618,23 @@
                             <ul class="text-sm text-green-800 space-y-2">
                                 <li class="flex items-start">
                                     <i class="fas fa-check-circle text-green-600 mr-2 mt-0.5"></i>
-                                    <span>Obtiene todas las postulaciones <strong>SUBMITTED</strong> de la convocatoria</span>
+                                    <span>Obtiene postulaciones <strong>ELEGIBLES</strong> sin asignación ni evaluación</span>
                                 </li>
                                 <li class="flex items-start">
-                                    <i class="fas fa-check-circle text-green-600 mr-2 mt-0.5"></i>
+                                    <i class="fas fa-shield-halved text-green-600 mr-2 mt-0.5"></i>
+                                    <span>Excluye postulaciones con <strong>evaluaciones en progreso o completadas</strong></span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-users text-green-600 mr-2 mt-0.5"></i>
                                     <span>Obtiene todos los jurados <strong>ACTIVOS</strong> asignados</span>
                                 </li>
                                 <li class="flex items-start">
-                                    <i class="fas fa-check-circle text-green-600 mr-2 mt-0.5"></i>
+                                    <i class="fas fa-arrows-rotate text-green-600 mr-2 mt-0.5"></i>
                                     <span>Distribuye <strong>equitativamente</strong> usando algoritmo round-robin</span>
                                 </li>
                                 <li class="flex items-start">
-                                    <i class="fas fa-check-circle text-green-600 mr-2 mt-0.5"></i>
+                                    <i class="fas fa-user-shield text-green-600 mr-2 mt-0.5"></i>
                                     <span>Verifica <strong>conflictos de interés</strong> automáticamente</span>
-                                </li>
-                                <li class="flex items-start">
-                                    <i class="fas fa-check-circle text-green-600 mr-2 mt-0.5"></i>
-                                    <span>Respeta <strong>dependency_scope</strong> si está configurado</span>
                                 </li>
                             </ul>
                         </div>
@@ -502,11 +666,11 @@
                             Cancelar
                         </button>
                         <button type="submit"
-                                :disabled="isDistributing"
-                                :class="isDistributing ? 'opacity-50 cursor-not-allowed' : ''"
+                                :disabled="isDistributing || (metrics.loaded && metrics.available_to_assign === 0)"
+                                :class="(isDistributing || (metrics.loaded && metrics.available_to_assign === 0)) ? 'opacity-50 cursor-not-allowed' : ''"
                                 class="px-6 py-2.5 bg-gradient-to-r from-green-600 to-green-700 text-white border border-transparent rounded-lg shadow-md hover:from-green-700 hover:to-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all font-semibold">
                             <i :class="isDistributing ? 'fas fa-spinner fa-spin' : 'fas fa-magic'" class="mr-2"></i>
-                            <span x-text="isDistributing ? 'Distribuyendo...' : 'Distribuir Ahora'"></span>
+                            <span x-text="isDistributing ? 'Distribuyendo...' : (metrics.loaded && metrics.available_to_assign === 0 ? 'Sin postulaciones disponibles' : 'Distribuir Ahora')"></span>
                         </button>
                     </div>
                 </form>
@@ -526,10 +690,20 @@ function assignmentManager() {
             only_unassigned: true
         },
         juryPreview: [],
+        metrics: {
+            loaded: false,
+            total_eligible: 0,
+            without_assignment: 0,
+            with_assignment_no_evaluation: 0,
+            with_evaluation_in_progress: 0,
+            with_evaluation_completed: 0,
+            available_to_assign: 0,
+        },
 
         async loadJuryStats() {
             if (!this.distribution.job_posting_id) {
                 this.juryPreview = [];
+                this.metrics.loaded = false;
                 return;
             }
 
@@ -538,6 +712,47 @@ function assignmentManager() {
             this.juryPreview = [
                 { id: 1, name: 'Jurado ejemplo', workload: 5 }
             ];
+
+            // Si también hay fase seleccionada, cargar métricas
+            if (this.distribution.phase_id) {
+                await this.loadDistributionMetrics();
+            }
+        },
+
+        async loadDistributionMetrics() {
+            if (!this.distribution.job_posting_id || !this.distribution.phase_id) {
+                this.metrics.loaded = false;
+                return;
+            }
+
+            try {
+                const url = new URL('{{ route('evaluator-assignments.distribution-metrics') }}');
+                url.searchParams.append('job_posting_id', this.distribution.job_posting_id);
+                url.searchParams.append('phase_id', this.distribution.phase_id);
+
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    this.metrics = {
+                        loaded: true,
+                        ...data.data
+                    };
+                } else {
+                    console.error('Error loading metrics:', data.message);
+                    this.metrics.loaded = false;
+                }
+            } catch (error) {
+                console.error('Error loading distribution metrics:', error);
+                this.metrics.loaded = false;
+            }
         },
 
         async distributeApplications() {
@@ -546,7 +761,20 @@ function assignmentManager() {
                 return;
             }
 
-            if (!confirm('¿Está seguro de realizar la distribución automática? Se asignarán las postulaciones equitativamente entre todos los jurados disponibles.')) {
+            // Verificar si hay postulaciones disponibles
+            if (this.metrics.loaded && this.metrics.available_to_assign === 0) {
+                alert('No hay postulaciones disponibles para asignar. Todas las postulaciones elegibles ya tienen asignación o evaluación.');
+                return;
+            }
+
+            let confirmMessage = '¿Está seguro de realizar la distribución automática?';
+            if (this.metrics.loaded) {
+                confirmMessage += `\n\nSe asignarán ${this.metrics.available_to_assign} postulaciones disponibles equitativamente entre todos los jurados.`;
+            } else {
+                confirmMessage += '\n\nSe asignarán las postulaciones equitativamente entre todos los jurados disponibles.';
+            }
+
+            if (!confirm(confirmMessage)) {
                 return;
             }
 
@@ -570,7 +798,26 @@ function assignmentManager() {
                 const data = await response.json();
 
                 if (data.success) {
-                    alert(data.message || 'Distribución automática completada exitosamente');
+                    let message = data.message || 'Distribución automática completada exitosamente';
+
+                    // Agregar detalles de la distribución si están disponibles
+                    if (data.data) {
+                        message += `\n\n✅ Asignaciones exitosas: ${data.data.success || 0}`;
+
+                        if (data.data.conflicts > 0) {
+                            message += `\n⚠️ Conflictos resueltos: ${data.data.conflicts} (se asignó otro jurado automáticamente)`;
+                        }
+
+                        if (data.data.unassignable > 0) {
+                            message += `\n❌ Sin evaluador disponible: ${data.data.unassignable} (todos los jurados tienen conflictos)`;
+                        }
+
+                        if (data.data.errors > 0) {
+                            message += `\n⛔ Otros errores: ${data.data.errors}`;
+                        }
+                    }
+
+                    alert(message);
                     window.location.reload();
                 } else {
                     alert(data.message || 'Error en la distribución automática');
