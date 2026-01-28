@@ -482,7 +482,7 @@
                             </span>
                         </td>
                         <td class="comment-text">
-                            {{ $application->evaluation_comments ? Str::limit($application->evaluation_comments, 120) : '-' }}
+                            {{ $application->evaluation_comments ?? '-' }}
                         </td>
                     </tr>
                     @endforeach
