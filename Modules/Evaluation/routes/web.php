@@ -5,7 +5,8 @@ use Modules\Evaluation\Http\Controllers\{
     EvaluationController,
     EvaluatorAssignmentController,
     EvaluationCriterionController,
-    AutomaticEvaluationController
+    AutomaticEvaluationController,
+    InterviewScheduleController
 };
 
 /*
@@ -82,6 +83,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             // Acciones
             Route::post('/', [EvaluatorAssignmentController::class, 'store'])->name('store');
             Route::post('auto-assign', [EvaluatorAssignmentController::class, 'autoAssign'])->name('auto-assign');
+            Route::post('manual-distribute', [EvaluatorAssignmentController::class, 'manualDistribute'])->name('manual-distribute');
             Route::delete('{id}', [EvaluatorAssignmentController::class, 'destroy'])->name('destroy');
         });
 
@@ -138,5 +140,34 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('application/{id}', [AutomaticEvaluationController::class, 'viewApplicationEvaluation'])
                 ->name('application')
                 ->can('viewAny', \Modules\Evaluation\Policies\AutomaticEvaluationPolicy::class);
+        });
+
+    // ========================================
+    // INTERVIEW SCHEDULES - Cronograma de Entrevistas
+    // ========================================
+    Route::prefix('interview-schedules')
+        ->name('interview-schedules.')
+        ->middleware('can:assign-evaluators')
+        ->group(function () {
+
+            // Vista principal del cronograma
+            Route::get('/', [InterviewScheduleController::class, 'index'])
+                ->name('index');
+
+            // Programar entrevista
+            Route::post('schedule', [InterviewScheduleController::class, 'schedule'])
+                ->name('schedule');
+
+            // Asignación automática de entrevistas
+            Route::post('auto-schedule', [InterviewScheduleController::class, 'autoSchedule'])
+                ->name('auto-schedule');
+
+            // Generar PDF del cronograma
+            Route::get('pdf', [InterviewScheduleController::class, 'generatePDF'])
+                ->name('pdf');
+
+            // Eliminar programación
+            Route::delete('{id}', [InterviewScheduleController::class, 'unschedule'])
+                ->name('unschedule');
         });
 });

@@ -89,3 +89,15 @@ Route::prefix('regenerate')->name('regenerate.')->middleware(['web', 'auth'])->g
     Route::post('/schedule/{jobPosting}', [JobPostingController::class, 'regenerateSchedule'])
          ->name('schedule');
 });
+
+/*
+|--------------------------------------------------------------------------
+| API de Datos para Módulos
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['web', 'auth'])->group(function () {
+    // Obtener unidades orgánicas de una convocatoria
+    Route::get('/job-postings/{id}/requesting-units', [JobPostingController::class, 'getRequestingUnits'])
+         ->name('job-postings.requesting-units');
+});

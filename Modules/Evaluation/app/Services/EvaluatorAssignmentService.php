@@ -627,4 +627,179 @@ class EvaluatorAssignmentService
             })->values(),
         ];
     }
+
+    /**
+     * Distribución manual sin restricciones de conflictos
+     *
+     * ADVERTENCIA: Este método NO verifica conflictos de interés.
+     * Usar solo cuando se necesite asignar manualmente sin restricciones.
+     *
+     * @param string $jobPostingId
+     * @param string $phaseId
+     * @param string $userId ID del jurado a asignar
+     * @param bool $onlyUnassigned Si true, solo asigna postulaciones sin asignación previa
+     * @return array
+     */
+    public function manualDistributeWithoutRestrictions(
+        string $jobPostingId,
+        string $phaseId,
+        string $userId,
+        bool $onlyUnassigned = true
+    ): array {
+        Log::info("Iniciando distribución manual sin restricciones", [
+            'jobPostingId' => $jobPostingId,
+            'phaseId' => $phaseId,
+            'userId' => $userId,
+            'onlyUnassigned' => $onlyUnassigned,
+        ]);
+
+        // Verificar que el usuario es un jurado asignado a la convocatoria
+        $juryAssignment = JuryAssignment::where('user_id', $userId)
+            ->where('job_posting_id', $jobPostingId)
+            ->where('status', 'ACTIVE')
+            ->first();
+
+        if (!$juryAssignment) {
+            throw new \Exception('El usuario no está asignado como jurado en esta convocatoria');
+        }
+
+        if (!$juryAssignment->canEvaluate()) {
+            throw new \Exception('El jurado no puede evaluar en este momento');
+        }
+
+        // Obtener todos los job_profile_ids que pertenecen a esta convocatoria
+        $jobProfileIds = \Modules\JobProfile\Entities\JobProfile::where('job_posting_id', $jobPostingId)
+            ->pluck('id')
+            ->toArray();
+
+        if (empty($jobProfileIds)) {
+            return [
+                'success' => 0,
+                'errors' => 0,
+                'message' => 'No hay perfiles de puesto en esta convocatoria',
+                'assignments' => [],
+                'error_details' => [],
+            ];
+        }
+
+        // Obtener todas las postulaciones de los perfiles de esta convocatoria
+        $applicationsQuery = \Modules\Application\Entities\Application::whereIn('job_profile_id', $jobProfileIds)
+            ->where('status', \Modules\Application\Enums\ApplicationStatus::ELIGIBLE);
+
+        // Si solo queremos las no asignadas, filtrar
+        if ($onlyUnassigned) {
+            // Excluir postulaciones con asignaciones activas
+            $applicationsQuery->whereDoesntHave('evaluatorAssignments', function($query) use ($phaseId) {
+                $query->where('phase_id', $phaseId)
+                      ->active();
+            });
+
+            // También excluir postulaciones con evaluaciones en progreso o completadas
+            $applicationsQuery->whereDoesntHave('evaluations', function($query) use ($phaseId) {
+                $query->where('phase_id', $phaseId)
+                      ->whereIn('status', [
+                          \Modules\Evaluation\Enums\EvaluationStatusEnum::IN_PROGRESS->value,
+                          \Modules\Evaluation\Enums\EvaluationStatusEnum::SUBMITTED->value,
+                          \Modules\Evaluation\Enums\EvaluationStatusEnum::MODIFIED->value,
+                      ]);
+            });
+        }
+
+        $applications = $applicationsQuery->get();
+
+        if ($applications->isEmpty()) {
+            $metrics = $this->getDistributionMetrics($jobPostingId, $phaseId);
+
+            return [
+                'success' => 0,
+                'errors' => 0,
+                'message' => 'No hay postulaciones disponibles para asignar. Todas las postulaciones elegibles ya tienen asignación o evaluación.',
+                'assignments' => [],
+                'error_details' => [],
+                'metrics' => $metrics,
+            ];
+        }
+
+        $assignments = [];
+        $errors = [];
+        $skipped = [];
+
+        // Asignar TODAS las postulaciones al mismo jurado SIN verificar conflictos
+        foreach ($applications as $application) {
+            try {
+                // Verificar solo si ya existe asignación para esta combinación
+                $existing = EvaluatorAssignment::where('user_id', $userId)
+                    ->where('application_id', $application->id)
+                    ->where('phase_id', $phaseId)
+                    ->first();
+
+                if ($existing) {
+                    $skipped[] = [
+                        'application_id' => $application->id,
+                        'reason' => 'Ya existe asignación para este evaluador en esta fase',
+                    ];
+                    continue;
+                }
+
+                // Crear asignación SIN verificar conflictos
+                $evaluatorAssignment = EvaluatorAssignment::create([
+                    'user_id' => $userId,
+                    'application_id' => $application->id,
+                    'phase_id' => $phaseId,
+                    'job_posting_id' => $jobPostingId,
+                    'assignment_type' => 'MANUAL',
+                    'assigned_by' => auth()->id(),
+                    'assigned_at' => now(),
+                    'metadata' => [
+                        'manual_distribution' => true,
+                        'without_conflict_check' => true,
+                        'assigned_at' => now()->toDateTimeString(),
+                    ],
+                ]);
+
+                $assignments[] = $evaluatorAssignment;
+
+                Log::info("Asignación manual creada sin verificar conflictos", [
+                    'assignmentId' => $evaluatorAssignment->id,
+                    'userId' => $userId,
+                    'applicationId' => $application->id,
+                ]);
+
+            } catch (\Exception $e) {
+                Log::error("Error en asignación manual", [
+                    'applicationId' => $application->id,
+                    'userId' => $userId,
+                    'error' => $e->getMessage(),
+                ]);
+
+                $errors[] = [
+                    'application_id' => $application->id,
+                    'error' => $e->getMessage(),
+                ];
+            }
+        }
+
+        $totalApplications = $applications->count();
+        $successCount = count($assignments);
+        $errorCount = count($errors);
+        $skippedCount = count($skipped);
+
+        Log::info("Distribución manual sin restricciones completada", [
+            'total' => $totalApplications,
+            'success' => $successCount,
+            'errors' => $errorCount,
+            'skipped' => $skippedCount,
+        ]);
+
+        return [
+            'success' => $successCount,
+            'errors' => $errorCount,
+            'skipped' => $skippedCount,
+            'total_applications' => $totalApplications,
+            'message' => "Se asignaron {$successCount} de {$totalApplications} postulaciones al jurado seleccionado (sin verificar conflictos)",
+            'assignments' => $assignments,
+            'error_details' => $errors,
+            'skipped_details' => $skipped,
+        ];
+    }
 }

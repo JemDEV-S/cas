@@ -23,6 +23,12 @@
                         Ver Postulaciones
                     </a>
                     <button
+                        @click="showManualDistributionModal = true"
+                        class="inline-flex items-center px-5 py-3 bg-gradient-to-r from-orange-600 to-orange-700 border border-transparent rounded-lg shadow-md text-sm font-semibold text-white hover:from-orange-700 hover:to-orange-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-all duration-150">
+                        <i class="fas fa-hand-pointer mr-2"></i>
+                        Distribución Manual
+                    </button>
+                    <button
                         @click="showDistributionModal = true"
                         class="inline-flex items-center px-5 py-3 bg-gradient-to-r from-green-600 to-green-700 border border-transparent rounded-lg shadow-md text-sm font-semibold text-white hover:from-green-700 hover:to-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-150">
                         <i class="fas fa-magic mr-2"></i>
@@ -677,19 +683,246 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal de Distribución Manual (Sin Restricciones) -->
+    <div x-show="showManualDistributionModal"
+        x-cloak
+        class="fixed inset-0 z-50 overflow-y-auto"
+        aria-labelledby="manual-modal-title"
+        role="dialog"
+        aria-modal="true"
+        @keydown.escape.window="showManualDistributionModal = false">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <!-- Background overlay -->
+            <div x-show="showManualDistributionModal"
+                x-transition:enter="ease-out duration-300"
+                x-transition:enter-start="opacity-0"
+                x-transition:enter-end="opacity-100"
+                x-transition:leave="ease-in duration-200"
+                x-transition:leave-start="opacity-100"
+                x-transition:leave-end="opacity-0"
+                class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+                @click="showManualDistributionModal = false"
+                aria-hidden="true"></div>
+
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+            <!-- Modal panel -->
+            <div x-show="showManualDistributionModal"
+                x-transition:enter="ease-out duration-300"
+                x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                x-transition:leave="ease-in duration-200"
+                x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                @click.outside="showManualDistributionModal = false"
+                class="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full relative z-10">
+
+                <form @submit.prevent="manualDistributeApplications()">
+                    <!-- Header -->
+                    <div class="bg-gradient-to-r from-orange-600 to-orange-700 px-6 py-5">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <div class="bg-white bg-opacity-20 rounded-lg p-3 mr-4">
+                                    <i class="fas fa-hand-pointer text-white text-2xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-bold text-white" id="manual-modal-title">
+                                        Distribución Manual Sin Restricciones
+                                    </h3>
+                                    <p class="text-orange-100 text-sm mt-1">Asignar todas las postulaciones a un jurado específico</p>
+                                </div>
+                            </div>
+                            <button type="button"
+                                    @click="showManualDistributionModal = false"
+                                    class="text-white hover:text-orange-100 transition-colors">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Body -->
+                    <div class="px-6 py-6 space-y-5">
+                        <!-- Advertencia importante -->
+                        <div class="bg-red-50 border-2 border-red-300 rounded-xl p-4">
+                            <div class="flex items-start">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-exclamation-triangle text-red-600 text-2xl"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <h4 class="text-red-900 font-bold text-sm mb-2">⚠️ ADVERTENCIA: Distribución sin restricciones</h4>
+                                    <ul class="text-sm text-red-800 space-y-1">
+                                        <li class="flex items-start">
+                                            <i class="fas fa-times-circle text-red-600 mr-2 mt-0.5 flex-shrink-0"></i>
+                                            <span><strong>NO</strong> se verificarán conflictos de interés</span>
+                                        </li>
+                                        <li class="flex items-start">
+                                            <i class="fas fa-times-circle text-red-600 mr-2 mt-0.5 flex-shrink-0"></i>
+                                            <span><strong>Todas</strong> las postulaciones se asignarán al jurado seleccionado</span>
+                                        </li>
+                                        <li class="flex items-start">
+                                            <i class="fas fa-check-circle text-red-600 mr-2 mt-0.5 flex-shrink-0"></i>
+                                            <span>Usar solo cuando sea necesario saltarse las validaciones automáticas</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Convocatoria -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                <i class="fas fa-briefcase text-gray-400 mr-2"></i>
+                                Convocatoria *
+                            </label>
+                            <select x-model="manualDistribution.job_posting_id"
+                                    @change="loadManualJuryList(); loadDistributionMetrics()"
+                                    required
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all">
+                                <option value="">Seleccione una convocatoria...</option>
+                                @foreach($jobPostings ?? [] as $posting)
+                                    <option value="{{ $posting->id }}">{{ $posting->title }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <!-- Fase -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                <i class="fas fa-layer-group text-gray-400 mr-2"></i>
+                                Fase de Evaluación *
+                            </label>
+                            <select x-model="manualDistribution.phase_id"
+                                    @change="loadDistributionMetrics()"
+                                    required
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all">
+                                <option value="">Seleccione una fase...</option>
+                                @foreach($phases ?? [] as $phase)
+                                    <option value="{{ $phase->id }}">{{ $phase->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <!-- Jurado -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                <i class="fas fa-user-tie text-gray-400 mr-2"></i>
+                                Jurado a Asignar *
+                            </label>
+                            <select x-model="manualDistribution.user_id"
+                                    required
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all">
+                                <option value="">Seleccione un jurado...</option>
+                                <template x-for="juror in manualJuryList" :key="juror.id">
+                                    <option :value="juror.user_id" x-text="juror.name + ' (' + juror.role + ') - Carga: ' + juror.workload"></option>
+                                </template>
+                            </select>
+                            <p class="text-xs text-gray-500 mt-2">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                Se mostrarán solo los jurados activos de la convocatoria seleccionada
+                            </p>
+                        </div>
+
+                        <!-- Métricas de Distribución -->
+                        <div x-show="metrics.loaded" x-cloak class="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200 rounded-xl p-5">
+                            <h4 class="text-indigo-900 font-semibold mb-4 flex items-center">
+                                <i class="fas fa-chart-pie mr-2"></i>
+                                Estado Actual de Postulaciones
+                            </h4>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="bg-white rounded-lg p-3 shadow-sm">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <p class="text-xs text-gray-600 mb-1">Total Elegibles</p>
+                                            <p class="text-2xl font-bold text-gray-900" x-text="metrics.total_eligible"></p>
+                                        </div>
+                                        <div class="bg-gray-100 rounded-full p-3">
+                                            <i class="fas fa-users text-gray-600"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="bg-white rounded-lg p-3 shadow-sm">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <p class="text-xs text-gray-600 mb-1">Disponibles</p>
+                                            <p class="text-2xl font-bold text-green-600" x-text="metrics.available_to_assign"></p>
+                                        </div>
+                                        <div class="bg-green-100 rounded-full p-3">
+                                            <i class="fas fa-check-circle text-green-600"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Mensaje de advertencia si no hay disponibles -->
+                            <div x-show="metrics.available_to_assign === 0 && metrics.total_eligible > 0"
+                                 class="mt-4 bg-yellow-100 border border-yellow-300 rounded-lg p-3">
+                                <div class="flex items-center">
+                                    <i class="fas fa-exclamation-triangle text-yellow-600 mr-2"></i>
+                                    <p class="text-sm text-yellow-800 font-medium">
+                                        No hay postulaciones disponibles para asignar. Todas ya tienen evaluación asignada, en progreso o completada.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Opciones -->
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <label class="flex items-start cursor-pointer">
+                                <input type="checkbox"
+                                    x-model="manualDistribution.only_unassigned"
+                                    class="mt-1 rounded border-gray-300 text-orange-600 shadow-sm focus:border-orange-300 focus:ring focus:ring-orange-200 focus:ring-opacity-50">
+                                <span class="ml-3">
+                                    <span class="text-sm font-medium text-gray-900">Solo postulaciones sin asignar</span>
+                                    <span class="block text-xs text-gray-600 mt-1">Excluye postulaciones con asignación activa o con evaluaciones en progreso/completadas</span>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="bg-gray-50 px-6 py-4 flex items-center justify-between border-t border-gray-200">
+                        <button type="button"
+                                @click="showManualDistributionModal = false"
+                                :disabled="isManualDistributing"
+                                class="px-6 py-2.5 text-gray-700 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i class="fas fa-times mr-2"></i>
+                            Cancelar
+                        </button>
+                        <button type="submit"
+                                :disabled="isManualDistributing || !manualDistribution.user_id || (metrics.loaded && metrics.available_to_assign === 0)"
+                                :class="(isManualDistributing || !manualDistribution.user_id || (metrics.loaded && metrics.available_to_assign === 0)) ? 'opacity-50 cursor-not-allowed' : ''"
+                                class="px-6 py-2.5 bg-gradient-to-r from-orange-600 to-orange-700 text-white border border-transparent rounded-lg shadow-md hover:from-orange-700 hover:to-orange-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-all font-semibold">
+                            <i :class="isManualDistributing ? 'fas fa-spinner fa-spin' : 'fas fa-hand-pointer'" class="mr-2"></i>
+                            <span x-text="isManualDistributing ? 'Distribuyendo...' : (metrics.loaded && metrics.available_to_assign === 0 ? 'Sin postulaciones disponibles' : 'Asignar Todo al Jurado')"></span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
 function assignmentManager() {
     return {
         showDistributionModal: false,
+        showManualDistributionModal: false,
         isDistributing: false,
+        isManualDistributing: false,
         distribution: {
             job_posting_id: '',
             phase_id: '',
             only_unassigned: true
         },
+        manualDistribution: {
+            job_posting_id: '',
+            phase_id: '',
+            user_id: '',
+            only_unassigned: true
+        },
         juryPreview: [],
+        manualJuryList: [],
         metrics: {
             loaded: false,
             total_eligible: 0,
@@ -720,15 +953,24 @@ function assignmentManager() {
         },
 
         async loadDistributionMetrics() {
-            if (!this.distribution.job_posting_id || !this.distribution.phase_id) {
+            // Determinar qué modal está abierto
+            const jobPostingId = this.showManualDistributionModal
+                ? this.manualDistribution.job_posting_id
+                : this.distribution.job_posting_id;
+
+            const phaseId = this.showManualDistributionModal
+                ? this.manualDistribution.phase_id
+                : this.distribution.phase_id;
+
+            if (!jobPostingId || !phaseId) {
                 this.metrics.loaded = false;
                 return;
             }
 
             try {
                 const url = new URL('{{ route('evaluator-assignments.distribution-metrics') }}');
-                url.searchParams.append('job_posting_id', this.distribution.job_posting_id);
-                url.searchParams.append('phase_id', this.distribution.phase_id);
+                url.searchParams.append('job_posting_id', jobPostingId);
+                url.searchParams.append('phase_id', phaseId);
 
                 const response = await fetch(url, {
                     method: 'GET',
@@ -752,6 +994,143 @@ function assignmentManager() {
             } catch (error) {
                 console.error('Error loading distribution metrics:', error);
                 this.metrics.loaded = false;
+            }
+        },
+
+        async loadManualJuryList() {
+            if (!this.manualDistribution.job_posting_id) {
+                this.manualJuryList = [];
+                return;
+            }
+
+            try {
+                // Obtener la convocatoria desde la variable jobPostings
+                const jobPostings = @json($jobPostings ?? []);
+                const selectedJobPosting = jobPostings.find(jp => jp.id === this.manualDistribution.job_posting_id);
+
+                if (!selectedJobPosting) {
+                    this.manualJuryList = [];
+                    return;
+                }
+
+                // Aquí podrías hacer una petición AJAX para obtener los jurados específicos
+                // Por simplicidad, vamos a usar una llamada a la base de datos
+                const response = await fetch(`/api/jury-assignments?job_posting_id=${this.manualDistribution.job_posting_id}&status=ACTIVE`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    this.manualJuryList = data.data || [];
+                } else {
+                    // Fallback: obtener de los workloadStats si está disponible
+                    const workloadStats = @json($workloadStats ?? []);
+                    this.manualJuryList = workloadStats.map(stat => ({
+                        id: stat.user_id,
+                        user_id: stat.user_id,
+                        name: stat.evaluator_name,
+                        role: stat.role,
+                        workload: stat.total
+                    }));
+                }
+            } catch (error) {
+                console.error('Error loading jury list:', error);
+                // Fallback usando workloadStats
+                const workloadStats = @json($workloadStats ?? []);
+                this.manualJuryList = workloadStats.map(stat => ({
+                    id: stat.user_id,
+                    user_id: stat.user_id,
+                    name: stat.evaluator_name,
+                    role: stat.role,
+                    workload: stat.total
+                }));
+            }
+        },
+
+        async manualDistributeApplications() {
+            if (!this.manualDistribution.job_posting_id ||
+                !this.manualDistribution.phase_id ||
+                !this.manualDistribution.user_id) {
+                alert('Por favor complete todos los campos requeridos');
+                return;
+            }
+
+            // Verificar si hay postulaciones disponibles
+            if (this.metrics.loaded && this.metrics.available_to_assign === 0) {
+                alert('No hay postulaciones disponibles para asignar. Todas las postulaciones elegibles ya tienen asignación o evaluación.');
+                return;
+            }
+
+            const selectedJuror = this.manualJuryList.find(j => j.user_id == this.manualDistribution.user_id);
+            const jurorName = selectedJuror ? selectedJuror.name : 'el jurado seleccionado';
+
+            let confirmMessage = `⚠️ ADVERTENCIA: Distribución Manual Sin Restricciones\n\n`;
+            confirmMessage += `Está a punto de asignar TODAS las postulaciones disponibles a:\n`;
+            confirmMessage += `👤 ${jurorName}\n\n`;
+            confirmMessage += `⚠️ IMPORTANTE:\n`;
+            confirmMessage += `• NO se verificarán conflictos de interés\n`;
+            confirmMessage += `• Se omitirán todas las validaciones automáticas\n`;
+
+            if (this.metrics.loaded) {
+                confirmMessage += `\n📊 Se asignarán ${this.metrics.available_to_assign} postulaciones disponibles\n`;
+            }
+
+            confirmMessage += `\n¿Está seguro de continuar?`;
+
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+
+            this.isManualDistributing = true;
+
+            const formData = new FormData();
+            formData.append('_token', '{{ csrf_token() }}');
+            formData.append('job_posting_id', this.manualDistribution.job_posting_id);
+            formData.append('phase_id', this.manualDistribution.phase_id);
+            formData.append('user_id', this.manualDistribution.user_id);
+            formData.append('only_unassigned', this.manualDistribution.only_unassigned ? '1' : '0');
+
+            try {
+                const response = await fetch('{{ route('evaluator-assignments.manual-distribute') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    let message = data.message || 'Distribución manual completada exitosamente';
+
+                    // Agregar detalles de la distribución si están disponibles
+                    if (data.data) {
+                        message += `\n\n✅ Asignaciones exitosas: ${data.data.success || 0}`;
+
+                        if (data.data.skipped > 0) {
+                            message += `\n⏭️ Omitidas (ya asignadas): ${data.data.skipped}`;
+                        }
+
+                        if (data.data.errors > 0) {
+                            message += `\n❌ Errores: ${data.data.errors}`;
+                        }
+                    }
+
+                    alert(message);
+                    window.location.reload();
+                } else {
+                    alert(data.message || 'Error en la distribución manual');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al realizar la distribución manual');
+            } finally {
+                this.isManualDistributing = false;
             }
         },
 

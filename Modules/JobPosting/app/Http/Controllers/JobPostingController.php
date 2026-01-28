@@ -785,4 +785,42 @@ class JobPostingController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Obtener las unidades orgánicas (requesting units) de una convocatoria
+     * GET /api/job-postings/{id}/requesting-units
+     */
+    public function getRequestingUnits(string $id)
+    {
+        try {
+            $jobPosting = JobPosting::findOrFail($id);
+
+            // Obtener las unidades orgánicas únicas de los perfiles de esta convocatoria
+            $units = \Modules\JobProfile\Entities\JobProfile::where('job_posting_id', $id)
+                ->with('requestingUnit:id,name')
+                ->get()
+                ->pluck('requestingUnit')
+                ->filter()
+                ->unique('id')
+                ->sortBy('name')
+                ->values()
+                ->map(function($unit) {
+                    return [
+                        'id' => $unit->id,
+                        'name' => $unit->name,
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'data' => $units,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener unidades: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
 }

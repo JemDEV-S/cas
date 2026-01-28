@@ -569,6 +569,69 @@ class EvaluatorAssignmentController extends Controller
     }
 
     /**
+     * Distribución manual sin restricciones de conflictos
+     * ADVERTENCIA: Este método NO verifica conflictos de interés
+     *
+     * POST /evaluator-assignments/manual-distribute
+     */
+    public function manualDistribute(Request $request)
+    {
+        $validated = $request->validate([
+            'job_posting_id' => ['required', 'string', 'exists:job_postings,id'],
+            'phase_id' => ['required', 'string', 'exists:process_phases,id'],
+            'user_id' => ['required', 'string', 'exists:users,id'],
+            'only_unassigned' => ['nullable', 'boolean'],
+        ]);
+
+        try {
+            $result = $this->assignmentService->manualDistributeWithoutRestrictions(
+                $validated['job_posting_id'],
+                $validated['phase_id'],
+                $validated['user_id'],
+                $validated['only_unassigned'] ?? true
+            );
+
+            // Construir mensaje detallado
+            $message = $result['message'];
+            if (isset($result['skipped']) && $result['skipped'] > 0) {
+                $message .= " | {$result['skipped']} postulaciones omitidas (ya asignadas)";
+            }
+
+            if ($request->wantsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'success' => true,
+                    'message' => $message,
+                    'data' => $result,
+                ]);
+            }
+
+            $flashMessage = $message;
+            $flashType = 'success';
+
+            // Si hay errores, cambiar a warning
+            if (isset($result['errors']) && $result['errors'] > 0) {
+                $flashType = 'warning';
+            }
+
+            return redirect()->route('evaluator-assignments.index', [
+                'job_posting_id' => $validated['job_posting_id']
+            ])->with($flashType, $flashMessage);
+
+        } catch (\Exception $e) {
+            \Log::error('Error in manual-distribute: ' . $e->getMessage());
+
+            if ($request->wantsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                ], 422);
+            }
+
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
+    /**
      * Cancel an assignment.
      * DELETE /evaluator-assignments/{id}
      */

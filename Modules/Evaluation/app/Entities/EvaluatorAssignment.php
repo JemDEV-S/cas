@@ -29,6 +29,10 @@ class EvaluatorAssignment extends Model
         'deadline_at',
         'completed_at',
         'metadata',
+        'interview_scheduled_at',
+        'interview_duration_minutes',
+        'interview_location',
+        'interview_notes',
     ];
 
     protected $casts = [
@@ -37,6 +41,8 @@ class EvaluatorAssignment extends Model
         'assigned_at' => 'datetime',
         'deadline_at' => 'datetime',
         'completed_at' => 'datetime',
+        'interview_scheduled_at' => 'datetime',
+        'interview_duration_minutes' => 'integer',
         'metadata' => 'array',
     ];
 
