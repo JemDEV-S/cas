@@ -683,7 +683,8 @@ function interviewScheduleManager() {
             }
 
             try {
-                const response = await fetch(`/api/job-postings/${this.autoScheduleForm.job_posting_id}/requesting-units`, {
+                const url = "{{ route('api.job-postings.requesting-units', ['id' => '__ID__']) }}".replace('__ID__', this.autoScheduleForm.job_posting_id);
+                const response = await fetch(url, {
                     method: 'GET',
                     headers: {
                         'Accept': 'application/json',
