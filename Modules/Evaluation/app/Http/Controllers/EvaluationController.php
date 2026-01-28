@@ -739,8 +739,58 @@ class EvaluationController extends Controller
                 $query->where('job_posting_id', $request->input('job_posting_id'));
             }
 
+            // Filtro por estado específico
+            if ($request->has('status') && $request->input('status') != '') {
+                $query->where('status', $request->input('status'));
+            }
+
+            // Filtro por rango de puntaje
+            if ($request->has('min_score') && $request->input('min_score') !== '') {
+                $minScore = floatval($request->input('min_score'));
+                $query->where('percentage', '>=', $minScore);
+            }
+
+            if ($request->has('max_score') && $request->input('max_score') !== '') {
+                $maxScore = floatval($request->input('max_score'));
+                $query->where('percentage', '<=', $maxScore);
+            }
+
+            // Filtro por comentarios
+            if ($request->has('has_comments') && $request->input('has_comments') !== '') {
+                if ($request->input('has_comments') == '1') {
+                    // Con comentarios
+                    $query->whereNotNull('general_comments')
+                          ->where('general_comments', '!=', '');
+                } else {
+                    // Sin comentarios
+                    $query->where(function($q) {
+                        $q->whereNull('general_comments')
+                          ->orWhere('general_comments', '=', '');
+                    });
+                }
+            }
+
+            // Filtro por evaluaciones problemáticas (< 35 puntos sin comentarios)
+            if ($request->has('problematic') && $request->input('problematic') == '1') {
+                $query->where('total_score', '<', 35)
+                      ->where(function($q) {
+                          $q->whereNull('general_comments')
+                            ->orWhere('general_comments', '=', '');
+                      });
+            }
+
+            // Filtro por fecha de envío
+            if ($request->has('date_from') && $request->input('date_from') != '') {
+                $query->whereDate('submitted_at', '>=', $request->input('date_from'));
+            }
+
+            if ($request->has('date_to') && $request->input('date_to') != '') {
+                $query->whereDate('submitted_at', '<=', $request->input('date_to'));
+            }
+
             $evaluations = $query->orderBy('submitted_at', 'desc')
-                ->paginate($request->input('per_page', 15));
+                ->paginate($request->input('per_page', 15))
+                ->appends($request->query());
 
             // Obtener unidades orgánicas para filtros
             $organizationalUnits = \Modules\Organization\Entities\OrganizationalUnit::where('is_active', true)
@@ -766,6 +816,14 @@ class EvaluationController extends Controller
                 'average_score' => Evaluation::where('evaluator_id', $userId)
                     ->whereIn('status', [EvaluationStatusEnum::SUBMITTED, EvaluationStatusEnum::MODIFIED])
                     ->avg('percentage') ?? 0,
+                'problematic' => Evaluation::where('evaluator_id', $userId)
+                    ->whereIn('status', [EvaluationStatusEnum::SUBMITTED, EvaluationStatusEnum::MODIFIED])
+                    ->where('total_score', '<', 35)
+                    ->where(function($q) {
+                        $q->whereNull('general_comments')
+                          ->orWhere('general_comments', '=', '');
+                    })
+                    ->count(),
             ];
 
             // Si es petición API
