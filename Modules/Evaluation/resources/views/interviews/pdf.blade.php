@@ -120,6 +120,7 @@
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 10px;
+            table-layout: fixed;
         }
 
         th {
@@ -137,6 +138,7 @@
             border-bottom: 1px solid #E5E7EB;
             font-size: 8pt;
             vertical-align: top;
+            word-wrap: break-word;
         }
 
         tr:nth-child(even) {
@@ -199,6 +201,62 @@
             margin-top: 2px;
         }
 
+        .warnings-section {
+            margin: 25px 0 60px 0;
+            page-break-inside: avoid;
+            border: 2px solid #DC2626;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .warnings-header {
+            background: #DC2626;
+            color: white;
+            padding: 8px 12px;
+            font-size: 11pt;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .warnings-content {
+            background: #FEF2F2;
+            padding: 12px 15px;
+        }
+
+        .warning-item {
+            display: flex;
+            margin-bottom: 8px;
+            padding: 6px 8px;
+            background: white;
+            border-left: 3px solid #DC2626;
+            border-radius: 3px;
+            align-items: flex-start;
+        }
+
+        .warning-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .warning-number {
+            color: #DC2626;
+            font-weight: bold;
+            font-size: 9pt;
+            min-width: 20px;
+            margin-right: 8px;
+            flex-shrink: 0;
+        }
+
+        .warning-text {
+            font-size: 8pt;
+            color: #1F2937;
+            line-height: 1.5;
+        }
+
+        .warning-text strong {
+            color: #DC2626;
+            font-weight: bold;
+        }
+
         @media print {
             .page-break {
                 page-break-before: always;
@@ -257,7 +315,7 @@
                         $dayName = ucfirst($dateCarbon->locale('es')->isoFormat('dddd'));
                     @endphp
                     <div class="date-header">
-                        📅 {{ $dayName }}, {{ $dateCarbon->format('d/m/Y') }} ({{ $dayInterviews->count() }} entrevistas)
+                        {{ $dayName }}, {{ $dateCarbon->format('d/m/Y') }} ({{ $dayInterviews->count() }} entrevistas)
                     </div>
                 @endif
 
@@ -266,11 +324,10 @@
                     <table>
                         <thead>
                             <tr>
-                                <th style="width: 8%;">N°</th>
-                                <th style="width: 15%;">Código</th>
-                                <th style="width: 30%;">Postulante</th>
-                                <th style="width: 25%;">Perfil</th>
-                                <th style="width: 22%;">Ubicación</th>
+                                <th style="width: 10%;">N°</th>
+                                <th style="width: 30%;">Código</th>
+                                <th style="width: 60%;">Postulante</th>
+
                             </tr>
                         </thead>
                         <tbody>
@@ -284,20 +341,6 @@
                                     <span style="font-size: 6pt; color: #6B7280;">
                                         DNI: {{ $interview->application->dni ?? 'N/A' }}
                                     </span>
-                                </td>
-                                <td>
-                                    {{ $interview->application->jobProfile->positionCode->code ?? 'N/A' }}
-                                    <br>
-                                    <span style="font-size: 6pt; color: #6B7280;">
-                                        {{ $interview->application->jobProfile->requestingUnit->acronym ?? '' }}
-                                    </span>
-                                </td>
-                                <td>
-                                    @if($interview->interview_location)
-                                        📍 {{ \Str::limit($interview->interview_location, 20) }}
-                                    @else
-                                        <span style="color: #9CA3AF;">-</span>
-                                    @endif
                                 </td>
                             </tr>
                             @endforeach
@@ -315,21 +358,19 @@
                     @foreach($interviewsByHour as $hour => $hourInterviews)
                         <div class="time-section">
                             <div class="time-header">
-                                ⏰ {{ $hour }} ({{ $hourInterviews->count() }} postulantes)
+                                {{ $hour }} ({{ $hourInterviews->count() }} postulantes)
                                 @if($hourInterviews->first()->interview_location)
-                                    | 📍 {{ $hourInterviews->first()->interview_location }}
+                                    | {{ $hourInterviews->first()->interview_location }}
                                 @endif
                             </div>
 
                             <table>
                                 <thead>
                                     <tr>
-                                        <th style="width: 6%;">N°</th>
-                                        <th style="width: 13%;">Código</th>
-                                        <th style="width: 30%;">Postulante</th>
-                                        <th style="width: 28%;">Perfil</th>
-                                        <th style="width: 10%;">Evaluador</th>
-                                        <th style="width: 13%;">Estado</th>
+                                        <th style="width: 10%;">N°</th>
+                                        <th style="width: 25%;">Código</th>
+                                        <th style="width: 45%;">Postulante</th>
+                                        <th style="width: 20%;">Estado</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -343,16 +384,6 @@
                                             <span style="font-size: 6pt; color: #6B7280;">
                                                 DNI: {{ $interview->application->dni ?? 'N/A' }}
                                             </span>
-                                        </td>
-                                        <td>
-                                            {{ $interview->application->jobProfile->positionCode->code ?? 'N/A' }}
-                                            <br>
-                                            <span style="font-size: 6pt; color: #6B7280;">
-                                                {{ $interview->application->jobProfile->requestingUnit->acronym ?? '' }}
-                                            </span>
-                                        </td>
-                                        <td style="font-size: 7pt;">
-                                            {{ $interview->user->first_name ?? '' }} {{ substr($interview->user->last_name ?? '', 0, 1) }}.
                                         </td>
                                         <td>
                                             @if($interview->status->value === 'COMPLETED')
@@ -377,6 +408,39 @@
             <p>No hay entrevistas programadas para mostrar.</p>
         </div>
     @endif
+
+    <!-- Advertencias -->
+    <div class="warnings-section">
+        <div class="warnings-header">
+            ⚠️ ADVERTENCIAS IMPORTANTES
+        </div>
+        <div class="warnings-content">
+            <div class="warning-item">
+                <span class="warning-number">1.</span>
+                <span class="warning-text">Los postulantes deben presentarse <strong>10 MINUTOS ANTES</strong> de la hora citada. Se llamará a lista a la hora exacta programada.</span>
+            </div>
+            <div class="warning-item">
+                <span class="warning-number">2.</span>
+                <span class="warning-text">La ausencia o llegada tardía (después de la hora citada) resultará en la <strong>DESCALIFICACIÓN AUTOMÁTICA</strong> del proceso de selección.</span>
+            </div>
+            <div class="warning-item">
+                <span class="warning-number">3.</span>
+                <span class="warning-text">Es <strong>OBLIGATORIO</strong> presentar el DNI original. No se aceptarán copias ni documentos vencidos.</span>
+            </div>
+            <div class="warning-item">
+                <span class="warning-number">4.</span>
+                <span class="warning-text">Los postulantes deben presentarse con vestimenta <strong>FORMAL</strong> (no se permite jeans, zapatillas deportivas, ni ropa casual).</span>
+            </div>
+            <div class="warning-item">
+                <span class="warning-number">5.</span>
+                <span class="warning-text">No está permitido el uso de dispositivos electrónicos durante la entrevista. Los celulares deben permanecer <strong>APAGADOS</strong>.</span>
+            </div>
+            <div class="warning-item">
+                <span class="warning-number">6.</span>
+                <span class="warning-text">No se permiten acompañantes en la sala de espera. Solo ingresará el postulante.</span>
+            </div>
+        </div>
+    </div>
 
     <!-- Footer -->
     <div class="footer">
