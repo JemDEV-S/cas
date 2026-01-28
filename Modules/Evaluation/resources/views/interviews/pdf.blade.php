@@ -276,22 +276,6 @@
         </div>
     </div>
 
-    <!-- Statistics -->
-    <div class="stats-container">
-        <div class="stat-box">
-            <span class="stat-number">{{ $stats['total'] }}</span>
-            <span class="stat-label">Total Entrevistas</span>
-        </div>
-        <div class="stat-box">
-            <span class="stat-number">{{ $stats['scheduled'] }}</span>
-            <span class="stat-label">Programadas</span>
-        </div>
-        <div class="stat-box">
-            <span class="stat-number">{{ $stats['pending'] }}</span>
-            <span class="stat-label">Pendientes</span>
-        </div>
-    </div>
-
     <!-- Interviews by Date and Time -->
     @if($interviews->isNotEmpty())
         @php
