@@ -334,7 +334,7 @@ class EvaluationService
         ])->byEvaluator($evaluatorId);
 
         if (isset($filters['status'])) {
-            $query->byStatus($filters['status']);
+            $query->where('evaluator_assignments.status', $filters['status']);
         }
 
         if (isset($filters['phase_id'])) {
@@ -348,11 +348,11 @@ class EvaluationService
         }
 
         if (isset($filters['pending_only']) && $filters['pending_only']) {
-            $query->pending();
+            $query->where('evaluator_assignments.status', \Modules\Evaluation\Enums\AssignmentStatusEnum::PENDING);
         }
 
         if (isset($filters['completed_only']) && $filters['completed_only']) {
-            $query->completed();
+            $query->where('evaluator_assignments.status', \Modules\Evaluation\Enums\AssignmentStatusEnum::COMPLETED);
         }
 
         // Ordenar por código de posición, luego por unidad orgánica, deadline y fecha de creación
