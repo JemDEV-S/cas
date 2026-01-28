@@ -310,7 +310,7 @@ function interviewEvaluationApp() {
         },
 
         autoSave(criterionId, score, comment) {
-            fetch(`/api/evaluations/${this.evaluationId}/details`, {
+            fetch('{{ route("evaluation.save-detail", $evaluation->id) }}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -335,7 +335,7 @@ function interviewEvaluationApp() {
             alert('Guardado automático activado. Los cambios se guardan automáticamente.');
         },
 
-        submitEvaluation() {
+        async submitEvaluation() {
             if (!this.canSubmit()) {
                 alert('Complete todos los campos requeridos antes de enviar');
                 return;
@@ -346,34 +346,53 @@ function interviewEvaluationApp() {
             }
 
             const payload = this.isDisqualified ? {
+                confirm: true,
                 disqualified: true,
                 disqualification_reason: this.disqualificationReason,
                 general_comments: this.disqualificationReason
             } : {
+                confirm: true,
                 general_comments: this.generalComments
             };
 
-            fetch(`/api/evaluations/${this.evaluationId}/submit`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                },
-                body: JSON.stringify(payload)
-            })
-            .then(response => response.json())
-            .then(data => {
+            try {
+                const response = await fetch('{{ route("evaluation.submit", $evaluation->id) }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                // Verificar el content-type de la respuesta
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    console.error('Respuesta no JSON:', text.substring(0, 500));
+                    alert('Error: El servidor devolvió una respuesta inválida');
+                    return;
+                }
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    alert('Error: ' + (data.message || data.error || 'Error desconocido'));
+                    return;
+                }
+
                 if (data.success) {
                     alert('Evaluación enviada exitosamente');
                     window.location.href = '{{ route("evaluation.index") }}';
                 } else {
                     alert('Error: ' + data.message);
                 }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error al enviar la evaluación');
-            });
+            } catch (error) {
+                console.error('Error completo:', error);
+                alert('Error al enviar la evaluación: ' + error.message);
+            }
         }
     }
 }

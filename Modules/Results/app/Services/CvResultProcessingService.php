@@ -108,7 +108,7 @@ class CvResultProcessingService
                 'score' => $score,
                 'current_score' => $currentScore,
                 'is_reprocess' => $isReprocess,
-                'evaluator' => $evaluation->evaluator?->name ?? 'N/A',
+                'evaluator' => $evaluation->evaluator?->first_name ?? 'N/A',
                 'comments' => $evaluation->general_comments,
             ];
 
