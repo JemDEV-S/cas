@@ -80,11 +80,23 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(
     Route::post('eligibility-override/{application}/reject', [EligibilityOverrideController::class, 'reject'])
         ->name('eligibility-override.reject');
 
-    // Generar PDF general de resoluciones por convocatoria
+    // Generar PDF de resoluciones por convocatoria (con filtros por fase)
     Route::get('eligibility-override/{posting}/pdf', [EligibilityOverrideController::class, 'generatePdf'])
         ->name('eligibility-override.pdf');
 
     // Ver ficha de postulación en nueva pestaña
     Route::get('eligibility-override/application/{application}/view-sheet', [EligibilityOverrideController::class, 'viewApplicationSheet'])
         ->name('eligibility-override.view-sheet');
+
+    // Revisar CV y modificar calificaciones (vista simple con panel dividido)
+    Route::get('eligibility-override/{application}/review-cv', [EligibilityOverrideController::class, 'reviewCV'])
+        ->name('eligibility-override.review-cv');
+
+    // Ver CV del postulante en iframe
+    Route::get('eligibility-override/{application}/view-cv', [EligibilityOverrideController::class, 'viewCV'])
+        ->name('eligibility-override.view-cv');
+
+    // Actualizar calificaciones de CV y resolver reclamo
+    Route::post('eligibility-override/{application}/update-cv-review', [EligibilityOverrideController::class, 'updateCVReview'])
+        ->name('eligibility-override.update-cv-review');
 });

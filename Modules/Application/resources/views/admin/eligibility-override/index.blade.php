@@ -16,13 +16,13 @@
                 </div>
                 <div class="flex space-x-2">
                     @if($resolvedApplications->count() > 0)
-                        <a href="{{ route('admin.eligibility-override.pdf', $posting->id) }}"
+                        <a href="{{ route('admin.eligibility-override.pdf', ['posting' => $posting->id, 'phase_id' => $phaseId, 'job_profile_id' => $jobProfileId]) }}"
                            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded inline-flex items-center"
                            target="_blank">
                             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                             </svg>
-                            Descargar PDF
+                            Descargar PDF {{ $phaseId ? '(Fase Filtrada)' : '' }}
                         </a>
                     @endif
                     <a href="{{ url()->previous() }}" class="bg-gray-500 hover:bg-gray-700 text-white px-4 py-2 rounded">
@@ -61,25 +61,57 @@
         </div>
     </div>
 
-    <!-- Filtro por perfil -->
+    <!-- Filtros por perfil y fase -->
     <div class="bg-white shadow sm:rounded-lg">
         <div class="px-6 py-4">
-            <form method="GET" action="{{ route('admin.eligibility-override.index', $posting->id) }}" class="flex items-center space-x-4">
-                <div class="flex-1">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Filtrar por Perfil</label>
-                    <select name="job_profile_id" class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                        <option value="">Todos los perfiles</option>
-                        @foreach($posting->jobProfiles as $profile)
-                            <option value="{{ $profile->id }}" {{ $jobProfileId == $profile->id ? 'selected' : '' }}>
-                                {{ $profile->code }} - {{ $profile->profile_name }}
-                            </option>
-                        @endforeach
-                    </select>
+            <form method="GET" action="{{ route('admin.eligibility-override.index', $posting->id) }}" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="flex-1">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Filtrar por Perfil</label>
+                        <select name="job_profile_id" class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="">Todos los perfiles</option>
+                            @foreach($posting->jobProfiles as $profile)
+                                <option value="{{ $profile->id }}" {{ $jobProfileId == $profile->id ? 'selected' : '' }}>
+                                    {{ $profile->code }} - {{ $profile->profile_name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="flex-1">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Filtrar por Fase de Evaluación</label>
+                        <select name="phase_id" class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="">Todas las fases</option>
+                            @foreach($phases as $phase)
+                                <option value="{{ $phase->id }}" {{ $phaseId == $phase->id ? 'selected' : '' }}>
+                                    {{ $phase->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
                 </div>
-                <div class="pt-6">
-                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded">
-                        Filtrar
-                    </button>
+                <div class="flex justify-between items-center">
+                    <div class="text-sm text-gray-600">
+                        @if($phaseId)
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                Filtrando por: {{ $phases->firstWhere('id', $phaseId)?->name ?? 'Fase' }}
+                            </span>
+                        @endif
+                        @if($jobProfileId)
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 ml-2">
+                                Filtrando por: {{ $posting->jobProfiles->firstWhere('id', $jobProfileId)?->code ?? 'Perfil' }}
+                            </span>
+                        @endif
+                    </div>
+                    <div class="flex space-x-2">
+                        @if($phaseId || $jobProfileId)
+                            <a href="{{ route('admin.eligibility-override.index', $posting->id) }}" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded">
+                                Limpiar Filtros
+                            </a>
+                        @endif
+                        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded">
+                            Aplicar Filtros
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>
@@ -105,6 +137,9 @@
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">DNI</th>
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Postulante</th>
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Perfil</th>
+                            @if(!$phaseId)
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fase(s)</th>
+                            @endif
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Motivo</th>
                             <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
@@ -119,6 +154,22 @@
                                 <td class="px-4 py-3 text-sm text-gray-600">
                                     {{ $application->jobProfile->code ?? 'N/A' }}
                                 </td>
+                                @if(!$phaseId)
+                                <td class="px-4 py-3 text-sm text-gray-600">
+                                    @if($application->evaluations && $application->evaluations->count() > 0)
+                                        @foreach($application->evaluations->unique('phase_id')->take(2) as $evaluation)
+                                            <span class="inline-block px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded mr-1 mb-1">
+                                                {{ $evaluation->phase->name ?? 'N/A' }}
+                                            </span>
+                                        @endforeach
+                                        @if($application->evaluations->unique('phase_id')->count() > 2)
+                                            <span class="text-xs text-gray-500">+{{ $application->evaluations->unique('phase_id')->count() - 2 }}</span>
+                                        @endif
+                                    @else
+                                        <span class="text-xs text-gray-400">Sin evaluaciones</span>
+                                    @endif
+                                </td>
+                                @endif
                                 <td class="px-4 py-3">
                                     <span class="px-2 py-1 text-xs font-semibold rounded-full
                                         {{ $application->status->value === 'NO_APTO' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800' }}">
@@ -129,10 +180,38 @@
                                     {{ Str::limit($application->ineligibility_reason, 50) ?? '-' }}
                                 </td>
                                 <td class="px-4 py-3 text-right">
-                                    <a href="{{ route('admin.eligibility-override.show', $application->id) }}"
-                                       class="inline-flex items-center px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded">
-                                        Revisar
-                                    </a>
+                                    <div class="flex items-center justify-end gap-2">
+                                        @php
+                                            // Verificar si tiene evaluación de CV completada (PHASE_06_CV_EVALUATION)
+                                            $hasCVEvaluation = false;
+                                            if ($application->evaluations && $application->evaluations->count() > 0) {
+                                                $hasCVEvaluation = $application->evaluations->filter(function($eval) {
+                                                    if (!$eval->phase) return false;
+                                                    // Comparar con el valor del enum
+                                                    $isSubmitted = in_array($eval->status->value, ['SUBMITTED', 'MODIFIED']);
+                                                    $isCVPhase = $eval->phase->code === 'PHASE_06_CV_EVALUATION' ||
+                                                                 str_contains(strtolower($eval->phase->name), 'evaluación curricular') ||
+                                                                 str_contains(strtolower($eval->phase->name), 'evaluación de currículo');
+                                                    return $isSubmitted && $isCVPhase;
+                                                })->isNotEmpty();
+                                            }
+                                        @endphp
+
+                                        @if($hasCVEvaluation)
+                                        <a href="{{ route('admin.eligibility-override.review-cv', $application->id) }}"
+                                           class="inline-flex items-center px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded"
+                                           title="Revisar CV">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                            </svg>
+                                        </a>
+                                        @endif
+
+                                        <a href="{{ route('admin.eligibility-override.show', $application->id) }}"
+                                           class="inline-flex items-center px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded">
+                                            Revisar
+                                        </a>
+                                    </div>
                                 </td>
                             </tr>
                         @endforeach
@@ -167,6 +246,9 @@
                         <tr>
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Codigo</th>
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Postulante</th>
+                            @if(!$phaseId)
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fase(s)</th>
+                            @endif
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado Original</th>
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Decision</th>
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nuevo Estado</th>
@@ -180,6 +262,22 @@
                             <tr class="hover:bg-gray-50">
                                 <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ $application->code }}</td>
                                 <td class="px-4 py-3 text-sm text-gray-900">{{ strtoupper($application->full_name) }}</td>
+                                @if(!$phaseId)
+                                <td class="px-4 py-3 text-sm text-gray-600">
+                                    @if($application->evaluations && $application->evaluations->count() > 0)
+                                        @foreach($application->evaluations->unique('phase_id')->take(2) as $evaluation)
+                                            <span class="inline-block px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded mr-1 mb-1">
+                                                {{ $evaluation->phase->name ?? 'N/A' }}
+                                            </span>
+                                        @endforeach
+                                        @if($application->evaluations->unique('phase_id')->count() > 2)
+                                            <span class="text-xs text-gray-500">+{{ $application->evaluations->unique('phase_id')->count() - 2 }}</span>
+                                        @endif
+                                    @else
+                                        <span class="text-xs text-gray-400">Sin evaluaciones</span>
+                                    @endif
+                                </td>
+                                @endif
                                 <td class="px-4 py-3">
                                     <span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
                                         {{ $application->eligibilityOverride->original_status_label }}
@@ -204,10 +302,38 @@
                                     {{ $application->eligibilityOverride->resolved_at->format('d/m/Y H:i') }}
                                 </td>
                                 <td class="px-4 py-3 text-right">
-                                    <a href="{{ route('admin.eligibility-override.show', $application->id) }}"
-                                       class="text-indigo-600 hover:text-indigo-900 text-sm">
-                                        Ver detalle
-                                    </a>
+                                    <div class="flex items-center justify-end gap-2">
+                                        @php
+                                            // Verificar si tiene evaluación de CV completada (PHASE_06_CV_EVALUATION)
+                                            $hasCVEvaluation = false;
+                                            if ($application->evaluations && $application->evaluations->count() > 0) {
+                                                $hasCVEvaluation = $application->evaluations->filter(function($eval) {
+                                                    if (!$eval->phase) return false;
+                                                    // Comparar con el valor del enum
+                                                    $isSubmitted = in_array($eval->status->value, ['SUBMITTED', 'MODIFIED']);
+                                                    $isCVPhase = $eval->phase->code === 'PHASE_06_CV_EVALUATION' ||
+                                                                 str_contains(strtolower($eval->phase->name), 'evaluación curricular') ||
+                                                                 str_contains(strtolower($eval->phase->name), 'evaluación de currículo');
+                                                    return $isSubmitted && $isCVPhase;
+                                                })->isNotEmpty();
+                                            }
+                                        @endphp
+
+                                        @if($hasCVEvaluation)
+                                        <a href="{{ route('admin.eligibility-override.review-cv', $application->id) }}"
+                                           class="inline-flex items-center px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded"
+                                           title="Revisar CV">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                            </svg>
+                                        </a>
+                                        @endif
+
+                                        <a href="{{ route('admin.eligibility-override.show', $application->id) }}"
+                                           class="text-indigo-600 hover:text-indigo-900 text-sm font-medium">
+                                            Ver detalle
+                                        </a>
+                                    </div>
                                 </td>
                             </tr>
                         @endforeach

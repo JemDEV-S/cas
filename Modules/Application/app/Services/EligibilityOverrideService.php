@@ -16,12 +16,16 @@ class EligibilityOverrideService
      * Obtener postulaciones que pueden ser reevaluadas
      * (NO_APTO sin override, o PENDIENTES de calificación)
      */
-    public function getApplicationsForReview(string $jobPostingId, ?string $jobProfileId = null): Collection
+    public function getApplicationsForReview(string $jobPostingId, ?string $jobProfileId = null, ?string $phaseId = null): Collection
     {
         return Application::whereHas('jobProfile', function ($q) use ($jobPostingId) {
                 $q->where('job_posting_id', $jobPostingId);
             })
             ->when($jobProfileId, fn($q) => $q->where('job_profile_id', $jobProfileId))
+            ->when($phaseId, function ($q) use ($phaseId) {
+                // Filtrar por fase: obtener evaluaciones de esa fase específica
+                $q->whereHas('evaluations', fn($eq) => $eq->where('phase_id', $phaseId));
+            })
             ->where(function ($q) {
                 $q->where('status', ApplicationStatus::NOT_ELIGIBLE)
                   ->orWhereIn('status', [
@@ -30,7 +34,7 @@ class EligibilityOverrideService
                   ]);
             })
             ->whereDoesntHave('eligibilityOverride')
-            ->with(['applicant', 'jobProfile', 'latestEvaluation'])
+            ->with(['applicant', 'jobProfile', 'latestEvaluation', 'evaluations.phase'])
             ->orderBy('created_at', 'desc')
             ->get();
     }
@@ -38,16 +42,33 @@ class EligibilityOverrideService
     /**
      * Obtener postulaciones con override ya resuelto
      */
-    public function getResolvedApplications(string $jobPostingId, ?string $jobProfileId = null): Collection
+    public function getResolvedApplications(string $jobPostingId, ?string $jobProfileId = null, ?string $phaseId = null): Collection
     {
-        return Application::whereHas('jobProfile', function ($q) use ($jobPostingId) {
+        $query = Application::whereHas('jobProfile', function ($q) use ($jobPostingId) {
                 $q->where('job_posting_id', $jobPostingId);
             })
             ->when($jobProfileId, fn($q) => $q->where('job_profile_id', $jobProfileId))
             ->whereHas('eligibilityOverride')
-            ->with(['applicant', 'jobProfile', 'eligibilityOverride.resolver'])
-            ->orderBy('created_at', 'desc')
-            ->get();
+            ->with(['applicant', 'jobProfile', 'eligibilityOverride.resolver', 'evaluations.phase']);
+
+        // Si hay filtro por fase, solo retornar las aplicaciones que tienen un override
+        // y que además tienen una evaluación MODIFICADA en esa fase específica
+        // O que su última evaluación antes del override fue en esa fase
+        if ($phaseId) {
+            $query->where(function ($q) use ($phaseId) {
+                // Opción 1: Tiene una evaluación MODIFICADA en esa fase (indica que el override afectó esa fase)
+                $q->whereHas('evaluations', function ($eq) use ($phaseId) {
+                    $eq->where('phase_id', $phaseId)
+                       ->where('status', 'MODIFIED');
+                })
+                // Opción 2: O tiene metadata en eligibilityOverride que indica la fase
+                ->orWhereHas('eligibilityOverride', function ($oq) use ($phaseId) {
+                    $oq->whereJsonContains('metadata->affected_phase_id', $phaseId);
+                });
+            });
+        }
+
+        return $query->orderBy('created_at', 'desc')->get();
     }
 
     /**
@@ -58,15 +79,22 @@ class EligibilityOverrideService
         string $resolutionSummary,
         string $resolutionDetail,
         string $resolvedBy,
-        string $resolutionType = 'CLAIM'
+        string $resolutionType = 'CLAIM',
+        ?string $affectedPhaseId = null
     ): EligibilityOverride {
-        return DB::transaction(function () use ($application, $resolutionSummary, $resolutionDetail, $resolvedBy, $resolutionType) {
+        return DB::transaction(function () use ($application, $resolutionSummary, $resolutionDetail, $resolvedBy, $resolutionType, $affectedPhaseId) {
             // Verificar que no tenga override previo
             if ($application->eligibilityOverride) {
                 throw new \Exception('Esta postulación ya tiene una resolución de reevaluación');
             }
 
             $originalStatus = $application->status->value;
+
+            // Preparar metadata
+            $metadata = [];
+            if ($affectedPhaseId) {
+                $metadata['affected_phase_id'] = $affectedPhaseId;
+            }
 
             // 1. Crear registro de override
             $override = EligibilityOverride::create([
@@ -80,6 +108,7 @@ class EligibilityOverrideService
                 'resolution_detail' => $resolutionDetail,
                 'resolved_by' => $resolvedBy,
                 'resolved_at' => now(),
+                'metadata' => $metadata,
             ]);
 
             // 2. Actualizar Application
@@ -119,15 +148,22 @@ class EligibilityOverrideService
         string $resolutionSummary,
         string $resolutionDetail,
         string $resolvedBy,
-        string $resolutionType = 'CLAIM'
+        string $resolutionType = 'CLAIM',
+        ?string $affectedPhaseId = null
     ): EligibilityOverride {
-        return DB::transaction(function () use ($application, $resolutionSummary, $resolutionDetail, $resolvedBy, $resolutionType) {
+        return DB::transaction(function () use ($application, $resolutionSummary, $resolutionDetail, $resolvedBy, $resolutionType, $affectedPhaseId) {
             // Verificar que no tenga override previo
             if ($application->eligibilityOverride) {
                 throw new \Exception('Esta postulación ya tiene una resolución de reevaluación');
             }
 
             $originalStatus = $application->status->value;
+
+            // Preparar metadata
+            $metadata = [];
+            if ($affectedPhaseId) {
+                $metadata['affected_phase_id'] = $affectedPhaseId;
+            }
 
             // 1. Crear registro de override (sin cambiar a APTO)
             $override = EligibilityOverride::create([
@@ -141,6 +177,7 @@ class EligibilityOverrideService
                 'resolution_detail' => $resolutionDetail,
                 'resolved_by' => $resolvedBy,
                 'resolved_at' => now(),
+                'metadata' => $metadata,
             ]);
 
             // 2. Si estaba PENDIENTE (no era NO_APTO), marcarlo como NO_APTO
@@ -214,11 +251,35 @@ class EligibilityOverrideService
     /**
      * Obtener estadísticas de reevaluaciones por convocatoria
      */
-    public function getStatistics(string $jobPostingId): array
+    public function getStatistics(string $jobPostingId, ?string $phaseId = null, ?string $jobProfileId = null): array
     {
-        $overrides = EligibilityOverride::whereHas('application.jobProfile', function ($q) use ($jobPostingId) {
+        $query = EligibilityOverride::whereHas('application.jobProfile', function ($q) use ($jobPostingId) {
             $q->where('job_posting_id', $jobPostingId);
-        })->get();
+        });
+
+        // Filtrar por perfil si se proporciona
+        if ($jobProfileId) {
+            $query->whereHas('application', function ($q) use ($jobProfileId) {
+                $q->where('job_profile_id', $jobProfileId);
+            });
+        }
+
+        // Filtrar por fase si se proporciona (aplicar la misma lógica que getResolvedApplications)
+        if ($phaseId) {
+            $query->where(function ($q) use ($phaseId) {
+                // Opción 1: Tiene una evaluación MODIFICADA en esa fase
+                $q->whereHas('application.evaluations', function ($eq) use ($phaseId) {
+                    $eq->where('phase_id', $phaseId)
+                       ->where('status', 'MODIFIED');
+                })
+                // Opción 2: O tiene metadata que indica la fase afectada
+                ->orWhere(function ($oq) use ($phaseId) {
+                    $oq->whereJsonContains('metadata->affected_phase_id', $phaseId);
+                });
+            });
+        }
+
+        $overrides = $query->get();
 
         return [
             'total' => $overrides->count(),
