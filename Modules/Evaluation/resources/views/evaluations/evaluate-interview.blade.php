@@ -427,7 +427,44 @@ function interviewEvaluationApp() {
 
                 if (data.success) {
                     alert('Evaluación enviada exitosamente');
-                    window.location.href = '{{ route("evaluation.index") }}';
+
+                    // Intentar obtener la URL de retorno desde sessionStorage
+                    const savedState = sessionStorage.getItem('evaluationListState');
+                    let returnUrl = null;
+
+                    console.log('Estado guardado en sessionStorage:', savedState);
+
+                    if (savedState) {
+                        try {
+                            const state = JSON.parse(savedState);
+                            console.log('Estado parseado:', state);
+
+                            if (state.url) {
+                                returnUrl = state.url;
+                                console.log('URL de retorno desde sessionStorage:', returnUrl);
+                            }
+                        } catch (e) {
+                            console.error('Error al parsear estado guardado:', e);
+                        }
+                    }
+
+                    // Fallback a la URL guardada en la sesión del servidor
+                    if (!returnUrl) {
+                        const serverReturnUrl = '{{ session("evaluation_return_url") }}';
+                        if (serverReturnUrl && serverReturnUrl !== '') {
+                            returnUrl = serverReturnUrl;
+                            console.log('URL de retorno desde sesión del servidor:', returnUrl);
+                        }
+                    }
+
+                    // Si hay URL de retorno, ir ahí; sino, ir al index
+                    if (returnUrl && returnUrl !== '') {
+                        console.log('Redirigiendo a:', returnUrl);
+                        window.location.href = returnUrl;
+                    } else {
+                        console.log('No hay URL guardada, redirigiendo al dashboard');
+                        window.location.href = '{{ route("evaluation.index") }}';
+                    }
                 } else {
                     alert('Error: ' + data.message);
                 }

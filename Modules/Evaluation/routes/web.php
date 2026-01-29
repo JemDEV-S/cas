@@ -28,6 +28,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Dashboard del evaluador
         Route::get('/', [EvaluationController::class, 'index'])->name('index');
 
+        // Lista de evaluaciones filtradas por convocatoria y fase
+        Route::get('list', [EvaluationController::class, 'evaluationsList'])->name('list');
+
         Route::get('my-evaluations', [EvaluationController::class, 'myEvaluations'])
             ->name('my-evaluations');
 
@@ -43,6 +46,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Formulario de evaluación
         Route::get('{id}/evaluate', [EvaluationController::class, 'evaluate'])->name('evaluate');
+
+        // Formulario de evaluación en modal (sin layout)
+        Route::get('{id}/evaluate-modal', [EvaluationController::class, 'evaluateModal'])->name('evaluate-modal');
 
         // Ver CV del postulante (iframe)
         Route::get('{id}/view-cv', [EvaluationController::class, 'viewCV'])->name('view-cv');

@@ -384,4 +384,9 @@ class JobPosting extends Model
         $remaining = $this->getDaysRemaining();
         return $remaining !== null && $remaining <= $days && $remaining > 0;
     }
+
+    public function evaluatorAssignments(): HasMany
+    {
+        return $this->hasMany(\Modules\Evaluation\Entities\EvaluatorAssignment::class);
+    }
 }

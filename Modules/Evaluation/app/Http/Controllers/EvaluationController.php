@@ -41,27 +41,100 @@ class EvaluationController extends Controller
             return $this->indexApi($request);
         }
 
-        // Si es petición web, devolver vista
+        // Si es petición web, devolver vista del dashboard con convocatorias
         $evaluatorId = auth()->id();
 
+        // Obtener convocatorias con asignaciones del evaluador agrupadas por fase
+        $jobPostings = \Modules\JobPosting\Entities\JobPosting::whereHas('evaluatorAssignments', function($query) use ($evaluatorId) {
+                $query->where('user_id', $evaluatorId);
+            })
+            ->with(['evaluatorAssignments' => function($query) use ($evaluatorId) {
+                $query->where('user_id', $evaluatorId)
+                    ->with([
+                        'phase',
+                        'evaluation',
+                        'application.jobProfile.positionCode',
+                        'application.jobProfile.requestingUnit',
+                        'application.jobProfile.jobPosting'
+                    ]);
+            }])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Agrupar por convocatoria y calcular estadísticas
+        $jobPostingsData = $jobPostings->map(function($jobPosting) {
+            $assignments = $jobPosting->evaluatorAssignments;
+
+            // Agrupar por fase
+            $phaseGroups = $assignments->groupBy('phase_id')->map(function($phaseAssignments, $phaseId) {
+                $phase = $phaseAssignments->first()->phase;
+
+                return [
+                    'phase' => $phase,
+                    'total' => $phaseAssignments->count(),
+                    'pending' => $phaseAssignments->whereIn('status.value', ['PENDING', 'IN_PROGRESS'])->count(),
+                    'completed' => $phaseAssignments->where('status.value', 'COMPLETED')->count(),
+                    'overdue' => $phaseAssignments->filter(function($a) {
+                        return $a->deadline_at && $a->deadline_at->isPast() &&
+                               in_array($a->status->value, ['PENDING', 'IN_PROGRESS']);
+                    })->count(),
+                ];
+            });
+
+            return [
+                'job_posting' => $jobPosting,
+                'phases' => $phaseGroups,
+                'total_assignments' => $assignments->count(),
+                'total_pending' => $assignments->whereIn('status.value', ['PENDING', 'IN_PROGRESS'])->count(),
+                'total_completed' => $assignments->where('status.value', 'COMPLETED')->count(),
+            ];
+        });
+
+        return view('evaluation::index', [
+            'jobPostingsData' => $jobPostingsData,
+        ]);
+    }
+
+    /**
+     * Display evaluations list for a specific job posting and phase (WEB).
+     * GET /evaluations/list?job_posting_id={id}&phase_id={id}
+     */
+    public function evaluationsList(Request $request)
+    {
+        $evaluatorId = auth()->id();
+        $jobPostingId = $request->input('job_posting_id');
+        $phaseId = $request->input('phase_id');
+
+        if (!$jobPostingId || !$phaseId) {
+            return redirect()->route('evaluation.index')
+                ->with('error', 'Debe seleccionar una convocatoria y fase');
+        }
+
+        // Obtener información de la convocatoria y fase
+        $jobPosting = \Modules\JobPosting\Entities\JobPosting::findOrFail($jobPostingId);
+        $phase = \Modules\JobPosting\Entities\ProcessPhase::findOrFail($phaseId);
+
+        // Obtener asignaciones filtradas
         $filters = [
+            'job_posting_id' => $jobPostingId,
+            'phase_id' => $phaseId,
             'status' => $request->input('status'),
-            'phase_id' => $request->input('phase_id'),
             'requesting_unit_id' => $request->input('requesting_unit_id'),
             'pending_only' => $request->boolean('pending_only'),
-            'completed_only' => $request->boolean('completed_only'),
-            'per_page' => $request->input('per_page', 15),
+            'search' => $request->input('search'),
+            'per_page' => $request->input('per_page', 20),
         ];
 
-        // Obtener asignaciones del evaluador (no evaluaciones directamente)
         $assignments = $this->evaluationService->getEvaluatorAssignments($evaluatorId, $filters);
 
-        // Obtener unidades orgánicas para el filtro
+        // Obtener unidades orgánicas para filtros
         $organizationalUnits = \Modules\Organization\Entities\OrganizationalUnit::where('is_active', true)
             ->orderBy('name')
             ->get();
 
-        return view('evaluation::index', [
+        return view('evaluation::evaluations-list', [
+            'jobPosting' => $jobPosting,
+            'phase' => $phase,
             'assignments' => $assignments,
             'filters' => $filters,
             'organizationalUnits' => $organizationalUnits,
@@ -196,12 +269,112 @@ class EvaluationController extends Controller
     }
 
     /**
+     * Show evaluation form in modal (WEB).
+     * GET /evaluations/{id}/evaluate-modal
+     */
+    public function evaluateModal($id)
+    {
+        try {
+            // Convertir ID a entero
+            $id = (int) $id;
+            \Log::info('Cargando evaluación modal para ID: ' . $id);
+
+            $evaluation = Evaluation::with([
+                'details.criterion',
+                'evaluatorAssignment.application.jobProfile.positionCode',
+                'evaluatorAssignment.application.jobProfile.requestingUnit',
+                'evaluatorAssignment.application.jobProfile.jobPosting',
+                'evaluatorAssignment.application.documents',
+                'evaluatorAssignment.phase',
+                'phase'
+            ])->findOrFail($id);
+
+            \Log::info('Evaluación encontrada: ' . $evaluation->id);
+
+            // Verificar que el usuario autenticado sea el evaluador
+            if ($evaluation->evaluatorAssignment && $evaluation->evaluatorAssignment->user_id != auth()->id()) {
+                \Log::warning('Usuario sin permiso intentando evaluar: ' . auth()->id());
+                return response('No tienes permiso para evaluar esta postulación', 403);
+            }
+
+            // Obtener el position_code_id desde la postulación
+            $positionCodeId = null;
+            if ($evaluation->evaluatorAssignment &&
+                $evaluation->evaluatorAssignment->application &&
+                $evaluation->evaluatorAssignment->application->jobProfile) {
+
+                $jobProfile = $evaluation->evaluatorAssignment->application->jobProfile;
+                if ($jobProfile->position_code_id) {
+                    $positionCodeId = $jobProfile->position_code_id;
+                }
+            }
+
+            // Obtener criterios de evaluación
+            $criteriaQuery = \Modules\Evaluation\Entities\EvaluationCriterion::active()
+                ->byPhase($evaluation->phase_id);
+
+            if ($positionCodeId) {
+                $criteriaQuery->byPositionCode($positionCodeId);
+            }
+
+            $criteria = $criteriaQuery->ordered()->get();
+            $maxTotalScore = $criteria->sum('max_score');
+
+            \Log::info('Criterios cargados: ' . $criteria->count());
+
+            // Crear array con detalles indexados por criterion_id
+            $details = [];
+            foreach ($evaluation->details as $detail) {
+                $details[$detail->criterion_id] = $detail;
+            }
+
+            // Obtener application y jobProfile
+            $application = $evaluation->evaluatorAssignment->application ?? null;
+            $jobProfile = $application ? $application->jobProfile : null;
+
+            if (!$application) {
+                \Log::error('Application no encontrada para evaluación: ' . $evaluation->id);
+                return response('Error: Postulación no encontrada', 404);
+            }
+
+            if (!$jobProfile) {
+                \Log::error('JobProfile no encontrado para application: ' . $application->id);
+                return response('Error: Perfil de trabajo no encontrado', 404);
+            }
+
+            // Vista sin layout para modal
+            return view('evaluation::evaluations.evaluate-interview-modal', [
+                'evaluation' => $evaluation,
+                'criteria' => $criteria,
+                'maxTotalScore' => $maxTotalScore,
+                'details' => $details,
+                'application' => $application,
+                'jobProfile' => $jobProfile,
+            ]);
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            \Log::error('Evaluación no encontrada con ID: ' . $id);
+            return response('Evaluación no encontrada', 404);
+        } catch (\Exception $e) {
+            \Log::error('Error al cargar formulario de evaluación modal: ' . $e->getMessage());
+            \Log::error('Stack trace: ' . $e->getTraceAsString());
+            return response('Error al cargar la evaluación: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
      * Show evaluation form (WEB).
      * GET /evaluations/{id}/evaluate
      */
     public function evaluate(int $id)
     {
         try {
+            // Guardar URL de referencia para volver después de completar la evaluación
+            $referer = request()->headers->get('referer');
+            if ($referer && str_contains($referer, '/evaluations/list')) {
+                session(['evaluation_return_url' => $referer]);
+            }
+
             $evaluation = Evaluation::with([
                 'details.criterion',
                 'evaluatorAssignment.application.jobProfile.positionCode',

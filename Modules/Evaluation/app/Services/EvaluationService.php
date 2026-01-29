@@ -331,6 +331,7 @@ class EvaluationService
             'application.jobProfile.positionCode',
             'phase',
             'jobPosting',
+            'evaluation',
         ])->byEvaluator($evaluatorId);
 
         if (isset($filters['status'])) {
@@ -341,14 +342,29 @@ class EvaluationService
             $query->byPhase($filters['phase_id']);
         }
 
+        if (isset($filters['job_posting_id'])) {
+            $query->where('evaluator_assignments.job_posting_id', $filters['job_posting_id']);
+        }
+
         if (isset($filters['requesting_unit_id'])) {
             $query->whereHas('application.jobProfile', function($q) use ($filters) {
                 $q->where('requesting_unit_id', $filters['requesting_unit_id']);
             });
         }
 
+        if (isset($filters['search']) && !empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->whereHas('application', function($q) use ($search) {
+                $q->where('full_name', 'like', "%{$search}%")
+                  ->orWhere('dni', 'like', "%{$search}%");
+            });
+        }
+
         if (isset($filters['pending_only']) && $filters['pending_only']) {
-            $query->where('evaluator_assignments.status', \Modules\Evaluation\Enums\AssignmentStatusEnum::PENDING);
+            $query->whereIn('evaluator_assignments.status', [
+                \Modules\Evaluation\Enums\AssignmentStatusEnum::PENDING,
+                \Modules\Evaluation\Enums\AssignmentStatusEnum::IN_PROGRESS
+            ]);
         }
 
         if (isset($filters['completed_only']) && $filters['completed_only']) {

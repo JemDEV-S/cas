@@ -7,251 +7,162 @@
             <i class="fas fa-clipboard-check text-orange-500 mr-3"></i>
             Dashboard de Evaluaciones
         </h1>
-        <p class="text-gray-600">Gestiona y realiza tus evaluaciones asignadas</p>
+        <p class="text-gray-600">Selecciona una convocatoria y fase para comenzar a evaluar</p>
     </div>
 
-    <!-- Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-blue-500">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm text-gray-600 mb-1">Total</p>
-                    <p class="text-3xl font-bold text-gray-900">{{ $assignments->total() }}</p>
-                </div>
-                <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <i class="fas fa-clipboard-list text-blue-500 text-xl"></i>
-                </div>
+    @if($jobPostingsData->isEmpty())
+        <!-- Empty State -->
+        <div class="bg-white rounded-xl shadow-md p-12">
+            <div class="flex flex-col items-center">
+                <i class="fas fa-inbox text-gray-300 text-6xl mb-4"></i>
+                <h3 class="text-xl font-semibold text-gray-700 mb-2">No tienes asignaciones pendientes</h3>
+                <p class="text-gray-500">Las asignaciones de evaluación aparecerán aquí cuando sean creadas</p>
             </div>
         </div>
+    @else
+        <!-- Grid de Cards de Convocatorias -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            @foreach($jobPostingsData as $data)
+                @php
+                    $jobPosting = $data['job_posting'];
+                    $phases = $data['phases'];
+                    $totalPending = $data['total_pending'];
+                    $totalCompleted = $data['total_completed'];
+                    $totalAssignments = $data['total_assignments'];
+                @endphp
 
-        <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-yellow-500">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm text-gray-600 mb-1">Pendientes</p>
-                    <p class="text-3xl font-bold text-gray-900">
-                        {{ $assignments->where('status', 'PENDING')->count() + $assignments->where('status', 'IN_PROGRESS')->count() }}
-                    </p>
-                </div>
-                <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                    <i class="fas fa-hourglass-half text-yellow-500 text-xl"></i>
-                </div>
-            </div>
-        </div>
-
-        <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-green-500">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm text-gray-600 mb-1">Completadas</p>
-                    <p class="text-3xl font-bold text-gray-900">
-                        {{ $assignments->where('status', 'COMPLETED')->count() }}
-                    </p>
-                </div>
-                <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                    <i class="fas fa-check-circle text-green-500 text-xl"></i>
-                </div>
-            </div>
-        </div>
-
-        <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-red-500">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm text-gray-600 mb-1">Vencidas</p>
-                    <p class="text-3xl font-bold text-gray-900">
-                        {{ $assignments->where('deadline_at', '<', now())->whereIn('status', ['PENDING', 'IN_PROGRESS'])->count() }}
-                    </p>
-                </div>
-                <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                    <i class="fas fa-exclamation-triangle text-red-500 text-xl"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Filters -->
-    <div class="bg-white rounded-xl shadow-md p-6 mb-8">
-        <form method="GET" action="{{ route('evaluation.index') }}" class="flex flex-wrap gap-4">
-            <div class="flex-1 min-w-[200px]">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Estado</label>
-                <select name="status" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
-                    <option value="">Todos los estados</option>
-                    <option value="ASSIGNED" {{ request('status') == 'ASSIGNED' ? 'selected' : '' }}>Asignada</option>
-                    <option value="IN_PROGRESS" {{ request('status') == 'IN_PROGRESS' ? 'selected' : '' }}>En Progreso</option>
-                    <option value="SUBMITTED" {{ request('status') == 'SUBMITTED' ? 'selected' : '' }}>Enviada</option>
-                </select>
-            </div>
-
-            <div class="flex-1 min-w-[200px]">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Fase</label>
-                <select name="phase_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
-                    <option value="">Todas las fases</option>
-                    <!-- Aquí cargarías las fases dinámicamente -->
-                </select>
-            </div>
-
-            <div class="flex-1 min-w-[200px]">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Unidad Orgánica</label>
-                <select name="requesting_unit_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
-                    <option value="">Todas las unidades</option>
-                    @foreach($organizationalUnits ?? [] as $unit)
-                        <option value="{{ $unit->id }}" {{ request('requesting_unit_id') == $unit->id ? 'selected' : '' }}>
-                            {{ $unit->name }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div class="flex items-end">
-                <label class="flex items-center">
-                    <input type="checkbox" name="pending_only" value="1" {{ request('pending_only') ? 'checked' : '' }} class="w-5 h-5 text-orange-500 border-gray-300 rounded focus:ring-orange-500">
-                    <span class="ml-2 text-sm text-gray-700">Solo pendientes</span>
-                </label>
-            </div>
-
-            <div class="flex items-end gap-2">
-                <button type="submit" class="px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors">
-                    <i class="fas fa-filter mr-2"></i> Filtrar
-                </button>
-                <a href="{{ route('evaluation.index') }}" class="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
-                    <i class="fas fa-times mr-2"></i> Limpiar
-                </a>
-            </div>
-        </form>
-    </div>
-
-    <!-- Evaluations Table -->
-    <div class="bg-white rounded-xl shadow-md overflow-hidden">
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Convocatoria</th>
-                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Perfil</th>
-                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unidad Orgánica</th>
-                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Postulante</th>
-                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fase</th>
-                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Puntaje</th>
-                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha Límite</th>
-                        <th class="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    @forelse($assignments as $assignment)
-                    <tr class="hover:bg-gray-50 transition-colors">
-                        <td class="px-6 py-4">
-                            <div class="text-sm font-medium text-gray-900">{{ $assignment->jobPosting->title ?? 'N/A' }}</div>
-                            <div class="text-xs text-gray-500">{{ $assignment->jobPosting->code ?? 'N/A' }}</div>
-                        </td>
-                        <td class="px-6 py-4">
-                            <div class="text-sm font-medium text-gray-900">
-                                {{ $assignment->application->jobProfile->profile_name ?? 'N/A' }}
+                <div class="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow border border-gray-200">
+                    <!-- Header del Card -->
+                    <div class="px-6 py-4 bg-gradient-to-r from-orange-500 to-orange-600 border-b">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <h3 class="text-lg font-bold text-white mb-1">
+                                    {{ $jobPosting->title }}
+                                </h3>
+                                <p class="text-sm text-orange-100">
+                                    <i class="fas fa-code mr-1"></i>
+                                    {{ $jobPosting->code }}
+                                </p>
                             </div>
-                            <div class="text-xs text-gray-500">
-                                {{ $assignment->application->jobProfile->positionCode->code ?? '' }}
-                                @if($assignment->application->jobProfile->positionCode->name ?? null)
-                                    - {{ $assignment->application->jobProfile->positionCode->name }}
-                                @endif
-                            </div>
-                        </td>
-                        <td class="px-6 py-4">
-                            <div class="text-sm text-gray-900">
-                                {{ $assignment->application->jobProfile->requestingUnit->name ?? 'N/A' }}
-                            </div>
-                            <div class="text-xs text-gray-500">
-                                {{ $assignment->application->jobProfile->requestingUnit->code ?? '' }}
-                            </div>
-                        </td>
-                        <td class="px-6 py-4">
-                            <div class="text-sm text-gray-900">
-                                @if($assignment->metadata['is_anonymous'] ?? false)
-                                    <i class="fas fa-user-secret text-gray-400 mr-2"></i> Anónimo
-                                @else
-                                    {{ $assignment->application->full_name ?? 'N/A' }}
-                                @endif
-                            </div>
-                        </td>
-                        <td class="px-6 py-4">
-                            <span class="px-3 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
-                                {{ $assignment->phase->name ?? 'N/A' }}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4">
-                            @php
-                                $statusColors = [
-                                    'PENDING' => 'bg-blue-100 text-blue-800',
-                                    'IN_PROGRESS' => 'bg-yellow-100 text-yellow-800',
-                                    'COMPLETED' => 'bg-green-100 text-green-800',
-                                    'CANCELLED' => 'bg-red-100 text-red-800',
-                                    'REASSIGNED' => 'bg-orange-100 text-orange-800',
-                                ];
-                            @endphp
-                            <span class="px-3 py-1 text-xs font-semibold rounded-full {{ $statusColors[$assignment->status->value] ?? 'bg-gray-100 text-gray-800' }}">
-                                {{ $assignment->status->value }}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4">
-                            @if($assignment->evaluation && $assignment->evaluation->total_score)
-                                <div class="text-sm font-semibold text-gray-900">{{ number_format($assignment->evaluation->total_score, 2) }}</div>
-                                <div class="text-xs text-gray-500">de {{ number_format($assignment->evaluation->max_possible_score, 2) }}</div>
-                            @else
-                                <span class="text-sm text-gray-400">Pendiente</span>
-                            @endif
-                        </td>
-                        <td class="px-6 py-4">
-                            @if($assignment->deadline_at)
-                                <div class="text-sm {{ $assignment->deadline_at->isPast() && $assignment->status->value != 'COMPLETED' ? 'text-red-600 font-semibold' : 'text-gray-900' }}">
-                                    {{ $assignment->deadline_at->format('d/m/Y') }}
+                            <div class="ml-4">
+                                <div class="bg-white bg-opacity-20 rounded-lg px-3 py-2 backdrop-blur-sm">
+                                    <div class="text-center">
+                                        <div class="text-2xl font-bold text-white">{{ $totalAssignments }}</div>
+                                        <div class="text-xs text-orange-100">Total</div>
+                                    </div>
                                 </div>
-                                <div class="text-xs text-gray-500">{{ $assignment->deadline_at->diffForHumans() }}</div>
-                            @else
-                                <span class="text-sm text-gray-400">Sin límite</span>
-                            @endif
-                        </td>
-                        <td class="px-6 py-4 text-right space-x-2">
-                            @if($assignment->evaluation)
-                                <a href="{{ route('evaluation.show', $assignment->evaluation->id) }}"
-                                   class="inline-flex items-center px-3 py-1.5 bg-blue-100 text-blue-700 text-sm font-medium rounded-lg hover:bg-blue-200 transition-colors"
-                                   title="Ver detalles">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-
-                                @if(in_array($assignment->status->value, ['PENDING', 'IN_PROGRESS']))
-                                <a href="{{ route('evaluation.evaluate', $assignment->evaluation->id) }}"
-                                   class="inline-flex items-center px-3 py-1.5 bg-orange-500 text-white text-sm font-medium rounded-lg hover:bg-orange-600 transition-colors"
-                                   title="Evaluar">
-                                    <i class="fas fa-edit mr-1"></i> Evaluar
-                                </a>
-                                @endif
-                            @else
-                                <a href="{{ route('evaluation.create', ['assignment_id' => $assignment->id]) }}"
-                                   class="inline-flex items-center px-3 py-1.5 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600 transition-colors"
-                                   title="Iniciar evaluación">
-                                    <i class="fas fa-play mr-1"></i> Iniciar
-                                </a>
-                            @endif
-                        </td>
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="9" class="px-6 py-12 text-center">
-                            <div class="flex flex-col items-center">
-                                <i class="fas fa-inbox text-gray-300 text-5xl mb-4"></i>
-                                <p class="text-gray-500 text-lg">No hay asignaciones disponibles</p>
-                                <p class="text-gray-400 text-sm mt-2">Las asignaciones de evaluación aparecerán aquí</p>
                             </div>
-                        </td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
+                        </div>
+                    </div>
 
-        <!-- Pagination -->
-        @if($assignments->hasPages())
-        <div class="px-6 py-4 border-t border-gray-200">
-            {{ $assignments->links() }}
+                    <!-- Stats Resumen -->
+                    <div class="px-6 py-4 bg-orange-50 border-b grid grid-cols-3 gap-4">
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-yellow-600">{{ $totalPending }}</div>
+                            <div class="text-xs text-gray-600">Pendientes</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-green-600">{{ $totalCompleted }}</div>
+                            <div class="text-xs text-gray-600">Completadas</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-gray-600">{{ count($phases) }}</div>
+                            <div class="text-xs text-gray-600">Fases</div>
+                        </div>
+                    </div>
+
+                    <!-- Fases -->
+                    <div class="p-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-3">
+                            <i class="fas fa-layer-group mr-2"></i>
+                            Selecciona una fase para evaluar:
+                        </label>
+
+                        <div class="space-y-2">
+                            @foreach($phases as $phaseId => $phaseData)
+                                @php
+                                    $phase = $phaseData['phase'];
+                                    $phasePending = $phaseData['pending'];
+                                    $phaseCompleted = $phaseData['completed'];
+                                    $phaseOverdue = $phaseData['overdue'];
+                                    $phaseTotal = $phaseData['total'];
+                                @endphp
+
+                                <a href="{{ route('evaluation.list', ['job_posting_id' => $jobPosting->id, 'phase_id' => $phaseId]) }}"
+                                   class="block p-4 border-2 border-gray-200 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition-all group">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex-1">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-200 transition-colors">
+                                                    <i class="fas fa-clipboard-list text-purple-600"></i>
+                                                </div>
+                                                <div>
+                                                    <h4 class="font-semibold text-gray-900 group-hover:text-orange-600">
+                                                        {{ $phase->name }}
+                                                    </h4>
+                                                    <p class="text-xs text-gray-500">{{ $phase->code }}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Stats de la Fase -->
+                                        <div class="flex items-center gap-4 ml-4">
+                                            @if($phaseOverdue > 0)
+                                                <div class="flex items-center gap-1 px-2 py-1 bg-red-100 rounded text-red-700">
+                                                    <i class="fas fa-exclamation-triangle text-xs"></i>
+                                                    <span class="text-sm font-semibold">{{ $phaseOverdue }}</span>
+                                                </div>
+                                            @endif
+
+                                            @if($phasePending > 0)
+                                                <div class="flex items-center gap-1 px-2 py-1 bg-yellow-100 rounded text-yellow-700">
+                                                    <i class="fas fa-hourglass-half text-xs"></i>
+                                                    <span class="text-sm font-semibold">{{ $phasePending }}</span>
+                                                </div>
+                                            @endif
+
+                                            <div class="flex items-center gap-1 px-2 py-1 bg-green-100 rounded text-green-700">
+                                                <i class="fas fa-check-circle text-xs"></i>
+                                                <span class="text-sm font-semibold">{{ $phaseCompleted }}</span>
+                                            </div>
+
+                                            <div class="text-sm text-gray-500 font-medium">
+                                                {{ $phaseTotal }} total
+                                            </div>
+
+                                            <i class="fas fa-arrow-right text-gray-400 group-hover:text-orange-500 group-hover:translate-x-1 transition-all"></i>
+                                        </div>
+                                    </div>
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <!-- Footer del Card -->
+                    <div class="px-6 py-3 bg-gray-50 border-t">
+                        <div class="flex items-center justify-between text-xs text-gray-500">
+                            <div>
+                                <i class="far fa-calendar mr-1"></i>
+                                Creado: {{ $jobPosting->created_at->format('d/m/Y') }}
+                            </div>
+                            <div>
+                                @if($totalPending > 0)
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">
+                                        <i class="fas fa-tasks mr-1"></i>
+                                        {{ $totalPending }} por evaluar
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                                        <i class="fas fa-check-double mr-1"></i>
+                                        Todas completadas
+                                    </span>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endforeach
         </div>
-        @endif
-    </div>
+    @endif
 </div>
 @endsection
