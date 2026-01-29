@@ -308,6 +308,13 @@ function saveListState() {
 function restoreFiltersFromStorage() {
     const savedState = sessionStorage.getItem('evaluationListState');
 
+    // Solo restaurar si venimos desde una página de evaluación
+    if (!document.referrer.includes('/evaluate')) {
+        console.log('No venimos de una evaluación, limpiando estado guardado');
+        sessionStorage.removeItem('evaluationListState');
+        return;
+    }
+
     if (savedState) {
         try {
             const state = JSON.parse(savedState);
@@ -332,14 +339,16 @@ function restoreFiltersFromStorage() {
 
                     const newUrl = `{{ route('evaluation.list') }}?${params.toString()}`;
 
-                    // Solo redirigir si venimos de una evaluación (hay diferencia en la URL)
-                    if (window.location.href !== newUrl && document.referrer.includes('/evaluate')) {
-                        console.log('Redirigiendo a:', newUrl);
-                        window.location.href = newUrl;
-                    }
+                    console.log('Redirigiendo a:', newUrl);
+                    window.location.href = newUrl;
+                } else {
+                    // Ya estamos en la página correcta, limpiar el estado
+                    console.log('Ya estamos en la página correcta, limpiando estado');
+                    sessionStorage.removeItem('evaluationListState');
                 }
             } else {
                 // Estado expirado, limpiar
+                console.log('Estado expirado, limpiando');
                 sessionStorage.removeItem('evaluationListState');
             }
         } catch (e) {

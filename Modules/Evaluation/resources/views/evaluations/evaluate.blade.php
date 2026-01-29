@@ -1307,12 +1307,15 @@ function evaluationApp() {
 
                 // Fallback a la URL guardada en la sesión del servidor
                 if (!returnUrl) {
-                    const serverReturnUrl = '{{ session("evaluation_return_url") }}';
+                    const serverReturnUrl = '{!! session("evaluation_return_url") !!}';
                     if (serverReturnUrl && serverReturnUrl !== '') {
                         returnUrl = serverReturnUrl;
                         console.log('URL de retorno desde sesión del servidor:', returnUrl);
                     }
                 }
+
+                // Limpiar el estado guardado después de leerlo
+                sessionStorage.removeItem('evaluationListState');
 
                 // Si hay URL de retorno, ir ahí; sino, ir al index
                 if (returnUrl && returnUrl !== '') {
