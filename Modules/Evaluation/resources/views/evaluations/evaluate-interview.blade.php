@@ -29,8 +29,10 @@
                     <div x-show="!isDisqualified" class="text-3xl font-bold text-white" x-text="totalScore.toFixed(2)">0.00</div>
                     <div x-show="isDisqualified" class="text-3xl font-bold text-red-200">DESCALIFICADO</div>
                     <p x-show="!isDisqualified" class="text-xs text-purple-100">de {{ number_format($maxTotalScore, 2) }} pts</p>
-                    <div x-show="!isDisqualified" class="mt-2 w-40 h-3 bg-purple-800 rounded-full overflow-hidden">
-                        <div class="h-full bg-white transition-all duration-300" :style="`width: ${progress}%`"></div>
+                    <div x-show="!isDisqualified" class="mt-3 w-48 bg-purple-900 rounded-full overflow-hidden border-2 border-purple-300 shadow-lg">
+                        <div class="h-5 bg-gradient-to-r from-green-400 to-green-300 transition-all duration-300 flex items-center justify-end pr-2" :style="`width: ${Math.max(progress, 2)}%`">
+                            <span class="text-xs font-semibold text-purple-900" x-show="progress > 10" x-text="progress.toFixed(0) + '%'"></span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -38,7 +40,7 @@
 
         {{-- Información del Perfil --}}
         <div class="px-6 py-4 bg-gradient-to-br from-purple-50 to-indigo-50 border-b">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
                         <i class="fas fa-briefcase text-purple-600"></i>
@@ -67,6 +69,51 @@
                     </div>
                 </div>
             </div>
+
+            {{-- Información Adicional del Postulante --}}
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {{-- Puntaje CV --}}
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-file-alt text-green-600"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500">Puntaje CV</p>
+                        <p class="font-semibold text-gray-900">
+                            {{ $application->curriculum_score ? number_format($application->curriculum_score, 2) . ' pts' : 'N/A' }}
+                        </p>
+                    </div>
+                </div>
+
+                {{-- Edad (solo si es menor de 29 años) --}}
+                @php
+                    $age = $application->birth_date ? \Carbon\Carbon::parse($application->birth_date)->age : null;
+                @endphp
+                @if($age && $age < 29)
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-birthday-cake text-yellow-600"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500">Edad (Bonificación)</p>
+                        <p class="font-semibold text-gray-900">{{ $age }} años</p>
+                    </div>
+                </div>
+                @endif
+
+                {{-- Condición Especial --}}
+                @if($application->special_condition_bonus && $application->special_condition_bonus > 0)
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-exclamation-triangle text-red-600"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-red-600 font-semibold">⚠️ Condición Especial</p>
+                        <p class="text-xs text-red-700">Bonificación: {{ number_format($application->special_condition_bonus, 2) }}%</p>
+                    </div>
+                </div>
+                @endif
+            </div>
         </div>
     </div>
 
@@ -77,7 +124,7 @@
         <div class="bg-white rounded-lg shadow-sm border mb-6">
             <div class="px-6 py-4 bg-gray-50 border-b">
                 <h4 class="text-lg font-semibold text-gray-900">Criterios de Evaluación</h4>
-                <p class="text-sm text-gray-600 mt-1">Puntaje total: 0 a 50 puntos (mínimo 35 para aprobar)</p>
+                <p class="text-sm text-gray-600 mt-1">Cada criterio se evalúa en escala de 0 a 20 puntos</p>
             </div>
 
             <div class="p-6 space-y-6">
@@ -85,8 +132,9 @@
                 <div class="border border-gray-200 rounded-lg p-5 hover:border-purple-300 transition-colors"
                      x-data="{
                          criterionId: {{ $criterion->id }},
-                         score: {{ $details[$criterion->id]->score ?? 0 }},
-                         maxScore: {{ $criterion->max_score }},
+                         score: {{ ($details[$criterion->id]->score ?? 0) > 0 ? number_format(($details[$criterion->id]->score / 12.5) * 20, 1, '.', '') : 0 }},
+                         maxScore: 20,
+                         maxScoreDB: {{ $criterion->max_score }},
                          comment: '{{ $details[$criterion->id]->comments ?? '' }}'
                      }">
 
@@ -100,25 +148,15 @@
                         </div>
                         <div class="ml-4 text-right">
                             <div class="text-xs text-gray-500 mb-1">Puntaje máximo</div>
-                            <div class="text-2xl font-bold text-purple-600">{{ number_format($criterion->max_score, 1) }}</div>
+                            <div class="text-2xl font-bold text-purple-600">20.0</div>
                         </div>
                     </div>
-
-                    {{-- Guía de Evaluación --}}
-                    @if($criterion->evaluation_guide)
-                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                        <p class="text-xs font-semibold text-blue-900 mb-2">
-                            <i class="fas fa-lightbulb mr-1"></i> Guía de Evaluación:
-                        </p>
-                        <div class="text-xs text-blue-800 whitespace-pre-line">{{ $criterion->evaluation_guide }}</div>
-                    </div>
-                    @endif
 
                     {{-- Input de Puntaje --}}
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">
-                                Puntaje Obtenido
+                                Puntaje Obtenido (escala 0-20)
                                 <span class="text-red-500">*</span>
                             </label>
                             <div class="flex items-center gap-2">
@@ -133,11 +171,11 @@
                                     :class="score > maxScore ? 'border-red-500 bg-red-50' : ''"
                                     placeholder="0.0"
                                     required>
-                                <span class="text-gray-500 font-medium">/ {{ number_format($criterion->max_score, 1) }}</span>
+                                <span class="text-gray-500 font-medium">/ 20.0</span>
                             </div>
                             <p x-show="score > maxScore" class="text-xs text-red-600 mt-1">
                                 <i class="fas fa-exclamation-triangle mr-1"></i>
-                                El puntaje no puede exceder {{ number_format($criterion->max_score, 1) }}
+                                El puntaje no puede exceder 20.0
                             </p>
                         </div>
 
@@ -258,14 +296,14 @@ function interviewEvaluationApp() {
     return {
         evaluationId: {{ $evaluation->id }},
         totalScore: {{ $evaluation->total_score ?? 0 }},
-        maxScore: {{ $maxTotalScore }},
+        maxTotalScore: {{ $maxTotalScore }},
         generalComments: '{{ $evaluation->general_comments ?? '' }}',
         isDisqualified: false,
         disqualificationReason: '',
         criteriaScores: {},
 
         init() {
-            // Inicializar con datos existentes
+            // Inicializar TODOS los criterios (incluso si no tienen puntaje aún)
             @foreach($criteria as $criterion)
                 this.criteriaScores[{{ $criterion->id }}] = {
                     score: {{ $details[$criterion->id]->score ?? 0 }},
@@ -277,16 +315,20 @@ function interviewEvaluationApp() {
         },
 
         get progress() {
-            return (this.totalScore / this.maxScore) * 100;
+            return (this.totalScore / this.maxTotalScore) * 100;
         },
 
         updateScore(criterionId, score, comment) {
+            // Convertir de escala visual (0-20) a escala BD (0-12.5)
+            const visualScore = parseFloat(score) || 0;
+            const dbScore = (visualScore / 20) * 12.5;
+
             this.criteriaScores[criterionId] = {
-                score: parseFloat(score) || 0,
+                score: dbScore,
                 comment: comment
             };
             this.calculateTotal();
-            this.autoSave(criterionId, score, comment);
+            this.autoSave(criterionId, dbScore, comment);
         },
 
         calculateTotal() {

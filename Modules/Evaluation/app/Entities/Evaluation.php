@@ -176,7 +176,7 @@ class Evaluation extends Model
 
     public function calculateTotalScore(): float
     {
-        return $this->details()->sum('weighted_score') ?? 0;
+        return $this->details()->sum('score') ?? 0;
     }
 
     public function calculatePercentage(): float
