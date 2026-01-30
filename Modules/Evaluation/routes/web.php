@@ -176,4 +176,34 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::delete('{id}', [InterviewScheduleController::class, 'unschedule'])
                 ->name('unschedule');
         });
+
+    // ========================================
+    // BULK EDIT - Edición Masiva de Evaluaciones (Solo Admin)
+    // ========================================
+    Route::prefix('evaluation/bulk-edit')
+        ->name('evaluation.bulk-edit.')
+        ->middleware('can:assign-evaluators')
+        ->group(function () {
+
+            // Vista de selección de convocatoria y fase
+            Route::get('/', [\Modules\Evaluation\Http\Controllers\BulkEditEvaluationController::class, 'index'])
+                ->name('index');
+
+            // Vista de edición masiva
+            Route::get('edit', [\Modules\Evaluation\Http\Controllers\BulkEditEvaluationController::class, 'edit'])
+                ->name('edit');
+
+            // API Endpoints (AJAX)
+            Route::get('data', [\Modules\Evaluation\Http\Controllers\BulkEditEvaluationController::class, 'loadData'])
+                ->name('data');
+
+            Route::post('update-score', [\Modules\Evaluation\Http\Controllers\BulkEditEvaluationController::class, 'updateScore'])
+                ->name('update-score');
+
+            Route::get('criteria', [\Modules\Evaluation\Http\Controllers\BulkEditEvaluationController::class, 'getCriteria'])
+                ->name('criteria');
+
+            Route::get('phases', [\Modules\Evaluation\Http\Controllers\BulkEditEvaluationController::class, 'getPhases'])
+                ->name('phases');
+        });
 });

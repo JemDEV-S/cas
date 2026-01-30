@@ -3,7 +3,7 @@
 namespace Modules\Evaluation\Services;
 
 use Illuminate\Support\Facades\DB;
-use Modules\Evaluation\Entities\{Evaluation, EvaluationDetail, EvaluationHistory};
+use Modules\Evaluation\Entities\{Evaluation, EvaluationDetail, EvaluationHistory, EvaluationCriterion};
 use Modules\Evaluation\Enums\EvaluationStatusEnum;
 use Modules\Evaluation\Exceptions\EvaluationException;
 use Modules\Evaluation\Entities\EvaluatorAssignment;
@@ -479,5 +479,131 @@ class EvaluationService
             'overdue' => (clone $query)->overdue()->count(),
             'average_score' => (clone $query)->completed()->avg('total_score') ?? 0,
         ];
+    }
+
+    /**
+     * Actualizar un puntaje individual en modo bulk edit (para administradores)
+     * Este método es similar a saveEvaluationDetail pero optimizado para edición masiva
+     *
+     * @param int $evaluationId
+     * @param int $criterionId
+     * @param float $score
+     * @return array ['success' => bool, 'message' => string, 'data' => array]
+     */
+    public function bulkUpdateScore(int $evaluationId, int $criterionId, float $score): array
+    {
+        try {
+            $evaluation = Evaluation::with(['details', 'application.jobProfile.positionCode'])
+                ->findOrFail($evaluationId);
+
+            // Validar que la evaluación esté en estado válido para edición bulk
+            if (!in_array($evaluation->status->value, ['SUBMITTED', 'MODIFIED'])) {
+                return [
+                    'success' => false,
+                    'message' => 'Solo se pueden editar evaluaciones completadas (SUBMITTED o MODIFIED)',
+                    'data' => null,
+                ];
+            }
+
+            $criterion = EvaluationCriterion::findOrFail($criterionId);
+
+            // Validar rango de puntaje
+            if (!$criterion->validateScore($score)) {
+                return [
+                    'success' => false,
+                    'message' => "El puntaje debe estar entre {$criterion->min_score} y {$criterion->max_score}",
+                    'data' => null,
+                ];
+            }
+
+            return DB::transaction(function () use ($evaluation, $criterion, $score) {
+                // Buscar o crear el detalle
+                $detail = $evaluation->details()
+                    ->where('criterion_id', $criterion->id)
+                    ->first();
+
+                $oldScore = $detail?->score;
+                $isNewDetail = !$detail;
+
+                if ($detail) {
+                    // Actualizar existente
+                    $detail->update([
+                        'score' => $score,
+                        'version' => $detail->version + 1,
+                        'change_reason' => 'Actualización masiva por administrador',
+                    ]);
+                } else {
+                    // Crear nuevo detalle
+                    $detail = $evaluation->details()->create([
+                        'criterion_id' => $criterion->id,
+                        'score' => $score,
+                        'change_reason' => 'Creado en edición masiva por administrador',
+                    ]);
+                }
+
+                // Actualizar estado de la evaluación a MODIFIED si estaba SUBMITTED
+                if ($evaluation->status->value === 'SUBMITTED') {
+                    $evaluation->update([
+                        'status' => EvaluationStatusEnum::MODIFIED,
+                        'modified_by' => auth()->id(),
+                        'modified_at' => now(),
+                        'modification_reason' => 'Modificación masiva de puntajes',
+                    ]);
+                }
+
+                // Registrar en historial
+                $userId = auth()->id();
+                $action = $isNewDetail ? 'CRITERION_ADDED' : 'CRITERION_CHANGED';
+                $description = $isNewDetail
+                    ? "Criterio '{$criterion->name}' agregado en edición masiva"
+                    : "Criterio '{$criterion->name}' actualizado en edición masiva";
+
+                EvaluationHistory::logChange(
+                    $evaluation->id,
+                    $userId,
+                    $action,
+                    $description,
+                    ['score' => $oldScore],
+                    ['score' => $score],
+                    'Edición masiva por administrador'
+                );
+
+                // Refrescar para obtener los scores actualizados (se calculan automáticamente)
+                $evaluation->refresh();
+
+                return [
+                    'success' => true,
+                    'message' => 'Puntaje actualizado correctamente',
+                    'data' => [
+                        'detail_id' => $detail->id,
+                        'score' => $detail->score,
+                        'weighted_score' => $detail->weighted_score,
+                        'version' => $detail->version,
+                        'total_score' => $evaluation->total_score,
+                        'percentage' => $evaluation->percentage,
+                    ],
+                ];
+            });
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return [
+                'success' => false,
+                'message' => 'Evaluación o criterio no encontrado',
+                'data' => null,
+            ];
+        } catch (\Exception $e) {
+            \Log::error('Error en bulkUpdateScore: ' . $e->getMessage(), [
+                'evaluation_id' => $evaluationId,
+                'criterion_id' => $criterionId,
+                'score' => $score,
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Error al actualizar el puntaje: ' . $e->getMessage(),
+                'data' => null,
+            ];
+        }
     }
 }
