@@ -553,7 +553,7 @@ class EvaluationService
 
                 // Registrar en historial
                 $userId = auth()->id();
-                $action = $isNewDetail ? 'CRITERION_ADDED' : 'CRITERION_CHANGED';
+                $action = 'CRITERION_CHANGED'; // Siempre usamos CRITERION_CHANGED (es un valor válido del ENUM)
                 $description = $isNewDetail
                     ? "Criterio '{$criterion->name}' agregado en edición masiva"
                     : "Criterio '{$criterion->name}' actualizado en edición masiva";
@@ -570,6 +570,9 @@ class EvaluationService
 
                 // Refrescar para obtener los scores actualizados (se calculan automáticamente)
                 $evaluation->refresh();
+
+                // Actualizar el puntaje en la tabla de application según la fase
+                $this->updateApplicationScore($evaluation);
 
                 return [
                     'success' => true,
@@ -604,6 +607,70 @@ class EvaluationService
                 'message' => 'Error al actualizar el puntaje: ' . $e->getMessage(),
                 'data' => null,
             ];
+        }
+    }
+
+    /**
+     * Actualizar el puntaje en la tabla application según la fase de evaluación
+     *
+     * @param Evaluation $evaluation
+     * @return void
+     */
+    protected function updateApplicationScore(Evaluation $evaluation): void
+    {
+        try {
+            $application = $evaluation->application;
+            if (!$application) {
+                \Log::warning('No se encontró la application para la evaluación', [
+                    'evaluation_id' => $evaluation->id,
+                ]);
+                return;
+            }
+
+            $phase = $evaluation->phase;
+            if (!$phase) {
+                \Log::warning('No se encontró la fase para la evaluación', [
+                    'evaluation_id' => $evaluation->id,
+                ]);
+                return;
+            }
+
+            // Determinar qué campo actualizar según el código de la fase
+            $scoreField = null;
+            switch ($phase->code) {
+                case 'PHASE_06_CV_EVALUATION':
+                    $scoreField = 'curriculum_score';
+                    break;
+                case 'PHASE_08_INTERVIEW':
+                    $scoreField = 'interview_score';
+                    break;
+                default:
+                    // Si no es una fase de evaluación curricular o entrevista, no actualizamos
+                    \Log::info('Fase no requiere actualización de puntaje en application', [
+                        'phase_code' => $phase->code,
+                        'evaluation_id' => $evaluation->id,
+                    ]);
+                    return;
+            }
+
+            // Actualizar el puntaje en la application
+            $application->update([
+                $scoreField => $evaluation->total_score,
+            ]);
+
+            \Log::info('Puntaje actualizado en application', [
+                'application_id' => $application->id,
+                'evaluation_id' => $evaluation->id,
+                'phase_code' => $phase->code,
+                'field' => $scoreField,
+                'score' => $evaluation->total_score,
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error al actualizar puntaje en application: ' . $e->getMessage(), [
+                'evaluation_id' => $evaluation->id,
+                'trace' => $e->getTraceAsString(),
+            ]);
         }
     }
 }
