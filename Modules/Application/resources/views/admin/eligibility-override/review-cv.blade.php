@@ -77,8 +77,8 @@
 
                     <!-- Puntaje total -->
                     <div class="text-right">
-                        <div class="text-2xl font-bold text-blue-600" x-text="totalScore.toFixed(2)">{{ number_format($cvEvaluation->total_score, 2) }}</div>
-                        <p class="text-xs text-gray-500">de {{ number_format($criteria->sum('max_score'), 2) }} pts</p>
+                        <div class="text-2xl font-bold text-blue-600" x-text="totalScore.toFixed(2)">{{ number_format($cvEvaluation->total_score ?? 0, 2) }}</div>
+                        <p class="text-xs text-gray-500">de {{ number_format($criteria->sum('max_score') ?? 0, 2) }} pts</p>
                         <div class="mt-1 w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
                             <div class="h-full bg-blue-600 transition-all duration-300" :style="`width: ${progress}%`"></div>
                         </div>
@@ -365,7 +365,7 @@
 function cvReviewApp() {
     return {
         criteria: @json($criteria),
-        totalScore: {{ $cvEvaluation->total_score }},
+        totalScore: {{ $cvEvaluation->total_score ?? 0 }},
         progress: 0,
         generalComments: @json($cvEvaluation->general_comments ?? ''),
         decision: '',
@@ -449,9 +449,9 @@ function cvReviewApp() {
             this.totalScore = total;
 
             // Calcular progreso sobre la suma de max_score (no ponderado)
-            const maxScore = {{ $criteria->sum('max_score') }};
+            const maxScore = {{ $criteria->sum('max_score') ?? 0 }};
             const currentScore = this.totalScore;
-            const maxTotalScore = {{ floatval($criteria->sum(fn($c) => $c->max_score * $c->weight)) }};
+            const maxTotalScore = {{ $criteria->map(function($c) { return $c->max_score * $c->weight; })->sum() ?? 0 }};
             this.progress = maxTotalScore > 0 ? (currentScore / maxTotalScore) * 100 : 0;
         },
 

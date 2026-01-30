@@ -389,10 +389,28 @@ class EligibilityOverrideController extends Controller
             ->with(['details.criterion', 'evaluator', 'phase'])
             ->first();
 
+        // Si no existe evaluación de CV, crear una nueva
         if (!$cvEvaluation) {
-            return redirect()
-                ->back()
-                ->with('error', 'No se encontró una evaluación de CV completada para este postulante.');
+            $cvEvaluation = \Modules\Evaluation\Entities\Evaluation::create([
+                'application_id' => $application->id,
+                'evaluator_id' => auth()->id(),
+                'phase_id' => $cvPhase->id,
+                'job_posting_id' => $application->jobProfile->job_posting_id,
+                'status' => \Modules\Evaluation\Enums\EvaluationStatusEnum::IN_PROGRESS,
+                'is_anonymous' => false,
+                'is_collaborative' => false,
+            ]);
+
+            // Registrar en historial
+            \Modules\Evaluation\Entities\EvaluationHistory::logChange(
+                $cvEvaluation->id,
+                auth()->id(),
+                'CREATED',
+                'Evaluación de CV creada desde reevaluación de elegibilidad'
+            );
+
+            // Recargar relaciones
+            $cvEvaluation->load(['details.criterion', 'evaluator', 'phase']);
         }
 
         // Obtener CV
@@ -490,10 +508,10 @@ class EligibilityOverrideController extends Controller
                 ->with('error', 'No se encontró la fase de Evaluación de CV.');
         }
 
-        // Buscar evaluación de CV
+        // Buscar evaluación de CV (incluyendo nuevas evaluaciones creadas)
         $cvEvaluation = \Modules\Evaluation\Entities\Evaluation::where('application_id', $application->id)
             ->where('phase_id', $cvPhase->id)
-            ->whereIn('status', ['SUBMITTED', 'MODIFIED'])
+            ->whereIn('status', ['SUBMITTED', 'MODIFIED', 'IN_PROGRESS', 'DRAFT'])
             ->first();
 
         if (!$cvEvaluation) {
