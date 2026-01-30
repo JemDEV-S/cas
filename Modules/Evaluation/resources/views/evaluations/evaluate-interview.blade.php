@@ -154,10 +154,19 @@
 
                     {{-- Input de Puntaje --}}
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
+                        <div x-data="{ getSaveStatus() { return $root.saveStatus ? $root.saveStatus[this.criterionId] : 'idle'; } }">
                             <label class="block text-sm font-medium text-gray-700 mb-2">
                                 Puntaje Obtenido (escala 0-20)
                                 <span class="text-red-500">*</span>
+                                <span x-show="getSaveStatus() === 'saving'" class="ml-2 text-xs text-blue-600">
+                                    <i class="fas fa-spinner fa-spin"></i> Guardando...
+                                </span>
+                                <span x-show="getSaveStatus() === 'saved'" class="ml-2 text-xs text-green-600">
+                                    <i class="fas fa-check-circle"></i> Guardado
+                                </span>
+                                <span x-show="getSaveStatus() === 'error'" class="ml-2 text-xs text-red-600">
+                                    <i class="fas fa-exclamation-circle"></i> Error al guardar
+                                </span>
                             </label>
                             <div class="flex items-center gap-2">
                                 <input
@@ -266,7 +275,17 @@
                 Volver
             </a>
 
-            <div class="flex gap-3">
+            <div class="flex gap-3 items-center">
+                {{-- Indicador de estado de guardado global --}}
+                <div x-show="isSaving" class="text-sm text-blue-600">
+                    <i class="fas fa-spinner fa-spin mr-1"></i>
+                    Guardando cambios...
+                </div>
+                <div x-show="!isSaving && lastSaveTime" class="text-sm text-green-600">
+                    <i class="fas fa-check-circle mr-1"></i>
+                    Todos los cambios guardados
+                </div>
+
                 <button
                     type="button"
                     @click="saveAsDraft()"
@@ -278,11 +297,12 @@
                 <button
                     type="button"
                     @click="submitEvaluation()"
-                    :disabled="!canSubmit()"
-                    :class="canSubmit() ? 'bg-purple-600 hover:bg-purple-700' : 'bg-gray-300 cursor-not-allowed'"
+                    :disabled="!canSubmit() || hasPendingSaves()"
+                    :class="(canSubmit() && !hasPendingSaves()) ? 'bg-purple-600 hover:bg-purple-700' : 'bg-gray-300 cursor-not-allowed'"
                     class="px-6 py-3 text-white rounded-lg font-medium">
                     <i class="fas fa-paper-plane mr-2"></i>
-                    Enviar Evaluación
+                    <span x-show="!hasPendingSaves()">Enviar Evaluación</span>
+                    <span x-show="hasPendingSaves()">Guardando...</span>
                 </button>
             </div>
         </div>
@@ -302,6 +322,13 @@ function interviewEvaluationApp() {
         disqualificationReason: '',
         criteriaScores: {},
 
+        // Control de auto-save
+        saveTimeouts: {},
+        pendingRequests: {},
+        saveStatus: {}, // 'idle', 'saving', 'saved', 'error'
+        isSaving: false,
+        lastSaveTime: null,
+
         init() {
             // Inicializar TODOS los criterios (incluso si no tienen puntaje aún)
             @foreach($criteria as $criterion)
@@ -309,6 +336,7 @@ function interviewEvaluationApp() {
                     score: {{ $details[$criterion->id]->score ?? 0 }},
                     comment: '{{ $details[$criterion->id]->comments ?? '' }}'
                 };
+                this.saveStatus[{{ $criterion->id }}] = 'idle';
             @endforeach
 
             this.calculateTotal();
@@ -352,25 +380,90 @@ function interviewEvaluationApp() {
         },
 
         autoSave(criterionId, score, comment) {
+            // Cancelar timeout anterior para este criterio (debouncing)
+            if (this.saveTimeouts[criterionId]) {
+                clearTimeout(this.saveTimeouts[criterionId]);
+                delete this.saveTimeouts[criterionId];
+            }
+
+            // Cancelar request pendiente anterior para este criterio
+            if (this.pendingRequests[criterionId]) {
+                this.pendingRequests[criterionId].abort();
+            }
+
+            // Marcar como pendiente de guardado
+            this.saveStatus[criterionId] = 'idle';
+
+            // Esperar 800ms antes de guardar (debouncing)
+            this.saveTimeouts[criterionId] = setTimeout(() => {
+                delete this.saveTimeouts[criterionId]; // Limpiar el timeout
+                this.performSave(criterionId, score, comment);
+            }, 800);
+        },
+
+        performSave(criterionId, score, comment) {
+            // Crear AbortController para poder cancelar esta request si es necesario
+            const controller = new AbortController();
+            this.pendingRequests[criterionId] = controller;
+
+            // Marcar como guardando
+            this.saveStatus[criterionId] = 'saving';
+            this.isSaving = true;
+
             fetch('{{ route("evaluation.save-detail", $evaluation->id) }}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'Accept': 'application/json',
                 },
                 body: JSON.stringify({
                     criterion_id: criterionId,
                     score: parseFloat(score) || 0,
                     comments: comment
-                })
+                }),
+                signal: controller.signal
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Error en la respuesta del servidor');
+                }
+                return response.json();
+            })
             .then(data => {
-                if (!data.success) {
+                if (data.success) {
+                    this.saveStatus[criterionId] = 'saved';
+                    this.lastSaveTime = new Date();
+
+                    // Limpiar el estado "saved" después de 2 segundos
+                    setTimeout(() => {
+                        if (this.saveStatus[criterionId] === 'saved') {
+                            this.saveStatus[criterionId] = 'idle';
+                        }
+                    }, 2000);
+                } else {
                     console.error('Error al guardar:', data.message);
+                    this.saveStatus[criterionId] = 'error';
                 }
             })
-            .catch(error => console.error('Error:', error));
+            .catch(error => {
+                if (error.name !== 'AbortError') {
+                    console.error('Error al guardar:', error);
+                    this.saveStatus[criterionId] = 'error';
+                }
+            })
+            .finally(() => {
+                // Limpiar el request pendiente
+                delete this.pendingRequests[criterionId];
+
+                // Verificar si aún hay requests pendientes
+                this.isSaving = Object.keys(this.pendingRequests).length > 0;
+            });
+        },
+
+        hasPendingSaves() {
+            return Object.values(this.saveStatus).some(status => status === 'saving') ||
+                   Object.keys(this.saveTimeouts).length > 0;
         },
 
         saveAsDraft() {
@@ -380,6 +473,12 @@ function interviewEvaluationApp() {
         async submitEvaluation() {
             if (!this.canSubmit()) {
                 alert('Complete todos los campos requeridos antes de enviar');
+                return;
+            }
+
+            // Verificar si hay guardados pendientes
+            if (this.hasPendingSaves()) {
+                alert('Hay cambios que se están guardando. Por favor espere unos segundos e intente nuevamente.');
                 return;
             }
 
