@@ -257,8 +257,8 @@
                 </a>
 
                 <div class="flex items-center gap-3">
-                    {{-- Solo mostrar botón de modificar si el reclamo NO ha sido resuelto --}}
-                    @if(!$application->eligibilityOverride)
+                    {{-- Solo mostrar botón de modificar si NO hay un reclamo pendiente --}}
+                    @if(!$application->pendingEligibilityOverride)
                     <a href="{{ route('admin.eligibility-override.edit-cv-evaluation', $application->id) }}"
                        class="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg transition-colors inline-flex items-center gap-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

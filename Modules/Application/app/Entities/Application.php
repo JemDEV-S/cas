@@ -221,11 +221,27 @@ class Application extends Model
     }
 
     /**
-     * Relación con override de elegibilidad (reevaluación de reclamo)
+     * Relación con override de elegibilidad (reevaluación de reclamo) - Múltiples reclamos
+     */
+    public function eligibilityOverrides(): HasMany
+    {
+        return $this->hasMany(EligibilityOverride::class);
+    }
+
+    /**
+     * Relación con el último override de elegibilidad
      */
     public function eligibilityOverride(): HasOne
     {
-        return $this->hasOne(EligibilityOverride::class);
+        return $this->hasOne(EligibilityOverride::class)->latestOfMany('resolved_at');
+    }
+
+    /**
+     * Relación con override de elegibilidad pendiente (sin resolver)
+     */
+    public function pendingEligibilityOverride(): HasOne
+    {
+        return $this->hasOne(EligibilityOverride::class)->whereNull('resolved_at');
     }
 
     /**

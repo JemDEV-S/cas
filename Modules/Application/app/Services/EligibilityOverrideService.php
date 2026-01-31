@@ -14,7 +14,7 @@ class EligibilityOverrideService
 {
     /**
      * Obtener postulaciones que pueden ser reevaluadas
-     * (NO_APTO sin override, o PENDIENTES de calificación)
+     * (NO_APTO o PENDIENTES de calificación, sin reclamo pendiente)
      */
     public function getApplicationsForReview(string $jobPostingId, ?string $jobProfileId = null, ?string $phaseId = null): Collection
     {
@@ -33,8 +33,9 @@ class EligibilityOverrideService
                       ApplicationStatus::IN_REVIEW
                   ]);
             })
-            ->whereDoesntHave('eligibilityOverride')
-            ->with(['applicant', 'jobProfile', 'latestEvaluation', 'evaluations.phase'])
+            // Solo excluir si tiene un reclamo pendiente (sin resolver)
+            ->whereDoesntHave('pendingEligibilityOverride')
+            ->with(['applicant', 'jobProfile', 'latestEvaluation', 'evaluations.phase', 'eligibilityOverrides'])
             ->orderBy('created_at', 'desc')
             ->get();
     }
@@ -83,9 +84,9 @@ class EligibilityOverrideService
         ?string $affectedPhaseId = null
     ): EligibilityOverride {
         return DB::transaction(function () use ($application, $resolutionSummary, $resolutionDetail, $resolvedBy, $resolutionType, $affectedPhaseId) {
-            // Verificar que no tenga override previo
-            if ($application->eligibilityOverride) {
-                throw new \Exception('Esta postulación ya tiene una resolución de reevaluación');
+            // Verificar que no tenga un override pendiente (sin resolver)
+            if ($application->pendingEligibilityOverride) {
+                throw new \Exception('Esta postulación ya tiene un reclamo pendiente de resolución');
             }
 
             $originalStatus = $application->status->value;
@@ -152,9 +153,9 @@ class EligibilityOverrideService
         ?string $affectedPhaseId = null
     ): EligibilityOverride {
         return DB::transaction(function () use ($application, $resolutionSummary, $resolutionDetail, $resolvedBy, $resolutionType, $affectedPhaseId) {
-            // Verificar que no tenga override previo
-            if ($application->eligibilityOverride) {
-                throw new \Exception('Esta postulación ya tiene una resolución de reevaluación');
+            // Verificar que no tenga un override pendiente (sin resolver)
+            if ($application->pendingEligibilityOverride) {
+                throw new \Exception('Esta postulación ya tiene un reclamo pendiente de resolución');
             }
 
             $originalStatus = $application->status->value;
@@ -226,6 +227,8 @@ class EligibilityOverrideService
             'specialConditions',
             'latestEvaluation',
             'eligibilityOverride.resolver',
+            'eligibilityOverrides.resolver',
+            'pendingEligibilityOverride',
             'history' => fn($q) => $q->orderBy('performed_at', 'desc')->limit(10),
         ]);
     }
@@ -235,8 +238,8 @@ class EligibilityOverrideService
      */
     public function canBeReviewed(Application $application): bool
     {
-        // No puede tener override previo
-        if ($application->eligibilityOverride) {
+        // No puede tener un reclamo pendiente (sin resolver)
+        if ($application->pendingEligibilityOverride) {
             return false;
         }
 

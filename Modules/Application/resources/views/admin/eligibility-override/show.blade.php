@@ -66,6 +66,50 @@
         </div>
     @endif
 
+    <!-- Historial de Reclamos (si hay más de uno) -->
+    @if($application->eligibilityOverrides && $application->eligibilityOverrides->count() > 1)
+        <div class="bg-white shadow sm:rounded-lg">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-800">
+                    Historial de Reclamos
+                    <span class="ml-2 px-2 py-1 text-sm bg-gray-200 text-gray-800 rounded-full">
+                        {{ $application->eligibilityOverrides->count() }}
+                    </span>
+                </h3>
+                <p class="text-sm text-gray-600 mt-1">Todos los reclamos registrados para esta postulación</p>
+            </div>
+            <div class="px-6 py-4">
+                <div class="space-y-4">
+                    @foreach($application->eligibilityOverrides->sortByDesc('resolved_at') as $index => $override)
+                        <div class="p-4 border rounded-lg {{ $index === 0 ? 'bg-blue-50 border-blue-300' : 'bg-gray-50 border-gray-300' }}">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center gap-2">
+                                    @if($index === 0)
+                                        <span class="px-2 py-1 text-xs font-semibold bg-blue-600 text-white rounded">
+                                            Más reciente
+                                        </span>
+                                    @endif
+                                    <span class="px-2 py-1 text-xs font-semibold rounded-full
+                                        {{ $override->decision->value === 'APPROVED' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                                        {{ $override->decision->label() }}
+                                    </span>
+                                    <span class="text-sm text-gray-600">
+                                        {{ $override->resolved_at->format('d/m/Y H:i') }}
+                                    </span>
+                                </div>
+                                <span class="text-xs text-gray-500">
+                                    por {{ $override->resolver->name ?? 'N/A' }}
+                                </span>
+                            </div>
+                            <p class="text-sm font-semibold text-gray-800">{{ $override->resolution_summary }}</p>
+                            <p class="text-sm text-gray-600 mt-1">{{ Str::limit($override->resolution_detail, 200) }}</p>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+    @endif
+
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Columna izquierda: Datos del postulante -->
         <div class="lg:col-span-2 space-y-6">
