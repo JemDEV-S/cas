@@ -20,6 +20,21 @@
         </a>
     </div>
 
+    {{-- Nota sobre bonificaciones --}}
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+        <div class="flex items-start">
+            <i class="fas fa-info-circle text-blue-600 mt-1 mr-3"></i>
+            <div class="text-sm text-blue-800">
+                <p class="font-semibold mb-1">Bonificaciones aplicables en esta fase:</p>
+                <ul class="list-disc list-inside space-y-1 ml-2">
+                    <li><strong>Bonus Joven (10%):</strong> Se aplica automáticamente a postulantes menores de 29 años sobre el puntaje de entrevista RAW (Ley 31533 Art. 3.1)</li>
+                    <li><strong>Bonus FF.AA. (10%):</strong> Se aplica a licenciados de las Fuerzas Armadas sobre el puntaje de entrevista RAW (RPE 61-2010-SERVIR/PE Art. 4)</li>
+                    <li class="text-blue-600 font-medium">Ambas bonificaciones son acumulables y pueden hacer que el puntaje de entrevista supere los 50 puntos</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
     {{-- Resumen --}}
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div class="bg-white rounded-lg shadow-sm border p-4">
@@ -58,9 +73,10 @@
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">DNI</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Puesto</th>
                         <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Edad</th>
-                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Puntaje Bruto</th>
-                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Bonus Edad</th>
-                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Puntaje Final</th>
+                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Puntaje RAW</th>
+                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase" title="Ley 31533 Art. 3.1">Bonus Joven</th>
+                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase" title="RPE 61-2010-SERVIR/PE Art. 4">Bonus FF.AA.</th>
+                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Total Entrevista</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Evaluador</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
                     </tr>
@@ -87,13 +103,20 @@
                         </td>
                         <td class="px-4 py-3 text-center text-sm">
                             @if($item['age_bonus'] > 0)
-                                <span class="text-green-600 font-medium">+{{ number_format($item['age_bonus'], 2) }}</span>
+                                <span class="text-green-600 font-medium" title="10% sobre entrevista RAW">+{{ number_format($item['age_bonus'], 2) }}</span>
+                            @else
+                                <span class="text-gray-400">—</span>
+                            @endif
+                        </td>
+                        <td class="px-4 py-3 text-center text-sm">
+                            @if($item['military_bonus'] > 0)
+                                <span class="text-purple-600 font-medium" title="10% sobre entrevista RAW">+{{ number_format($item['military_bonus'], 2) }}</span>
                             @else
                                 <span class="text-gray-400">—</span>
                             @endif
                         </td>
                         <td class="px-4 py-3 text-center">
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-green-100 text-green-800">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-green-100 text-green-800" title="RAW + Bonus Joven + Bonus FF.AA.">
                                 {{ number_format($item['score_with_bonus'], 2) }}
                             </span>
                         </td>

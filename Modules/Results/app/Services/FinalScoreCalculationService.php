@@ -76,10 +76,12 @@ class FinalScoreCalculationService
                 'curriculum_score' => $app->curriculum_score,
                 'interview_score_raw' => $app->interview_score,
                 'age_bonus' => $bonuses['age_bonus'],
+                'military_bonus' => $bonuses['military_bonus'],
                 'interview_score_with_bonus' => $bonuses['interview_score_with_bonus'],
                 'base_score' => $bonuses['base_score'],
                 'public_sector_years' => $bonuses['public_sector_years'],
                 'public_sector_bonus' => $bonuses['public_sector_bonus'],
+                'subtotal' => $bonuses['subtotal'],
                 'special_bonuses' => $bonuses['special_bonuses'],
                 'special_bonus_total' => $bonuses['special_bonus_total'],
                 'final_score' => $bonuses['final_score'],
@@ -133,9 +135,10 @@ class FinalScoreCalculationService
 
                     $bonuses = $this->bonusService->calculateAllBonuses($app);
 
-                    // Actualizar todos los campos
-                    $app->age_bonus = $bonuses['age_bonus'];
-                    $app->interview_score_with_bonus = $bonuses['interview_score_with_bonus'];
+                    // NOTA: age_bonus, military_bonus e interview_score_with_bonus ya fueron
+                    // guardados por InterviewResultProcessingService, no necesitan actualizarse aquí
+
+                    // Actualizar campos calculados en esta fase
                     $app->base_score = $bonuses['base_score'];
                     $app->public_sector_years = $bonuses['public_sector_years'];
                     $app->public_sector_bonus = $bonuses['public_sector_bonus'];

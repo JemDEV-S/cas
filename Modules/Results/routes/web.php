@@ -72,6 +72,8 @@ Route::prefix('admin')->middleware(['auth'])->name('admin.results.')->group(func
         ->name('final-calculation');
     Route::post('postings/{posting}/results/final-calculation/preview', [FinalResultCalculationController::class, 'preview'])
         ->name('final-calculation.preview');
+    Route::post('postings/{posting}/results/final-calculation/preview-detailed', [FinalResultCalculationController::class, 'previewDetailed'])
+        ->name('final-calculation.preview-detailed');
     Route::post('postings/{posting}/results/final-calculation/execute', [FinalResultCalculationController::class, 'execute'])
         ->name('final-calculation.execute');
 

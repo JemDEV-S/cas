@@ -108,7 +108,15 @@
                         @csrf
                         <button type="submit" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                             <i class="fas fa-search mr-2"></i>
-                            Previsualizar Resultados (Dry Run)
+                            Previsualizar Resultados (Vista Simple)
+                        </button>
+                    </form>
+
+                    <form action="{{ route('admin.results.final-calculation.preview-detailed', $posting) }}" method="POST">
+                        @csrf
+                        <button type="submit" class="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+                            <i class="fas fa-file-alt mr-2"></i>
+                            Reporte Detallado (Por Unidad/Perfil)
                         </button>
                     </form>
                 @else
@@ -121,6 +129,13 @@
                     </span>
                 @endif
             </div>
+
+            @if($summary['ready_for_calculation'] > 0)
+            <div class="mt-4 text-sm text-gray-600">
+                <p><strong>Vista Simple:</strong> Lista rápida de todos los postulantes agrupados por estado (aprobados/no aptos/incompletos)</p>
+                <p><strong>Reporte Detallado:</strong> Organizado por Unidad Orgánica y Perfil, con todas las columnas de bonificaciones visibles (similar al formato de reporte PDF)</p>
+            </div>
+            @endif
         </div>
     </div>
 </div>

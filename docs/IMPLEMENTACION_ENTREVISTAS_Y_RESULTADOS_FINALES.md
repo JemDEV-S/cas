@@ -12,15 +12,12 @@
 
 ### 1.1 Normativa Aplicable
 
-| Ley | Concepto | Bonificacion |
-|-----|----------|--------------|
-| **Ley 31533, Art. 3.1** | Postulantes tecnicos/profesionales menores de 29 anios | 10% sobre puntaje de entrevista |
-| **Ley 31533, Art. 3.2** | Experiencia laboral en sector publico | +1 punto por anio (max 3 pts) |
-| **Ley 29973** | Persona con discapacidad certificada | 15% sobre puntaje final |
-| **Ley 29248** | Licenciado de las FF.AA. | 10% sobre puntaje final |
-| **Ley 27674** | Deportista calificado nacional | 10% sobre puntaje final |
-| **Ley 27674** | Deportista calificado internacional | 15% sobre puntaje final |
-| **Ley 27277** | Victima del terrorismo | 10% sobre puntaje final |
+| Ley | Concepto | Bonificacion | Requisitos de Verificacion |
+|-----|----------|--------------|----------------------------|
+| **Ley 31533, Art. 3.1** | Postulantes tecnicos/profesionales menores de 29 anios | 10% sobre puntaje de entrevista RAW | Fecha de nacimiento verificada, edad < 29 años |
+| **RPE 61-2010-SERVIR/PE, Art. 4** | Licenciado de las FF.AA. | 10% sobre puntaje de entrevista RAW | Documento oficial de autoridad competente que acredite la condición |
+| **Ley 31533, Art. 3.2** | Experiencia laboral en sector publico (menores de 29 anios) | +1 punto por anio (max 3 pts) | Edad < 29 años + experiencias verificadas con `is_public_sector=true` |
+| **Ley 29973, Art. 48** | Persona con discapacidad certificada | 15% sobre subtotal | Certificado de discapacidad vigente y verificado |
 
 ### 1.2 Situacion Actual del Sistema
 
@@ -37,6 +34,60 @@
 | Calculo puntaje final | ❌ Falta | No implementado |
 | Asignacion de ganadores | ❌ Falta | No implementado |
 
+### 1.3 Requisitos de Verificacion Documental
+
+Para que una bonificación sea aplicable, el postulante debe cumplir con los siguientes requisitos de verificación documental:
+
+#### 1.3.1 Bonificación por Edad (Ley 31533, Art. 3.1)
+- **Requisito**: El postulante debe ser menor de 29 años
+- **Verificación**:
+  - Campo `birth_date` debe estar completado en la tabla `applications`
+  - El cálculo de edad se realiza automáticamente: `Carbon::parse($application->birth_date)->age < 29`
+- **Documentación**: DNI o partida de nacimiento (ya verificado en el registro)
+
+#### 1.3.2 Bonificación por Licenciado de FF.AA. (RPE 61-2010-SERVIR/PE, Art. 4)
+- **Requisito**: Ser personal licenciado de las Fuerzas Armadas
+- **Verificación**:
+  - Debe existir registro en tabla `application_special_conditions` con `condition_type = 'MILITARY'`
+  - Campo `is_verified = true` (verificado por administrador)
+  - Campo `expiry_date` debe ser NULL o posterior a la fecha actual
+- **Documentación requerida**:
+  - Documento oficial emitido por autoridad competente (Comando de Personal de las FF.AA.)
+  - Debe acreditar la condición de licenciado
+  - Copia simple adjunta en el CV documentado
+  - El postulante debe haberlo indicado en su Hoja de Vida
+
+#### 1.3.3 Bonificación por Experiencia en Sector Público (Ley 31533, Art. 3.2)
+- **Requisito**: Tener experiencia laboral verificada en sector público Y ser menor de 29 años
+- **Verificación**:
+  - Registros en tabla `application_experiences` con `is_public_sector = true`
+  - Campo `is_verified = true` (verificado por administrador)
+  - Campo `duration_days` para calcular años de experiencia (365 días = 1 año)
+  - Edad < 29 años (requisito adicional)
+- **Documentación**: Contratos, certificados de trabajo, constancias emitidas por entidades públicas
+- **Cálculo**: +1 punto por año completo, máximo 3 puntos
+
+#### 1.3.4 Bonificación por Discapacidad (Ley 29973, Art. 48)
+- **Requisito**: Persona con discapacidad certificada
+- **Verificación**:
+  - Registro en `application_special_conditions` con `condition_type = 'DISABILITY'`
+  - Campo `is_verified = true`
+  - Campo `expiry_date` debe ser NULL o posterior a la fecha actual
+- **Documentación**: Certificado de discapacidad emitido por CONADIS (Consejo Nacional para la Integración de la Persona con Discapacidad)
+
+#### 1.3.5 Otras Bonificaciones Especiales
+| Tipo | Campo en DB | Documentación Requerida | Entidad Emisora |
+|------|-------------|------------------------|-----------------|
+| Deportista Nacional | `ATHLETE_NATIONAL` | Constancia oficial de deportista calificado | IPD (Instituto Peruano del Deporte) |
+| Deportista Internacional | `ATHLETE_INTL` | Constancia oficial de deportista calificado de alto nivel | IPD |
+| Víctima de Terrorismo | `TERRORISM` | Certificado de inscripción en el Registro Único de Víctimas | CONADIS / Registro Único |
+
+**IMPORTANTE**: En todos los casos, el administrador del sistema debe:
+1. Verificar la autenticidad de los documentos presentados
+2. Marcar `is_verified = true` en la tabla correspondiente
+3. Verificar que los documentos estén vigentes (si aplica `expiry_date`)
+4. Solo las condiciones especiales con `is_verified = true` se consideran para las bonificaciones
+
 ---
 
 ## 2. REGLAS DE NEGOCIO
@@ -44,49 +95,74 @@
 ### 2.1 Formula de Puntaje Final
 
 ```
-PUNTAJE_BASE = curriculum_score + interview_score_con_bonus_joven
-
-Donde:
+PASO 1: Bonificaciones que se aplican sobre puntaje de entrevista RAW
 - curriculum_score: 0 a 50 puntos (minimo 35 para aprobar)
-- interview_score: 0 a 50 puntos (minimo 35 para aprobar)
-- bonus_joven: 10% sobre interview_score (si edad < 29)
+- interview_score_raw: 0 a 50 puntos (minimo 35 para aprobar)
+- bonus_joven: 10% sobre interview_score_raw (si edad < 29) - Ley 31533 Art. 3.1
+- bonus_ffaa: 10% sobre interview_score_raw - RPE 61-2010-SERVIR/PE Art. 4
 
-PUNTAJE_FINAL = PUNTAJE_BASE + BONIFICACIONES
+PASO 2: Calcular puntaje base
+- interview_score_with_bonuses = interview_score_raw + bonus_joven + bonus_ffaa
+- PUNTAJE_BASE = curriculum_score + interview_score_with_bonuses
 
-Bonificaciones (acumulables):
-- Discapacidad: 15% de PUNTAJE_BASE
-- Licenciado FF.AA.: 10% de PUNTAJE_BASE
-- Deportista Nacional: 10% de PUNTAJE_BASE
-- Deportista Internacional: 15% de PUNTAJE_BASE
-- Victima Terrorismo: 10% de PUNTAJE_BASE
-- Experiencia Sector Publico: +1 pt/anio (max 3 pts)
+PASO 3: Bonificacion por experiencia sector publico
+- Experiencia Sector Publico: +1 pt/anio (max 3 pts) - SOLO SI < 29 AÑOS - Ley 31533 Art. 3.2
 
-NOTA: El puntaje final PUEDE superar 100 puntos
+PASO 4: Calcular subtotal
+- SUBTOTAL = PUNTAJE_BASE + bonus_sector_publico
+
+PASO 5: Bonificaciones especiales sobre subtotal (discapacidad, deportistas, terrorismo)
+- Discapacidad: 15% sobre SUBTOTAL - Ley 29973 Art. 48
+- Deportista Nacional: 10% sobre SUBTOTAL - Ley 27674
+- Deportista Internacional: 15% sobre SUBTOTAL - Ley 27674
+- Victima Terrorismo: 10% sobre SUBTOTAL - Ley 27277
+
+PASO 6: Puntaje final
+- PUNTAJE_FINAL = SUBTOTAL + suma_bonificaciones_especiales
+
+NOTAS IMPORTANTES:
+- Todas las bonificaciones son ACUMULABLES
+- El puntaje final PUEDE superar 100 puntos
+- La bonificación de FF.AA. se aplica sobre entrevista RAW (antes de sumarla al CV)
+- La bonificación de discapacidad se aplica sobre el SUBTOTAL (después de todas las demás)
 ```
 
 ### 2.2 Ejemplo de Calculo
 
 ```
-Postulante: Juan Perez, 27 anios, con discapacidad, 4 anios sector publico
+Postulante: Juan Perez, 27 años, licenciado FF.AA. + discapacidad, 4 años sector publico
 
 curriculum_score = 45/50
 interview_score_raw = 42/50
 
-1. Bonus Joven (< 29 anios):
-   bonus_joven = 42 * 0.10 = 4.2
-   interview_score_final = 42 + 4.2 = 46.2
+PASO 1: Bonificaciones sobre puntaje de entrevista RAW
+   bonus_joven = 42 * 0.10 = 4.2 (< 29 años - Ley 31533 Art. 3.1)
+   bonus_ffaa = 42 * 0.10 = 4.2 (Licenciado FF.AA. - RPE 61-2010-SERVIR/PE Art. 4)
 
-2. Puntaje Base:
-   puntaje_base = 45 + 46.2 = 91.2
+PASO 2: Puntaje Base
+   interview_score_with_bonuses = 42 + 4.2 + 4.2 = 50.4
+   puntaje_base = 45 + 50.4 = 95.4
 
-3. Bonificacion Discapacidad (15%):
-   bonus_discapacidad = 91.2 * 0.15 = 13.68
+PASO 3: Bonificacion por experiencia sector publico
+   bonus_exp_publica = 3.0 (4 años, max 3 pts, < 29 años - Ley 31533 Art. 3.2)
 
-4. Bonificacion Exp. Sector Publico (4 anios, max 3 pts):
-   bonus_exp_publica = 3.0 (tope)
+PASO 4: Subtotal
+   subtotal = 95.4 + 3.0 = 98.4
 
-5. PUNTAJE FINAL:
-   final_score = 91.2 + 13.68 + 3.0 = 107.88 puntos
+PASO 5: Bonificaciones especiales sobre subtotal
+   bonus_discapacidad = 98.4 * 0.15 = 14.76 (15% sobre subtotal - Ley 29973 Art. 48)
+
+PASO 6: PUNTAJE FINAL
+   final_score = 98.4 + 14.76 = 113.16 puntos
+
+DESGLOSE COMPLETO:
+- CV: 45.0
+- Entrevista RAW: 42.0
+- Bonus Joven (10% entrevista): +4.2
+- Bonus FF.AA. (10% entrevista): +4.2
+- Bonus Exp. Pública (3 años): +3.0
+- Bonus Discapacidad (15% subtotal): +14.76
+- TOTAL: 113.16 puntos ✓ APROBADO (>70)
 ```
 
 ### 2.3 Reglas de Aprobacion
@@ -266,34 +342,46 @@ class BonusCalculationService
     public function calculateAllBonuses(Application $application): array
     {
         $interviewScore = $application->interview_score ?? 0;
+        $age = $this->getAge($application);
 
-        // 1. Bonus por edad (< 29 anios) - sobre entrevista
+        // PASO 1: Bonificaciones sobre puntaje de entrevista RAW
+        // 1.1. Bonus por edad (< 29 años) - Ley 31533 Art. 3.1
         $ageBonus = $this->calculateAgeBonus($application, $interviewScore);
 
-        // 2. Interview score con bonus joven
-        $interviewScoreWithBonus = $interviewScore + $ageBonus;
+        // 1.2. Bonus FF.AA. (10% sobre entrevista RAW) - RPE 61-2010-SERVIR/PE Art. 4
+        $militaryBonus = $this->calculateMilitaryBonus($application, $interviewScore);
 
-        // 3. Puntaje base (CV + Entrevista con bonus)
-        $baseScore = ($application->curriculum_score ?? 0) + $interviewScoreWithBonus;
+        // PASO 2: Puntaje base
+        $interviewScoreWithBonuses = $interviewScore + $ageBonus + $militaryBonus;
+        $baseScore = ($application->curriculum_score ?? 0) + $interviewScoreWithBonuses;
 
-        // 4. Bonus por experiencia sector publico
+        // PASO 3: Bonus por experiencia sector publico (SOLO si < 29 años)
         $publicSectorYears = $this->calculatePublicSectorYears($application);
-        $publicSectorBonus = min($publicSectorYears, self::MAX_PUBLIC_SECTOR_BONUS);
+        $publicSectorBonus = ($age !== null && $age < self::AGE_LIMIT_FOR_BONUS)
+            ? min($publicSectorYears, self::MAX_PUBLIC_SECTOR_BONUS)
+            : 0;
 
-        // 5. Bonificaciones especiales (discapacidad, militar, etc) - sobre puntaje base
-        $specialBonuses = $this->calculateSpecialBonuses($application, $baseScore);
+        // PASO 4: Subtotal
+        $subtotal = $baseScore + $publicSectorBonus;
 
-        // 6. Puntaje final
-        $finalScore = $baseScore + $specialBonuses['total'] + $publicSectorBonus;
+        // PASO 5: Bonificaciones especiales sobre SUBTOTAL (discapacidad, deportistas, terrorismo)
+        // NOTA: Excluimos MILITARY porque ya se aplicó sobre entrevista RAW
+        $specialBonuses = $this->calculateSpecialBonuses($application, $subtotal, ['MILITARY']);
+
+        // PASO 6: Puntaje final
+        $finalScore = $subtotal + $specialBonuses['total'];
 
         return [
             'interview_score_raw' => $interviewScore,
+            'age' => $age,
             'age_bonus' => round($ageBonus, 2),
-            'interview_score_with_bonus' => round($interviewScoreWithBonus, 2),
+            'military_bonus' => round($militaryBonus, 2),
+            'interview_score_with_bonuses' => round($interviewScoreWithBonuses, 2),
             'curriculum_score' => $application->curriculum_score ?? 0,
             'base_score' => round($baseScore, 2),
             'public_sector_years' => $publicSectorYears,
             'public_sector_bonus' => round($publicSectorBonus, 2),
+            'subtotal' => round($subtotal, 2),
             'special_bonuses' => $specialBonuses,
             'special_bonus_total' => round($specialBonuses['total'], 2),
             'final_score' => round($finalScore, 2),
@@ -303,7 +391,7 @@ class BonusCalculationService
 
     /**
      * Calcular bonus por edad (Ley 31533, Art. 3.1)
-     * 10% sobre puntaje de entrevista para menores de 29 anios
+     * 10% sobre puntaje de entrevista RAW para menores de 29 años
      */
     public function calculateAgeBonus(Application $application, float $interviewScore): float
     {
@@ -315,6 +403,32 @@ class BonusCalculationService
 
         if ($age < self::AGE_LIMIT_FOR_BONUS) {
             return $interviewScore * self::AGE_BONUS_PERCENTAGE;
+        }
+
+        return 0;
+    }
+
+    /**
+     * Calcular bonus por ser licenciado de FF.AA.
+     * (RPE 61-2010-SERVIR/PE, Art. 4)
+     * 10% sobre puntaje de entrevista RAW
+     *
+     * Requisitos:
+     * - Debe estar indicado en la Hoja de Vida
+     * - Debe adjuntar documento oficial de autoridad competente
+     * - El documento debe acreditar la condición de licenciado
+     */
+    public function calculateMilitaryBonus(Application $application, float $interviewScore): float
+    {
+        // Verificar si tiene la condición especial de tipo MILITARY verificada
+        $hasMilitaryCondition = $application->specialConditions()
+            ->where('condition_type', 'MILITARY')
+            ->where('is_verified', true)
+            ->whereRaw('(expiry_date IS NULL OR expiry_date >= CURDATE())')
+            ->exists();
+
+        if ($hasMilitaryCondition) {
+            return $interviewScore * 0.10; // 10% sobre entrevista RAW
         }
 
         return 0;
@@ -335,44 +449,62 @@ class BonusCalculationService
     }
 
     /**
-     * Calcular bonificaciones especiales (sobre puntaje base)
+     * Calcular bonificaciones especiales sobre SUBTOTAL
+     * (discapacidad, deportistas, terrorismo)
+     *
+     * NOTA: MILITARY (FF.AA.) NO se calcula aquí porque se aplica sobre entrevista RAW,
+     *       no sobre el subtotal
+     *
+     * @param Application $application
+     * @param float $subtotal El puntaje sobre el cual calcular las bonificaciones
+     * @param array $exclude Tipos de condiciones a excluir (ej: ['MILITARY'])
      */
-    public function calculateSpecialBonuses(Application $application, float $baseScore): array
-    {
+    public function calculateSpecialBonuses(
+        Application $application,
+        float $subtotal,
+        array $exclude = []
+    ): array {
         $bonuses = [
-            'disability' => 0,      // Discapacidad 15%
-            'military' => 0,        // Licenciado FF.AA. 10%
-            'athlete_national' => 0, // Deportista nacional 10%
-            'athlete_intl' => 0,    // Deportista internacional 15%
-            'terrorism' => 0,       // Victima terrorismo 10%
+            'disability' => 0,       // Discapacidad 15% sobre subtotal
+            'athlete_national' => 0, // Deportista nacional 10% sobre subtotal
+            'athlete_intl' => 0,     // Deportista internacional 15% sobre subtotal
+            'terrorism' => 0,        // Victima terrorismo 10% sobre subtotal
             'total' => 0,
             'details' => [],
         ];
 
+        // Si no hay specialConditions cargadas, retornar vacío
+        if (!$application->relationLoaded('specialConditions')) {
+            return $bonuses;
+        }
+
         foreach ($application->specialConditions as $condition) {
-            if (!$condition->is_verified || !$condition->isValid()) {
+            // Saltar si no está verificada
+            if (!$condition->is_verified) {
+                continue;
+            }
+
+            // Saltar si está excluida
+            if (in_array($condition->condition_type, $exclude)) {
+                continue;
+            }
+
+            // Verificar fecha de vencimiento
+            if ($condition->expiry_date && $condition->expiry_date < now()->toDateString()) {
                 continue;
             }
 
             $percentage = $condition->bonus_percentage / 100;
-            $bonus = $baseScore * $percentage;
+            $bonus = $subtotal * $percentage;
 
             switch ($condition->condition_type) {
                 case 'DISABILITY':
                     $bonuses['disability'] = $bonus;
                     $bonuses['details'][] = [
                         'type' => 'Discapacidad',
-                        'law' => 'Ley 29973',
+                        'law' => 'Ley 29973 Art. 48',
                         'percentage' => $condition->bonus_percentage,
-                        'amount' => round($bonus, 2),
-                    ];
-                    break;
-                case 'MILITARY':
-                    $bonuses['military'] = $bonus;
-                    $bonuses['details'][] = [
-                        'type' => 'Licenciado FF.AA.',
-                        'law' => 'Ley 29248',
-                        'percentage' => $condition->bonus_percentage,
+                        'base' => 'subtotal',
                         'amount' => round($bonus, 2),
                     ];
                     break;
@@ -382,6 +514,7 @@ class BonusCalculationService
                         'type' => 'Deportista Nacional',
                         'law' => 'Ley 27674',
                         'percentage' => $condition->bonus_percentage,
+                        'base' => 'subtotal',
                         'amount' => round($bonus, 2),
                     ];
                     break;
@@ -391,6 +524,7 @@ class BonusCalculationService
                         'type' => 'Deportista Internacional',
                         'law' => 'Ley 27674',
                         'percentage' => $condition->bonus_percentage,
+                        'base' => 'subtotal',
                         'amount' => round($bonus, 2),
                     ];
                     break;
@@ -400,6 +534,7 @@ class BonusCalculationService
                         'type' => 'Victima Terrorismo',
                         'law' => 'Ley 27277',
                         'percentage' => $condition->bonus_percentage,
+                        'base' => 'subtotal',
                         'amount' => round($bonus, 2),
                     ];
                     break;
@@ -407,9 +542,8 @@ class BonusCalculationService
         }
 
         // Sumar todas las bonificaciones (son acumulables)
-        $bonuses['total'] = $bonuses['disability'] + $bonuses['military'] +
-                           $bonuses['athlete_national'] + $bonuses['athlete_intl'] +
-                           $bonuses['terrorism'];
+        $bonuses['total'] = $bonuses['disability'] + $bonuses['athlete_national'] +
+                           $bonuses['athlete_intl'] + $bonuses['terrorism'];
 
         return $bonuses;
     }
@@ -1347,17 +1481,22 @@ return new class extends Migration
 
 ## 11. RESUMEN DE BONIFICACIONES
 
-| Tipo | Base de Calculo | Porcentaje/Puntos | Ley |
-|------|-----------------|-------------------|-----|
-| Menor de 29 anios | Puntaje Entrevista | 10% | Ley 31533 Art. 3.1 |
-| Exp. Sector Publico | Fijo | +1 pt/anio (max 3) | Ley 31533 Art. 3.2 |
-| Discapacidad | Puntaje Base | 15% | Ley 29973 |
-| Licenciado FF.AA. | Puntaje Base | 10% | Ley 29248 |
-| Deportista Nacional | Puntaje Base | 10% | Ley 27674 |
-| Deportista Internacional | Puntaje Base | 15% | Ley 27674 |
-| Victima Terrorismo | Puntaje Base | 10% | Ley 27277 |
+| Tipo | Base de Calculo | Porcentaje/Puntos | Ley | Requisitos | Orden de Aplicacion |
+|------|-----------------|-------------------|-----|------------|---------------------|
+| **Menor de 29 años** | Puntaje Entrevista RAW | 10% | Ley 31533 Art. 3.1 | Edad < 29 | 1° (sobre entrevista) |
+| **Licenciado FF.AA.** | Puntaje Entrevista RAW | 10% | RPE 61-2010-SERVIR/PE Art. 4 | Documento oficial de autoridad competente | 1° (sobre entrevista) |
+| **Exp. Sector Publico** | Puntos fijos | +1 pt/año (max 3) | Ley 31533 Art. 3.2 | Edad < 29 + Exp. verificada | 3° (después de base) |
+| **Discapacidad** | Subtotal | 15% | Ley 29973 Art. 48 | Certificado vigente y verificado | 5° (sobre subtotal) |
+| **Deportista Nacional** | Subtotal | 10% | Ley 27674 | Constancia oficial del IPD | 5° (sobre subtotal) |
+| **Deportista Internacional** | Subtotal | 15% | Ley 27674 | Constancia oficial del IPD | 5° (sobre subtotal) |
+| **Victima Terrorismo** | Subtotal | 10% | Ley 27277 | Certificado del CONADIS | 5° (sobre subtotal) |
 
-**IMPORTANTE:** Todas las bonificaciones son **ACUMULABLES**. El puntaje final **PUEDE SUPERAR 100 puntos**.
+**NOTAS IMPORTANTES:**
+- Todas las bonificaciones son **ACUMULABLES**
+- El puntaje final **PUEDE SUPERAR 100 puntos**
+- La bonificación de **FF.AA. NO depende de la edad** (a diferencia del bonus joven y exp. sector público)
+- FF.AA. y bonus joven se aplican AMBAS sobre entrevista RAW (no son excluyentes)
+- Las bonificaciones especiales (discapacidad, deportistas, terrorismo) se calculan sobre el SUBTOTAL (después de todas las demás)
 
 ---
 

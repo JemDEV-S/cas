@@ -101,6 +101,7 @@ class InterviewResultProcessingService
             $score = $evaluation->total_score ?? 0;
             $age = $this->bonusService->getAge($app);
             $ageBonus = $this->bonusService->calculateAgeBonus($app, $score);
+            $militaryBonus = $this->bonusService->calculateMilitaryBonus($app, $score);
 
             $item = [
                 'application' => $app,
@@ -108,7 +109,8 @@ class InterviewResultProcessingService
                 'score_raw' => $score,
                 'age' => $age,
                 'age_bonus' => round($ageBonus, 2),
-                'score_with_bonus' => round($score + $ageBonus, 2),
+                'military_bonus' => round($militaryBonus, 2),
+                'score_with_bonus' => round($score + $ageBonus + $militaryBonus, 2),
                 'is_reprocess' => $app->interview_score !== null,
                 'evaluator' => $evaluation->evaluator?->name ?? 'N/A',
                 'comments' => $evaluation->general_comments,
@@ -170,11 +172,13 @@ class InterviewResultProcessingService
 
                     $score = $evaluation->total_score ?? 0;
                     $ageBonus = $this->bonusService->calculateAgeBonus($app, $score);
+                    $militaryBonus = $this->bonusService->calculateMilitaryBonus($app, $score);
 
-                    // Actualizar puntajes
+                    // Actualizar puntajes (incluyendo ambas bonificaciones sobre entrevista RAW)
                     $app->interview_score = $score;
                     $app->age_bonus = $ageBonus;
-                    $app->interview_score_with_bonus = $score + $ageBonus;
+                    $app->military_bonus = $militaryBonus;
+                    $app->interview_score_with_bonus = $score + $ageBonus + $militaryBonus;
 
                     // Determinar estado
                     if ($score >= self::MIN_PASSING_SCORE) {
@@ -190,7 +194,7 @@ class InterviewResultProcessingService
                     }
 
                     $app->save();
-                    $this->logProcessing($app, $score, $ageBonus);
+                    $this->logProcessing($app, $score, $ageBonus, $militaryBonus);
                     $processed++;
 
                 } catch (\Exception $e) {
@@ -231,17 +235,27 @@ class InterviewResultProcessingService
         return \Modules\JobPosting\Entities\ProcessPhase::where('code', 'PHASE_08_INTERVIEW')->first();
     }
 
-    private function logProcessing($application, $score, $ageBonus): void
+    private function logProcessing($application, $score, $ageBonus, $militaryBonus): void
     {
+        $bonusDescription = [];
+        if ($ageBonus > 0) {
+            $bonusDescription[] = "bonus joven: {$ageBonus}";
+        }
+        if ($militaryBonus > 0) {
+            $bonusDescription[] = "bonus FF.AA.: {$militaryBonus}";
+        }
+        $bonusText = !empty($bonusDescription) ? ' + ' . implode(' + ', $bonusDescription) : '';
+
         $application->history()->create([
             'action_type' => 'INTERVIEW_RESULT_PROCESSED',
-            'description' => "Entrevista procesada: {$score}/50 + bonus joven: {$ageBonus}",
+            'description' => "Entrevista procesada: {$score}/50{$bonusText}",
             'performed_by' => auth()->id(),
             'performed_at' => now(),
             'metadata' => [
                 'interview_score' => $score,
                 'age_bonus' => $ageBonus,
-                'interview_score_with_bonus' => $score + $ageBonus,
+                'military_bonus' => $militaryBonus,
+                'interview_score_with_bonus' => $score + $ageBonus + $militaryBonus,
             ],
         ]);
     }

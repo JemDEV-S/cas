@@ -34,6 +34,16 @@ class FinalResultCalculationController extends Controller
     }
 
     /**
+     * Previsualizacion detallada organizada por unidad/perfil (dry-run)
+     */
+    public function previewDetailed(Request $request, JobPosting $posting)
+    {
+        $preview = $this->calculationService->preview($posting);
+
+        return view('results::admin.final-calculation.preview-detailed', compact('posting', 'preview'));
+    }
+
+    /**
      * Ejecutar cálculo
      */
     public function execute(Request $request, JobPosting $posting)
