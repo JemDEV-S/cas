@@ -256,42 +256,48 @@ class EligibilityOverrideService
      */
     public function getStatistics(string $jobPostingId, ?string $phaseId = null, ?string $jobProfileId = null): array
     {
-        $query = EligibilityOverride::whereHas('application.jobProfile', function ($q) use ($jobPostingId) {
-            $q->where('job_posting_id', $jobPostingId);
-        });
+        // Contar aplicaciones resueltas usando la misma lógica que getResolvedApplications
+        $resolvedQuery = Application::whereHas('jobProfile', function ($q) use ($jobPostingId) {
+                $q->where('job_posting_id', $jobPostingId);
+            })
+            ->when($jobProfileId, fn($q) => $q->where('job_profile_id', $jobProfileId))
+            ->whereHas('eligibilityOverride')
+            ->with('eligibilityOverride');
 
-        // Filtrar por perfil si se proporciona
-        if ($jobProfileId) {
-            $query->whereHas('application', function ($q) use ($jobProfileId) {
-                $q->where('job_profile_id', $jobProfileId);
-            });
-        }
-
-        // Filtrar por fase si se proporciona (aplicar la misma lógica que getResolvedApplications)
+        // Aplicar el mismo filtro de fase que en getResolvedApplications
         if ($phaseId) {
-            $query->where(function ($q) use ($phaseId) {
-                // Opción 1: Tiene una evaluación MODIFICADA en esa fase
-                $q->whereHas('application.evaluations', function ($eq) use ($phaseId) {
+            $resolvedQuery->where(function ($q) use ($phaseId) {
+                $q->whereHas('evaluations', function ($eq) use ($phaseId) {
                     $eq->where('phase_id', $phaseId)
                        ->where('status', 'MODIFIED');
                 })
-                // Opción 2: O tiene metadata que indica la fase afectada
-                ->orWhere(function ($oq) use ($phaseId) {
+                ->orWhereHas('eligibilityOverride', function ($oq) use ($phaseId) {
                     $oq->whereJsonContains('metadata->affected_phase_id', $phaseId);
                 });
             });
         }
 
-        $overrides = $query->get();
+        $resolvedApplications = $resolvedQuery->get();
+
+        $approved = 0;
+        $rejected = 0;
+
+        foreach ($resolvedApplications as $application) {
+            if ($application->eligibilityOverride->decision === OverrideDecisionEnum::APPROVED) {
+                $approved++;
+            } else {
+                $rejected++;
+            }
+        }
 
         return [
-            'total' => $overrides->count(),
-            'approved' => $overrides->where('decision', OverrideDecisionEnum::APPROVED)->count(),
-            'rejected' => $overrides->where('decision', OverrideDecisionEnum::REJECTED)->count(),
+            'total' => $resolvedApplications->count(),
+            'approved' => $approved,
+            'rejected' => $rejected,
             'by_type' => [
-                'claim' => $overrides->where('resolution_type', 'CLAIM')->count(),
-                'correction' => $overrides->where('resolution_type', 'CORRECTION')->count(),
-                'other' => $overrides->where('resolution_type', 'OTHER')->count(),
+                'claim' => $resolvedApplications->filter(fn($app) => $app->eligibilityOverride->resolution_type === 'CLAIM')->count(),
+                'correction' => $resolvedApplications->filter(fn($app) => $app->eligibilityOverride->resolution_type === 'CORRECTION')->count(),
+                'other' => $resolvedApplications->filter(fn($app) => $app->eligibilityOverride->resolution_type === 'OTHER')->count(),
             ],
         ];
     }
