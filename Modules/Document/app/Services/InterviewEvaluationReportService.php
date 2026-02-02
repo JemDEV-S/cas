@@ -38,11 +38,10 @@ class InterviewEvaluationReportService
             return collect();
         }
 
-        // Obtener postulaciones con evaluación de entrevista completada
+        // Obtener postulaciones con evaluación de entrevista procesada
+        // Incluye tanto los que aprobaron (ELIGIBLE) como los que no aprobaron (NOT_ELIGIBLE)
         $applications = Application::query()
             ->whereIn('job_profile_id', $profileIds)
-            ->where('status', ApplicationStatus::ELIGIBLE)
-            ->where('is_eligible', true)
             ->whereNotNull('interview_score')
             ->with([
                 'jobProfile.organizationalUnit',
