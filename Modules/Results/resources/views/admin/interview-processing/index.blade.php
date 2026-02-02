@@ -106,18 +106,34 @@
     <div class="bg-white rounded-lg shadow-sm border p-6">
         <h3 class="text-lg font-semibold mb-4">Acciones</h3>
 
-        @if($summary['evaluations_submitted'] > 0)
-            <form method="POST" action="{{ route('admin.results.interview-processing.preview', $posting) }}">
-                @csrf
-                <button type="submit" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 mr-3">
-                    <i class="fas fa-eye mr-2"></i> Vista Previa
+        <div class="flex flex-wrap gap-3">
+            @if($summary['evaluations_submitted'] > 0)
+                <form method="POST" action="{{ route('admin.results.interview-processing.preview', $posting) }}">
+                    @csrf
+                    <button type="submit" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        <i class="fas fa-eye mr-2"></i> Vista Previa
+                    </button>
+                </form>
+            @else
+                <button disabled class="px-6 py-3 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed">
+                    <i class="fas fa-eye mr-2"></i> Vista Previa (Sin datos)
                 </button>
-            </form>
-        @else
-            <button disabled class="px-6 py-3 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed">
-                <i class="fas fa-eye mr-2"></i> Vista Previa (Sin datos)
-            </button>
-            <p class="text-sm text-gray-500 mt-2">Complete las evaluaciones de entrevista para continuar</p>
+            @endif
+
+            @if($summary['already_processed'] > 0)
+                <a href="{{ route('admin.results.interview-processing.download-pdf', $posting) }}"
+                   class="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 inline-flex items-center">
+                    <i class="fas fa-file-pdf mr-2"></i> Descargar PDF de Resultados
+                </a>
+            @else
+                <button disabled class="px-6 py-3 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed">
+                    <i class="fas fa-file-pdf mr-2"></i> Descargar PDF (Sin datos procesados)
+                </button>
+            @endif
+        </div>
+
+        @if($summary['evaluations_submitted'] == 0)
+            <p class="text-sm text-gray-500 mt-3">Complete las evaluaciones de entrevista para continuar</p>
         @endif
     </div>
 </div>

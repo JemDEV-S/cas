@@ -66,6 +66,8 @@ Route::prefix('admin')->middleware(['auth'])->name('admin.results.')->group(func
         ->name('interview-processing.preview');
     Route::post('postings/{posting}/results/interview-processing/execute', [InterviewResultProcessingController::class, 'execute'])
         ->name('interview-processing.execute');
+    Route::get('postings/{posting}/results/interview-processing/download-pdf', [InterviewResultProcessingController::class, 'downloadPdf'])
+        ->name('interview-processing.download-pdf');
 
     // Calculo de Resultados Finales
     Route::get('postings/{posting}/results/final-calculation', [FinalResultCalculationController::class, 'index'])
@@ -84,6 +86,8 @@ Route::prefix('admin')->middleware(['auth'])->name('admin.results.')->group(func
         ->name('winner-assignment.preview');
     Route::post('postings/{posting}/results/winner-assignment/execute', [WinnerAssignmentController::class, 'execute'])
         ->name('winner-assignment.execute');
+    Route::get('postings/{posting}/results/winner-assignment/download-pdf', [WinnerAssignmentController::class, 'downloadPdf'])
+        ->name('winner-assignment.download-pdf');
 
     // Acciones sobre publicaciones
     Route::post('results/{publication}/unpublish', [ResultPublicationController::class, 'unpublish'])

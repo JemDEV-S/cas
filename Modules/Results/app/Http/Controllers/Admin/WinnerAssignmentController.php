@@ -5,12 +5,14 @@ namespace Modules\Results\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Modules\Results\Services\WinnerAssignmentService;
+use Modules\Document\Services\WinnerAssignmentReportService;
 use Modules\JobPosting\Entities\JobPosting;
 
 class WinnerAssignmentController extends Controller
 {
     public function __construct(
-        private WinnerAssignmentService $assignmentService
+        private WinnerAssignmentService $assignmentService,
+        private WinnerAssignmentReportService $reportService
     ) {}
 
     /**
@@ -51,6 +53,20 @@ class WinnerAssignmentController extends Controller
             return redirect()
                 ->back()
                 ->with('error', 'Error en asignación: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Descargar PDF con cuadro de méritos (resultados finales)
+     */
+    public function downloadPdf(JobPosting $posting)
+    {
+        try {
+            return $this->reportService->downloadPdf($posting);
+        } catch (\Exception $e) {
+            return redirect()
+                ->back()
+                ->with('error', 'Error al generar PDF: ' . $e->getMessage());
         }
     }
 }

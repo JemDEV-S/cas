@@ -151,7 +151,7 @@
         <div class="p-6">
             <h3 class="text-lg font-semibold mb-4">Acciones</h3>
 
-            <div class="flex gap-4 flex-wrap">
+            <div class="flex gap-4 flex-wrap items-center">
                 @if($summary['total_eligible'] > 0)
                     <form action="{{ route('admin.results.winner-assignment.preview', $posting) }}" method="POST">
                         @csrf
@@ -173,6 +173,19 @@
                     <span class="text-sm text-gray-500 self-center">
                         No hay postulantes elegibles para asignar
                     </span>
+                @endif
+
+                @if(($summary['already_assigned'] ?? 0) > 0)
+                    <a href="{{ route('admin.results.winner-assignment.download-pdf', $posting) }}"
+                       class="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors inline-flex items-center">
+                        <i class="fas fa-file-pdf mr-2"></i>
+                        Descargar Cuadro de Meritos (PDF)
+                    </a>
+                @else
+                    <button disabled class="px-6 py-3 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed">
+                        <i class="fas fa-file-pdf mr-2"></i>
+                        Descargar PDF (Sin asignacion)
+                    </button>
                 @endif
             </div>
         </div>

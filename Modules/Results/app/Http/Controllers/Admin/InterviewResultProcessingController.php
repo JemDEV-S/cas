@@ -5,12 +5,14 @@ namespace Modules\Results\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Modules\Results\Services\InterviewResultProcessingService;
+use Modules\Document\Services\InterviewEvaluationReportService;
 use Modules\JobPosting\Entities\JobPosting;
 
 class InterviewResultProcessingController extends Controller
 {
     public function __construct(
-        private InterviewResultProcessingService $processingService
+        private InterviewResultProcessingService $processingService,
+        private InterviewEvaluationReportService $reportService
     ) {}
 
     /**
@@ -49,6 +51,20 @@ class InterviewResultProcessingController extends Controller
             return redirect()
                 ->back()
                 ->with('error', 'Error en procesamiento: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Descargar PDF con resultados de evaluación de entrevista
+     */
+    public function downloadPdf(JobPosting $posting)
+    {
+        try {
+            return $this->reportService->downloadPdf($posting);
+        } catch (\Exception $e) {
+            return redirect()
+                ->back()
+                ->with('error', 'Error al generar PDF: ' . $e->getMessage());
         }
     }
 }

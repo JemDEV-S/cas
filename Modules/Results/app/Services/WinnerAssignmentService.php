@@ -44,11 +44,18 @@ class WinnerAssignmentService
             ];
         }
 
+        // Contar postulantes ya asignados (con selection_result)
+        $profileIds = $profiles->pluck('id');
+        $alreadyAssigned = Application::whereIn('job_profile_id', $profileIds)
+            ->whereNotNull('selection_result')
+            ->count();
+
         return [
             'profiles' => $summary,
             'total_profiles' => count($summary),
             'total_vacancies' => collect($summary)->sum('vacancies'),
             'total_eligible' => collect($summary)->sum('eligible_applicants'),
+            'already_assigned' => $alreadyAssigned,
         ];
     }
 
