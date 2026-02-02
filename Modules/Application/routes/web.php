@@ -68,6 +68,10 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(
     Route::get('eligibility-override/{posting}', [EligibilityOverrideController::class, 'index'])
         ->name('eligibility-override.index');
 
+    // Buscar postulante para revisar (por código o DNI)
+    Route::post('eligibility-override/{posting}/search', [EligibilityOverrideController::class, 'searchApplication'])
+        ->name('eligibility-override.search');
+
     // Detalle de postulación para reevaluar
     Route::get('eligibility-override/application/{application}', [EligibilityOverrideController::class, 'show'])
         ->name('eligibility-override.show');

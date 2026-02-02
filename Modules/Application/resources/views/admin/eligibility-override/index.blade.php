@@ -33,6 +33,49 @@
         </div>
     </div>
 
+    <!-- Buscador Rápido -->
+    <div class="bg-gradient-to-r from-indigo-600 to-purple-600 shadow-lg sm:rounded-lg">
+        <div class="px-6 py-5">
+            <form method="POST" action="{{ route('admin.eligibility-override.search', $posting->id) }}" class="flex items-end gap-4">
+                @csrf
+                <div class="flex-1">
+                    <label for="search" class="block text-sm font-semibold text-white mb-2">
+                        🔍 Buscar Postulante para Revisar
+                    </label>
+                    <div class="relative">
+                        <input
+                            type="text"
+                            name="search"
+                            id="search"
+                            placeholder="Ingrese código, DNI o nombre del postulante..."
+                            class="w-full px-4 py-3 pr-12 border-0 rounded-lg shadow-sm focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-indigo-600 text-gray-900 placeholder-gray-400"
+                            required
+                            minlength="3"
+                            value="{{ old('search') }}"
+                        >
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <p class="mt-1 text-xs text-indigo-100">
+                        Busca por código, DNI o nombre. Funciona para postulantes APTOS y NO_APTOS.
+                    </p>
+                </div>
+                <button
+                    type="submit"
+                    class="px-6 py-3 bg-white text-indigo-600 font-semibold rounded-lg shadow-md hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-indigo-600 transition-colors flex items-center gap-2"
+                >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                    Buscar
+                </button>
+            </form>
+        </div>
+    </div>
+
     <!-- Estadisticas -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div class="bg-white shadow sm:rounded-lg p-4">
@@ -255,6 +298,7 @@
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fase(s)</th>
                             @endif
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado Original</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Decision</th>
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nuevo Estado</th>
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Resuelto Por</th>
@@ -286,6 +330,12 @@
                                 <td class="px-4 py-3">
                                     <span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
                                         {{ $application->eligibilityOverride->original_status_label }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <span class="px-2 py-1 text-xs font-semibold rounded-full
+                                        {{ $application->eligibilityOverride->isScoreClaim() ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800' }}">
+                                        {{ $application->eligibilityOverride->resolution_type_label }}
                                     </span>
                                 </td>
                                 <td class="px-4 py-3">

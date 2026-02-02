@@ -89,6 +89,39 @@
             <!-- Contenido con scroll -->
             <div class="flex-1 overflow-y-auto px-6 py-6">
 
+                <!-- Tipo de Reclamo -->
+                @if($isScoreClaim)
+                <div class="bg-amber-50 border-l-4 border-amber-500 rounded-lg p-4 mb-6">
+                    <div class="flex items-start">
+                        <svg class="w-6 h-6 text-amber-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                        <div>
+                            <h5 class="font-semibold text-amber-900">Reclamo de Puntaje</h5>
+                            <p class="text-sm text-amber-800 mt-1">
+                                El postulante es <strong>APTO</strong> pero reclama la calificación obtenida.
+                                Revise y recalifique los criterios según corresponda.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                @elseif($isEligibilityClaim)
+                <div class="bg-red-50 border-l-4 border-red-500 rounded-lg p-4 mb-6">
+                    <div class="flex items-start">
+                        <svg class="w-6 h-6 text-red-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                        <div>
+                            <h5 class="font-semibold text-red-900">Reclamo de Elegibilidad</h5>
+                            <p class="text-sm text-red-800 mt-1">
+                                El postulante es <strong>NO APTO</strong> y reclama su elegibilidad.
+                                Revise y decida si corresponde cambiar su estado a APTO.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                @endif
+
                 <!-- Información de la postulación -->
                 <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 shadow-md mb-6 overflow-hidden">
                     <div class="px-6 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 border-b border-blue-300">

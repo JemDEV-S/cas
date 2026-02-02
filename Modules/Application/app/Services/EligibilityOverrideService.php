@@ -83,19 +83,34 @@ class EligibilityOverrideService
         string $resolutionType = 'CLAIM',
         ?string $affectedPhaseId = null
     ): EligibilityOverride {
-        return DB::transaction(function () use ($application, $resolutionSummary, $resolutionDetail, $resolvedBy, $resolutionType, $affectedPhaseId) {
-            // Verificar que no tenga un override pendiente (sin resolver)
-            if ($application->pendingEligibilityOverride) {
-                throw new \Exception('Esta postulación ya tiene un reclamo pendiente de resolución');
-            }
+        $metadata = [];
+        if ($affectedPhaseId) {
+            $metadata['affected_phase_id'] = $affectedPhaseId;
+        }
 
+        return $this->approveWithMetadata(
+            $application,
+            $resolutionSummary,
+            $resolutionDetail,
+            $resolvedBy,
+            $resolutionType,
+            $metadata
+        );
+    }
+
+    /**
+     * Aprobar postulación con metadata personalizado
+     */
+    public function approveWithMetadata(
+        Application $application,
+        string $resolutionSummary,
+        string $resolutionDetail,
+        string $resolvedBy,
+        string $resolutionType,
+        array $metadata = []
+    ): EligibilityOverride {
+        return DB::transaction(function () use ($application, $resolutionSummary, $resolutionDetail, $resolvedBy, $resolutionType, $metadata) {
             $originalStatus = $application->status->value;
-
-            // Preparar metadata
-            $metadata = [];
-            if ($affectedPhaseId) {
-                $metadata['affected_phase_id'] = $affectedPhaseId;
-            }
 
             // 1. Crear registro de override
             $override = EligibilityOverride::create([
@@ -142,6 +157,57 @@ class EligibilityOverrideService
     }
 
     /**
+     * Aprobar reclamo de puntaje (postulante ya es APTO, solo se modifican calificaciones)
+     */
+    public function approveScoreClaim(
+        Application $application,
+        string $resolutionSummary,
+        string $resolutionDetail,
+        string $resolvedBy,
+        array $metadata = []
+    ): EligibilityOverride {
+        return DB::transaction(function () use ($application, $resolutionSummary, $resolutionDetail, $resolvedBy, $metadata) {
+            $originalStatus = $application->status->value;
+
+            // 1. Crear registro de override
+            $override = EligibilityOverride::create([
+                'application_id' => $application->id,
+                'original_status' => $originalStatus, // APTO
+                'original_reason' => null,
+                'new_status' => $originalStatus, // Mantiene APTO
+                'decision' => OverrideDecisionEnum::APPROVED,
+                'resolution_type' => 'SCORE_CLAIM',
+                'resolution_summary' => $resolutionSummary,
+                'resolution_detail' => $resolutionDetail,
+                'resolved_by' => $resolvedBy,
+                'resolved_at' => now(),
+                'metadata' => $metadata,
+            ]);
+
+            // 2. No cambiar status de Application (ya es APTO)
+            // Los puntajes ya fueron modificados en la evaluación
+
+            // 3. Registrar en historial
+            ApplicationHistory::log(
+                $application->id,
+                'SCORE_CLAIM_RESOLVED',
+                [
+                    'status' => $originalStatus,
+                    'metadata' => [
+                        'override_id' => $override->id,
+                        'decision' => 'APPROVED',
+                        'resolution_type' => 'SCORE_CLAIM',
+                        'score_impact' => $metadata['score_impact'] ?? null,
+                    ],
+                ],
+                "Reclamo de puntaje APROBADO - {$resolutionSummary}"
+            );
+
+            return $override;
+        });
+    }
+
+    /**
      * Rechazar reevaluación (mantener NO_APTO)
      */
     public function reject(
@@ -152,19 +218,34 @@ class EligibilityOverrideService
         string $resolutionType = 'CLAIM',
         ?string $affectedPhaseId = null
     ): EligibilityOverride {
-        return DB::transaction(function () use ($application, $resolutionSummary, $resolutionDetail, $resolvedBy, $resolutionType, $affectedPhaseId) {
-            // Verificar que no tenga un override pendiente (sin resolver)
-            if ($application->pendingEligibilityOverride) {
-                throw new \Exception('Esta postulación ya tiene un reclamo pendiente de resolución');
-            }
+        $metadata = [];
+        if ($affectedPhaseId) {
+            $metadata['affected_phase_id'] = $affectedPhaseId;
+        }
 
+        return $this->rejectWithMetadata(
+            $application,
+            $resolutionSummary,
+            $resolutionDetail,
+            $resolvedBy,
+            $resolutionType,
+            $metadata
+        );
+    }
+
+    /**
+     * Rechazar reevaluación con metadata personalizado
+     */
+    public function rejectWithMetadata(
+        Application $application,
+        string $resolutionSummary,
+        string $resolutionDetail,
+        string $resolvedBy,
+        string $resolutionType,
+        array $metadata = []
+    ): EligibilityOverride {
+        return DB::transaction(function () use ($application, $resolutionSummary, $resolutionDetail, $resolvedBy, $resolutionType, $metadata) {
             $originalStatus = $application->status->value;
-
-            // Preparar metadata
-            $metadata = [];
-            if ($affectedPhaseId) {
-                $metadata['affected_phase_id'] = $affectedPhaseId;
-            }
 
             // 1. Crear registro de override (sin cambiar a APTO)
             $override = EligibilityOverride::create([
@@ -205,6 +286,56 @@ class EligibilityOverrideService
                     ],
                 ],
                 "Reevaluación: RECHAZADO - {$resolutionSummary}"
+            );
+
+            return $override;
+        });
+    }
+
+    /**
+     * Rechazar reclamo de puntaje (postulante APTO, no se modifican calificaciones)
+     */
+    public function rejectScoreClaim(
+        Application $application,
+        string $resolutionSummary,
+        string $resolutionDetail,
+        string $resolvedBy,
+        array $metadata = []
+    ): EligibilityOverride {
+        return DB::transaction(function () use ($application, $resolutionSummary, $resolutionDetail, $resolvedBy, $metadata) {
+            $originalStatus = $application->status->value;
+
+            // 1. Crear registro de override
+            $override = EligibilityOverride::create([
+                'application_id' => $application->id,
+                'original_status' => $originalStatus, // APTO
+                'original_reason' => null,
+                'new_status' => $originalStatus, // Mantiene APTO
+                'decision' => OverrideDecisionEnum::REJECTED,
+                'resolution_type' => 'SCORE_CLAIM',
+                'resolution_summary' => $resolutionSummary,
+                'resolution_detail' => $resolutionDetail,
+                'resolved_by' => $resolvedBy,
+                'resolved_at' => now(),
+                'metadata' => $metadata,
+            ]);
+
+            // 2. No cambiar status de Application (mantiene APTO)
+            // No se modifican los puntajes (se mantienen originales)
+
+            // 3. Registrar en historial
+            ApplicationHistory::log(
+                $application->id,
+                'SCORE_CLAIM_RESOLVED',
+                [
+                    'status' => $originalStatus,
+                    'metadata' => [
+                        'override_id' => $override->id,
+                        'decision' => 'REJECTED',
+                        'resolution_type' => 'SCORE_CLAIM',
+                    ],
+                ],
+                "Reclamo de puntaje RECHAZADO - {$resolutionSummary}"
             );
 
             return $override;
@@ -296,7 +427,9 @@ class EligibilityOverrideService
             'rejected' => $rejected,
             'by_type' => [
                 'claim' => $resolvedApplications->filter(fn($app) => $app->eligibilityOverride->resolution_type === 'CLAIM')->count(),
+                'score_claim' => $resolvedApplications->filter(fn($app) => $app->eligibilityOverride->resolution_type === 'SCORE_CLAIM')->count(),
                 'correction' => $resolvedApplications->filter(fn($app) => $app->eligibilityOverride->resolution_type === 'CORRECTION')->count(),
+                'score_correction' => $resolvedApplications->filter(fn($app) => $app->eligibilityOverride->resolution_type === 'SCORE_CORRECTION')->count(),
                 'other' => $resolvedApplications->filter(fn($app) => $app->eligibilityOverride->resolution_type === 'OTHER')->count(),
             ],
         ];

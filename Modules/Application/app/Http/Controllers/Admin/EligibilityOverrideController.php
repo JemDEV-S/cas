@@ -353,7 +353,43 @@ class EligibilityOverrideController extends Controller
     }
 
     /**
+     * Buscar postulante para revisar (por código o DNI)
+     * POST /admin/eligibility-override/{posting}/search
+     */
+    public function searchApplication(Request $request, string $postingId)
+    {
+        $this->authorize('eligibility.override');
+
+        $validated = $request->validate([
+            'search' => 'required|string|min:3',
+        ]);
+
+        $search = trim($validated['search']);
+
+        // Buscar por código, DNI o nombre en la convocatoria específica
+        $application = Application::whereHas('jobProfile', function ($q) use ($postingId) {
+                $q->where('job_posting_id', $postingId);
+            })
+            ->where(function ($q) use ($search) {
+                $q->where('code', 'like', "%{$search}%")
+                  ->orWhere('dni', 'like', "%{$search}%")
+                  ->orWhere('full_name', 'like', "%{$search}%");
+            })
+            ->first();
+
+        if (!$application) {
+            return redirect()
+                ->back()
+                ->with('error', "No se encontró ninguna postulación con código, DNI o nombre: {$search}");
+        }
+
+        // Redirigir directamente a revisar CV
+        return redirect()->route('admin.eligibility-override.review-cv', $application->id);
+    }
+
+    /**
      * Revisar CV y modificar calificaciones (simple y directo)
+     * Funciona para NO_APTO (reclamo de elegibilidad) y APTO (reclamo de puntaje)
      * GET /admin/eligibility-override/{application}/review-cv
      */
     public function reviewCV(string $applicationId)
@@ -365,8 +401,12 @@ class EligibilityOverrideController extends Controller
             'jobProfile.positionCode',
             'jobProfile.jobPosting',
             'documents',
-            'eligibilityOverride',
+            'eligibilityOverrides', // Cambiado a plural para obtener todos los overrides
         ])->findOrFail($applicationId);
+
+        // Determinar tipo de reclamo
+        $isEligibilityClaim = $application->status->value === 'NO_APTO';
+        $isScoreClaim = in_array($application->status->value, ['APTO', 'ELEGIBLE']);
 
         // Buscar fase de CV
         $cvPhase = \Modules\JobPosting\Entities\ProcessPhase::where('code', 'PHASE_06_CV_EVALUATION')
@@ -445,7 +485,9 @@ class EligibilityOverrideController extends Controller
             'cvDocument',
             'cvEvaluation',
             'criteria',
-            'details'
+            'details',
+            'isEligibilityClaim',
+            'isScoreClaim'
         ));
     }
 
@@ -520,13 +562,24 @@ class EligibilityOverrideController extends Controller
                 ->with('error', 'No se encontró una evaluación de CV para este postulante.');
         }
 
+        // Detectar tipo de reclamo según estado actual
+        $isEligibilityClaim = $application->status->value === 'NO_APTO';
+        $isScoreClaim = in_array($application->status->value, ['APTO', 'ELEGIBLE']);
+
         try {
-            DB::transaction(function () use ($request, $application, $cvEvaluation, $validated, $cvPhase) {
+            DB::transaction(function () use ($request, $application, $cvEvaluation, $validated, $cvPhase, $isEligibilityClaim, $isScoreClaim) {
+                // Guardar puntaje anterior para calcular impacto
+                $oldTotalScore = $cvEvaluation->total_score ?? 0;
                 $totalScore = 0;
+                $changesApplied = [];
 
                 // Actualizar detalles de evaluación
                 foreach ($validated['criteria'] as $criterionId => $data) {
                     $score = floatval($data['score'] ?? 0);
+
+                    // Obtener puntaje anterior si existe
+                    $oldDetail = $cvEvaluation->details->firstWhere('criterion_id', $criterionId);
+                    $oldScore = $oldDetail ? $oldDetail->score : 0;
 
                     // Actualizar o crear detalle
                     \Modules\Evaluation\Entities\EvaluationDetail::updateOrCreate(
@@ -541,12 +594,28 @@ class EligibilityOverrideController extends Controller
                         ]
                     );
 
+                    // Registrar cambios aplicados si hubo modificación
+                    if ($oldScore != $score) {
+                        $criterion = \Modules\Evaluation\Entities\EvaluationCriterion::find($criterionId);
+                        $changesApplied[] = [
+                            'criterion_id' => $criterionId,
+                            'criterion_name' => $criterion ? $criterion->name : 'N/A',
+                            'old_score' => $oldScore,
+                            'new_score' => $score,
+                        ];
+                    }
+
                     // Calcular puntaje ponderado
                     $criterion = \Modules\Evaluation\Entities\EvaluationCriterion::find($criterionId);
                     if ($criterion) {
                         $totalScore += $score * $criterion->weight;
                     }
                 }
+
+                // Determinar razón de modificación según tipo de reclamo
+                $modificationReason = $isEligibilityClaim
+                    ? 'Reevaluación por reclamo de elegibilidad'
+                    : 'Reevaluación por reclamo de puntaje';
 
                 // Actualizar evaluación
                 $cvEvaluation->update([
@@ -555,36 +624,83 @@ class EligibilityOverrideController extends Controller
                     'status' => 'MODIFIED',
                     'modified_by' => auth()->id(),
                     'modified_at' => now(),
-                    'modification_reason' => 'Reevaluación por reclamo de elegibilidad',
+                    'modification_reason' => $modificationReason,
                 ]);
 
-                // Resolver reclamo según decisión
+                // Calcular impacto en puntaje
+                $scoreImpact = $totalScore - $oldTotalScore;
+
+                // Preparar metadata según tipo de reclamo
+                $metadata = [
+                    'affected_phase_id' => $cvPhase->id,
+                    'evaluation_id' => $cvEvaluation->id,
+                ];
+
+                // Si es reclamo de puntaje, agregar información adicional
+                if ($isScoreClaim) {
+                    $metadata['type'] = 'score_claim';
+                    $metadata['changes_applied'] = $changesApplied;
+                    $metadata['score_impact'] = [
+                        'before' => $oldTotalScore,
+                        'after' => $totalScore,
+                        'difference' => $scoreImpact,
+                    ];
+                }
+
+                // Resolver reclamo según tipo y decisión
+                $resolutionType = $isEligibilityClaim ? 'CLAIM' : 'SCORE_CLAIM';
+
                 if ($validated['decision'] === 'APPROVED') {
-                    // Aprobar: cambiar a APTO
-                    app(EligibilityOverrideService::class)->approve(
-                        $application,
-                        $validated['resolution_summary'],
-                        $validated['resolution_detail'],
-                        auth()->id(),
-                        'CLAIM',
-                        $cvPhase->id  // Pasar el phase_id afectado
-                    );
+                    if ($isEligibilityClaim) {
+                        // Reclamo de elegibilidad: cambiar a APTO
+                        app(EligibilityOverrideService::class)->approveWithMetadata(
+                            $application,
+                            $validated['resolution_summary'],
+                            $validated['resolution_detail'],
+                            auth()->id(),
+                            $resolutionType,
+                            $metadata
+                        );
+                    } else {
+                        // Reclamo de puntaje: mantener APTO pero registrar cambio
+                        app(EligibilityOverrideService::class)->approveScoreClaim(
+                            $application,
+                            $validated['resolution_summary'],
+                            $validated['resolution_detail'],
+                            auth()->id(),
+                            $metadata
+                        );
+                    }
                 } else {
-                    // Rechazar: mantener NO_APTO
-                    app(EligibilityOverrideService::class)->reject(
-                        $application,
-                        $validated['resolution_summary'],
-                        $validated['resolution_detail'],
-                        auth()->id(),
-                        'CLAIM',
-                        $cvPhase->id  // Pasar el phase_id afectado
-                    );
+                    // Rechazar reclamo
+                    if ($isEligibilityClaim) {
+                        app(EligibilityOverrideService::class)->rejectWithMetadata(
+                            $application,
+                            $validated['resolution_summary'],
+                            $validated['resolution_detail'],
+                            auth()->id(),
+                            $resolutionType,
+                            $metadata
+                        );
+                    } else {
+                        app(EligibilityOverrideService::class)->rejectScoreClaim(
+                            $application,
+                            $validated['resolution_summary'],
+                            $validated['resolution_detail'],
+                            auth()->id(),
+                            $metadata
+                        );
+                    }
                 }
             });
 
+            $successMessage = $isScoreClaim
+                ? 'Revisión de CV completada. Reclamo de puntaje resuelto exitosamente.'
+                : 'Revisión de CV completada. Reclamo de elegibilidad resuelto exitosamente.';
+
             return redirect()
                 ->route('admin.eligibility-override.index', $application->jobProfile->job_posting_id)
-                ->with('success', 'Revisión de CV completada y reclamo resuelto exitosamente.');
+                ->with('success', $successMessage);
 
         } catch (\Exception $e) {
             \Log::error('Error al actualizar revisión de CV: ' . $e->getMessage());

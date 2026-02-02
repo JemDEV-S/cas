@@ -70,11 +70,29 @@ class EligibilityOverride extends Model
     public function getResolutionTypeLabelAttribute(): string
     {
         return match($this->resolution_type) {
-            'CLAIM' => 'Reclamo',
+            'CLAIM' => 'Reclamo de Elegibilidad',
+            'SCORE_CLAIM' => 'Reclamo de Puntaje',
             'CORRECTION' => 'Corrección de Oficio',
+            'SCORE_CORRECTION' => 'Corrección de Puntaje',
             'OTHER' => 'Otro',
             default => $this->resolution_type,
         };
+    }
+
+    /**
+     * Verificar si es un reclamo de puntaje
+     */
+    public function isScoreClaim(): bool
+    {
+        return in_array($this->resolution_type, ['SCORE_CLAIM', 'SCORE_CORRECTION']);
+    }
+
+    /**
+     * Verificar si es un reclamo de elegibilidad
+     */
+    public function isEligibilityClaim(): bool
+    {
+        return in_array($this->resolution_type, ['CLAIM', 'CORRECTION', 'OTHER']);
     }
 
     /**
