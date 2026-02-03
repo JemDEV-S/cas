@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use Modules\Results\Services\WinnerAssignmentService;
 use Modules\Document\Services\WinnerAssignmentReportService;
 use Modules\JobPosting\Entities\JobPosting;
+use Modules\Results\app\Exports\WinnersExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class WinnerAssignmentController extends Controller
 {
@@ -67,6 +69,22 @@ class WinnerAssignmentController extends Controller
             return redirect()
                 ->back()
                 ->with('error', 'Error al generar PDF: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Exportar ganadores y accesitarios a Excel
+     */
+    public function exportWinners(JobPosting $posting)
+    {
+        try {
+            $fileName = 'Ganadores_' . $posting->code . '_' . now()->format('Y-m-d_His') . '.xlsx';
+
+            return Excel::download(new WinnersExport($posting), $fileName);
+        } catch (\Exception $e) {
+            return redirect()
+                ->back()
+                ->with('error', 'Error al generar Excel: ' . $e->getMessage());
         }
     }
 }

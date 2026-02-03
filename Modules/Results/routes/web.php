@@ -88,6 +88,8 @@ Route::prefix('admin')->middleware(['auth'])->name('admin.results.')->group(func
         ->name('winner-assignment.execute');
     Route::get('postings/{posting}/results/winner-assignment/download-pdf', [WinnerAssignmentController::class, 'downloadPdf'])
         ->name('winner-assignment.download-pdf');
+    Route::get('postings/{posting}/results/winner-assignment/export-winners', [WinnerAssignmentController::class, 'exportWinners'])
+        ->name('winner-assignment.export-winners');
 
     // Acciones sobre publicaciones
     Route::post('results/{publication}/unpublish', [ResultPublicationController::class, 'unpublish'])
