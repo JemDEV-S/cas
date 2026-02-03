@@ -250,6 +250,11 @@ class CvResultProcessingService
                       // Incluir NO_APTO que ya fueron procesados (para re-proceso)
                       $q2->where('status', ApplicationStatus::NOT_ELIGIBLE)
                          ->whereNotNull('curriculum_score');
+                  })
+                  ->orWhere(function($q3) {
+                      // Incluir APPROVED (ganadores que necesitan re-proceso por reclamos)
+                      $q3->where('status', ApplicationStatus::APPROVED)
+                         ->whereNotNull('curriculum_score');
                   });
             })
             ->with(['jobProfile.positionCode', 'jobProfile.requestingUnit', 'applicant'])

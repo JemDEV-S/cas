@@ -182,10 +182,25 @@ class FinalScoreCalculationService
         return Application::whereHas('jobProfile', fn($q) =>
                 $q->where('job_posting_id', $posting->id)
             )
-            ->where('status', ApplicationStatus::ELIGIBLE)
-            ->where('is_eligible', true)
             ->whereNotNull('curriculum_score')
             ->where('curriculum_score', '>=', 35)
+            ->where(function($q) {
+                $q->where(function($q1) {
+                      // Incluir ELIGIBLE que pasaron entrevista
+                      $q1->where('status', ApplicationStatus::ELIGIBLE)
+                         ->where('is_eligible', true);
+                  })
+                  ->orWhere(function($q2) {
+                      // Incluir NO_APTO que ya fueron procesados con puntaje final (para re-proceso)
+                      $q2->where('status', ApplicationStatus::NOT_ELIGIBLE)
+                         ->whereNotNull('final_score');
+                  })
+                  ->orWhere(function($q3) {
+                      // Incluir APPROVED (ganadores que necesitan re-proceso por reclamos)
+                      $q3->where('status', ApplicationStatus::APPROVED)
+                         ->whereNotNull('final_score');
+                  });
+            })
             ->with([
                 'jobProfile.positionCode',
                 'applicant',
@@ -199,7 +214,7 @@ class FinalScoreCalculationService
     private function logCalculation($application, $bonuses): void
     {
         $application->history()->create([
-            'action_type' => 'FINAL_SCORE_CALCULATED',
+            'event_type' => 'FINAL_SCORE_CALCULATED',
             'description' => "Puntaje final calculado: {$bonuses['final_score']}",
             'performed_by' => auth()->id(),
             'performed_at' => now(),

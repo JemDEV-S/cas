@@ -47,6 +47,9 @@
                         <h3 class="text-lg font-semibold text-blue-900">
                             {{ $profileData['position_code'] }}
                         </h3>
+                        <p class="text-base text-blue-800 font-medium">
+                            {{ $profileData['position_title'] }}
+                        </p>
                         <p class="text-sm text-blue-700">
                             {{ $profileData['vacancies'] }} vacante(s) - Total postulantes: {{ $profileData['total_applicants'] }}
                         </p>

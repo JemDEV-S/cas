@@ -435,7 +435,6 @@
                         <th style="width: 7%;" class="text-center">B. FF.AA.</th>
                         <th style="width: 9%;" class="text-center">Total c/Bonus</th>
                         <th style="width: 7%;" class="text-center">Resultado</th>
-                        <th style="width: 10%;">Evaluador</th>
                         <th style="width: 14%;">Comentarios</th>
                     </tr>
                 </thead>
@@ -483,7 +482,6 @@
                                 {{ $isPassing ? 'APTO' : 'NO APTO' }}
                             </span>
                         </td>
-                        <td style="font-size: 6pt;">{{ $application->evaluator_name }}</td>
                         <td class="comment-text">
                             {{ $application->evaluation_comments ?? '-' }}
                         </td>

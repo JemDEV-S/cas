@@ -454,9 +454,13 @@
                     Cargo: {{ $profile['position_code'] }} |
                     Vacantes: {{ $profile['vacancies'] }} |
                     Postulantes: {{ $profile['stats']['total'] }}
+                    @if(!empty($profile['is_desert']))
+                        <span style="color: #c53030; font-weight: bold; margin-left: 10px;">⚠ DESIERTO (Sin ganadores)</span>
+                    @endif
                 </span>
             </div>
 
+            @if(empty($profile['is_desert']) && count($profile['applications']) > 0)
             <table class="applications">
                 <thead>
                     <tr>
@@ -629,6 +633,15 @@
                 Accesitarios: {{ $profile['stats']['accesitarios'] }} |
                 No Seleccionados: {{ $profile['stats']['not_selected'] }}
             </div>
+            @endif
+
+            @if(!empty($profile['is_desert']))
+            <div style="padding: 10px; background-color: #fff5f5; border: 1px solid #feb2b2; border-radius: 4px; text-align: center;">
+                <span style="color: #c53030; font-weight: bold; font-size: 8pt;">
+                    Este perfil no tiene ganadores asignados. CONVOCATORIA DESIERTA.
+                </span>
+            </div>
+            @endif
         </div>
         @endforeach
     </div>

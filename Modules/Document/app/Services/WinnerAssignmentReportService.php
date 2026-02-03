@@ -47,8 +47,9 @@ class WinnerAssignmentReportService
 
     /**
      * Organizar postulaciones por Unidad Organizacional > Perfil > Postulaciones
+     * Incluye perfiles desiertos (sin ganadores)
      */
-    public function organizeByStructure(Collection $applications): array
+    public function organizeByStructure(Collection $applications, string $jobPostingId = null): array
     {
         $structure = [];
 
@@ -128,6 +129,11 @@ class WinnerAssignmentReportService
             }
         }
 
+        // PASO 2: Agregar perfiles desiertos (activos pero sin ganadores)
+        if ($jobPostingId) {
+            $this->addDesertProfiles($structure, $jobPostingId, $applications);
+        }
+
         // Ordenar postulaciones por ranking dentro de cada perfil
         foreach ($structure as &$unit) {
             foreach ($unit['profiles'] as &$profile) {
@@ -149,6 +155,90 @@ class WinnerAssignmentReportService
         });
 
         return array_values($structure);
+    }
+
+    /**
+     * Agregar perfiles desiertos a la estructura
+     * Un perfil es desierto si:
+     * 1. No tiene ninguna postulación, O
+     * 2. Todas sus postulaciones son NO_ELIGIBLE (no llegaron a la fase final), O
+     * 3. No tiene ningún ganador asignado
+     */
+    private function addDesertProfiles(array &$structure, string $jobPostingId, Collection $applications): void
+    {
+        // Obtener IDs de perfiles que tienen al menos un GANADOR asignado
+        $profilesWithWinners = $applications
+            ->filter(function($app) {
+                return $app->selection_result === 'GANADOR';
+            })
+            ->pluck('job_profile_id')
+            ->unique()
+            ->toArray();
+
+        // Obtener todos los perfiles activos de la convocatoria
+        $allProfiles = JobProfile::where('job_posting_id', $jobPostingId)
+            ->where('status', \Modules\JobProfile\Enums\JobProfileStatusEnum::ACTIVE->value)
+            ->with(['organizationalUnit', 'requestingUnit', 'positionCode', 'vacancies'])
+            ->get();
+
+        \Illuminate\Support\Facades\Log::info('Búsqueda de perfiles desiertos en resultados finales', [
+            'total_profiles' => $allProfiles->count(),
+            'profiles_with_winners' => count($profilesWithWinners),
+            'profile_ids_with_winners' => $profilesWithWinners,
+            'all_profile_ids' => $allProfiles->pluck('id')->toArray(),
+        ]);
+
+        // Identificar perfiles desiertos
+        foreach ($allProfiles as $jobProfile) {
+            // Si tiene al menos un GANADOR, NO es desierto
+            if (in_array($jobProfile->id, $profilesWithWinners)) {
+                continue;
+            }
+
+            // Es un perfil desierto
+            $unit = $jobProfile->requestingUnit ?? $jobProfile->organizationalUnit;
+            $unitId = $unit?->id ?? 'sin_unidad';
+            $unitName = $unit?->name ?? 'Sin Unidad Asignada';
+            $unitCode = $unit?->code ?? 'N/A';
+
+            // Inicializar unidad si no existe
+            if (!isset($structure[$unitId])) {
+                $structure[$unitId] = [
+                    'id' => $unitId,
+                    'code' => $unitCode,
+                    'name' => $unitName,
+                    'order' => $unit?->order ?? 999,
+                    'profiles' => [],
+                    'stats' => [
+                        'total' => 0,
+                        'winners' => 0,
+                        'accesitarios' => 0,
+                        'not_selected' => 0,
+                        'vacancies' => 0,
+                    ],
+                ];
+            }
+
+            // Agregar perfil desierto
+            $vacancyCount = $jobProfile->vacancies?->count() ?? $jobProfile->total_vacancies ?? 1;
+            $structure[$unitId]['profiles'][$jobProfile->id] = [
+                'id' => $jobProfile->id,
+                'code' => $jobProfile->code,
+                'title' => $jobProfile->title,
+                'position_code' => $jobProfile->positionCode?->code ?? 'N/A',
+                'position_name' => $jobProfile->positionCode?->name ?? $jobProfile->profile_name,
+                'vacancies' => $vacancyCount,
+                'applications' => [],
+                'is_desert' => true, // Marcador de perfil desierto
+                'stats' => [
+                    'total' => 0,
+                    'winners' => 0,
+                    'accesitarios' => 0,
+                    'not_selected' => 0,
+                ],
+            ];
+            $structure[$unitId]['stats']['vacancies'] += $vacancyCount;
+        }
     }
 
     /**
@@ -186,8 +276,8 @@ class WinnerAssignmentReportService
         // Obtener postulaciones con asignación
         $applications = $this->getAssignedApplications($jobPosting->id);
 
-        // Organizar por estructura
-        $organizedData = $this->organizeByStructure($applications);
+        // Organizar por estructura (incluye perfiles desiertos)
+        $organizedData = $this->organizeByStructure($applications, $jobPosting->id);
 
         // Calcular estadísticas globales
         $globalStats = $this->calculateGlobalStats($organizedData);

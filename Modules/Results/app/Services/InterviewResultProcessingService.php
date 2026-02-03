@@ -171,6 +171,9 @@ class InterviewResultProcessingService
                     }
 
                     $score = $evaluation->total_score ?? 0;
+                    $oldScore = $app->interview_score;
+                    $oldStatus = $app->status;
+
                     $ageBonus = $this->bonusService->calculateAgeBonus($app, $score);
                     $militaryBonus = $this->bonusService->calculateMilitaryBonus($app, $score);
 
@@ -181,21 +184,34 @@ class InterviewResultProcessingService
                     $app->interview_score_with_bonus = $score + $ageBonus + $militaryBonus;
 
                     // Determinar estado
+                    $willPass = false;
                     if ($score >= self::MIN_PASSING_SCORE) {
-                        // Mantiene APTO
-                        $passed++;
+                        // Mantiene APTO (o vuelve a APTO si fue re-procesado)
+                        if ($app->status === ApplicationStatus::NOT_ELIGIBLE) {
+                            $app->status = ApplicationStatus::ELIGIBLE;
+                            $app->is_eligible = true;
+                            $app->ineligibility_reason = null;
+                        }
+                        $willPass = true;
                     } else {
                         // No aprobo entrevista
                         $app->status = ApplicationStatus::NOT_ELIGIBLE;
                         $app->is_eligible = false;
                         $app->ineligibility_reason = $evaluation->general_comments
                             ?: "Puntaje entrevista ({$score}/50) menor al minimo (35)";
-                        $failed++;
+                        $willPass = false;
                     }
 
                     $app->save();
-                    $this->logProcessing($app, $score, $ageBonus, $militaryBonus);
+                    $this->logProcessing($app, $oldScore, $score, $oldStatus, $app->status);
+
+                    // Incrementar contadores DESPUÉS de que todo sea exitoso
                     $processed++;
+                    if ($willPass) {
+                        $passed++;
+                    } else {
+                        $failed++;
+                    }
 
                 } catch (\Exception $e) {
                     $errors[] = ['application_id' => $app->id, 'error' => $e->getMessage()];
@@ -221,10 +237,25 @@ class InterviewResultProcessingService
         return Application::whereHas('jobProfile', fn($q) =>
                 $q->where('job_posting_id', $posting->id)
             )
-            ->where('status', ApplicationStatus::ELIGIBLE)
-            ->where('is_eligible', true)
             ->whereNotNull('curriculum_score')
             ->where('curriculum_score', '>=', 35)
+            ->where(function($q) {
+                $q->where(function($q1) {
+                      // Incluir ELIGIBLE que pasaron CV
+                      $q1->where('status', ApplicationStatus::ELIGIBLE)
+                         ->where('is_eligible', true);
+                  })
+                  ->orWhere(function($q2) {
+                      // Incluir NO_APTO que ya fueron procesados con entrevista (para re-proceso)
+                      $q2->where('status', ApplicationStatus::NOT_ELIGIBLE)
+                         ->whereNotNull('interview_score');
+                  })
+                  ->orWhere(function($q3) {
+                      // Incluir APPROVED (ganadores que necesitan re-proceso por reclamos)
+                      $q3->where('status', ApplicationStatus::APPROVED)
+                         ->whereNotNull('interview_score');
+                  });
+            })
             ->with(['jobProfile.positionCode', 'applicant', 'specialConditions'])
             ->orderBy('full_name')
             ->get();
@@ -235,27 +266,36 @@ class InterviewResultProcessingService
         return \Modules\JobPosting\Entities\ProcessPhase::where('code', 'PHASE_08_INTERVIEW')->first();
     }
 
-    private function logProcessing($application, $score, $ageBonus, $militaryBonus): void
+    private function logProcessing($application, $oldScore, $newScore, $oldStatus, $newStatus): void
     {
-        $bonusDescription = [];
-        if ($ageBonus > 0) {
-            $bonusDescription[] = "bonus joven: {$ageBonus}";
+        $description = "Procesamiento de resultados entrevista: ";
+
+        if ($oldScore === null) {
+            $description .= "Puntaje asignado: {$newScore}/50. ";
+        } else {
+            $description .= "Puntaje actualizado: {$oldScore} -> {$newScore}/50. ";
         }
-        if ($militaryBonus > 0) {
-            $bonusDescription[] = "bonus FF.AA.: {$militaryBonus}";
+
+        if ($oldStatus !== $newStatus) {
+            $description .= "Estado: {$oldStatus->label()} -> {$newStatus->label()}";
+        } else {
+            $description .= "Estado sin cambios: {$newStatus->label()}";
         }
-        $bonusText = !empty($bonusDescription) ? ' + ' . implode(' + ', $bonusDescription) : '';
 
         $application->history()->create([
-            'action_type' => 'INTERVIEW_RESULT_PROCESSED',
-            'description' => "Entrevista procesada: {$score}/50{$bonusText}",
+            'event_type' => 'INTERVIEW_RESULT_PROCESSED',
+            'description' => $description,
             'performed_by' => auth()->id(),
             'performed_at' => now(),
             'metadata' => [
-                'interview_score' => $score,
-                'age_bonus' => $ageBonus,
-                'military_bonus' => $militaryBonus,
-                'interview_score_with_bonus' => $score + $ageBonus + $militaryBonus,
+                'old_score' => $oldScore,
+                'new_score' => $newScore,
+                'old_status' => $oldStatus->value,
+                'new_status' => $newStatus->value,
+                'age_bonus' => $application->age_bonus,
+                'military_bonus' => $application->military_bonus,
+                'interview_score_with_bonus' => $application->interview_score_with_bonus,
+                'min_required' => self::MIN_PASSING_SCORE,
             ],
         ]);
     }
