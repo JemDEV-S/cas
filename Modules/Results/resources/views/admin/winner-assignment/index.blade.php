@@ -182,6 +182,12 @@
                         Descargar Cuadro de Meritos (PDF)
                     </a>
 
+                    <a href="{{ route('admin.results.winner-assignment.download-adjudication-certificate', $posting) }}"
+                       class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors inline-flex items-center">
+                        <i class="fas fa-file-signature mr-2"></i>
+                        Descargar Constancia de Adjudicacion (PDF)
+                    </a>
+
                     <a href="{{ route('admin.results.winner-assignment.export-winners', $posting) }}"
                        class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors inline-flex items-center">
                         <i class="fas fa-file-excel mr-2"></i>
@@ -191,6 +197,11 @@
                     <button disabled class="px-6 py-3 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed">
                         <i class="fas fa-file-pdf mr-2"></i>
                         Descargar PDF (Sin asignacion)
+                    </button>
+
+                    <button disabled class="px-6 py-3 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed">
+                        <i class="fas fa-file-signature mr-2"></i>
+                        Constancia (Sin asignacion)
                     </button>
 
                     <button disabled class="px-6 py-3 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed">

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Modules\Results\Services\WinnerAssignmentService;
 use Modules\Document\Services\WinnerAssignmentReportService;
+use Modules\Document\Services\WinnerAdjudicationCertificateService;
 use Modules\JobPosting\Entities\JobPosting;
 use Modules\Results\app\Exports\WinnersExport;
 use Maatwebsite\Excel\Facades\Excel;
@@ -14,7 +15,8 @@ class WinnerAssignmentController extends Controller
 {
     public function __construct(
         private WinnerAssignmentService $assignmentService,
-        private WinnerAssignmentReportService $reportService
+        private WinnerAssignmentReportService $reportService,
+        private WinnerAdjudicationCertificateService $adjudicationService
     ) {}
 
     /**
@@ -85,6 +87,20 @@ class WinnerAssignmentController extends Controller
             return redirect()
                 ->back()
                 ->with('error', 'Error al generar Excel: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Descargar constancia de adjudicación (PDF con firmas)
+     */
+    public function downloadAdjudicationCertificate(JobPosting $posting)
+    {
+        try {
+            return $this->adjudicationService->downloadPdf($posting);
+        } catch (\Exception $e) {
+            return redirect()
+                ->back()
+                ->with('error', 'Error al generar Constancia de Adjudicación: ' . $e->getMessage());
         }
     }
 }
