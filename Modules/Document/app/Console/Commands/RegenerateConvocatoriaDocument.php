@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Modules\Document\Console\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Auth;
+use Modules\User\Entities\User;
 use Modules\JobPosting\Entities\JobPosting;
 use Modules\Document\Entities\GeneratedDocument;
 use Modules\Document\Services\DocumentService;
@@ -28,6 +30,14 @@ class RegenerateConvocatoriaDocument extends Command
     {
         $jobPostingId = $this->argument('job-posting-id');
         $force = $this->option('force');
+
+        // Autenticar usuario para comandos de consola (generated_by requiere user_id)
+        if (!Auth::check()) {
+            $user = User::first();
+            if ($user) {
+                Auth::login($user);
+            }
+        }
 
         // Buscar convocatoria
         $jobPosting = JobPosting::find($jobPostingId);
@@ -91,11 +101,15 @@ class RegenerateConvocatoriaDocument extends Command
     private function generateNew(JobPosting $jobPosting): int
     {
         try {
+            ob_start();
             event(new JobPostingPublicationRequested($jobPosting));
-            $this->info('✅ Documento generado exitosamente');
+            ob_end_clean();
+
+            $this->info('Documento generado exitosamente');
             return Command::SUCCESS;
         } catch (\Exception $e) {
-            $this->error("❌ Error: {$e->getMessage()}");
+            ob_end_clean();
+            $this->error("Error: {$e->getMessage()}");
             return Command::FAILURE;
         }
     }

@@ -69,10 +69,9 @@ class GenerateConvocatoriaPdf
             data: $data
         );
 
-        // 5. Verificar si hay jurados titulares activos
+        // 5. Verificar si hay jurados activos
         $hasJurors = \Modules\Jury\Entities\JuryAssignment::where('job_posting_id', $jobPosting->id)
-            ->where('member_type', \Modules\Jury\Enums\MemberType::TITULAR)
-            ->where('is_active', true)
+            ->where('status', \Modules\Jury\Enums\AssignmentStatus::ACTIVE)
             ->exists();
 
         // 6. Crear workflow de firmas SOLO si hay jurados y el template lo requiere

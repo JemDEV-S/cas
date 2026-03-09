@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Log;
 use Modules\Document\Events\DocumentGenerated;
 use Modules\Document\Enums\DocumentCategoryEnum;
 use Modules\Jury\Entities\JuryAssignment;
-use Modules\Jury\Enums\MemberType;
+use Modules\Jury\Enums\AssignmentStatus;
 use Modules\JobPosting\Entities\JobPosting;
 
 class AssignJuriesToSign
@@ -31,10 +31,9 @@ class AssignJuriesToSign
 
         // Obtener jurados titulares activos de esta convocatoria ordenados
         $titularJurors = JuryAssignment::where('job_posting_id', $jobPosting->id)
-            ->where('member_type', MemberType::TITULAR)
-            ->where('is_active', true)
-            ->with('juryMember.user')
-            ->orderBy('order')
+            ->where('status', \Modules\Jury\Enums\AssignmentStatus::ACTIVE)
+            ->with('user')
+            ->orderBy('created_at')
             ->get();
 
         // Si no hay jurados: publicar directamente sin firmas
@@ -61,7 +60,7 @@ class AssignJuriesToSign
         // Preparar array de firmantes con formato requerido por createWorkflow
         $signers = $titularJurors->map(function($assignment) {
             return [
-                'user_id' => $assignment->juryMember->user_id,
+                'user_id' => $assignment->user_id,
                 'role' => $assignment->role_in_jury?->label() ?? 'JURADO',
                 'type' => 'firma',
             ];
@@ -70,11 +69,11 @@ class AssignJuriesToSign
         // Actualizar el workflow con los firmantes
         $this->updateWorkflowSigners($workflow, $signers, $document);
 
-        Log::info('Jurados titulares asignados como firmantes', [
+        Log::info('Jurados asignados como firmantes', [
             'job_posting_id' => $jobPosting->id,
             'document_id' => $document->id,
             'signers_count' => count($signers),
-            'signers' => $titularJurors->pluck('juryMember.user.name')->toArray(),
+            'signers' => $titularJurors->pluck('user.name')->toArray(),
         ]);
     }
 
