@@ -120,8 +120,25 @@ class JobPostingController extends Controller
             ->whereHas('jobProfile', fn($q) => $q->where('job_posting_id', $id))
             ->exists();
 
-        // Verificar si puede postular (fase de registro)
-        $canApply = $currentPhase && in_array($currentPhase->phase?->code ?? '', ['PHASE_03_REGISTRATION', 'REGISTRATION']);
+        // Verificar si puede postular (fase de registro + dentro del rango de fecha/hora)
+        $canApply = false;
+        if ($currentPhase && in_array($currentPhase->phase?->code ?? '', ['PHASE_03_REGISTRATION', 'REGISTRATION'])) {
+            $now = now();
+            $start = \Carbon\Carbon::parse($currentPhase->start_date);
+            $end = \Carbon\Carbon::parse($currentPhase->end_date);
+
+            if ($currentPhase->start_time) {
+                $timeParts = explode(':', $currentPhase->start_time);
+                $start->setTime((int)$timeParts[0], (int)($timeParts[1] ?? 0));
+            }
+
+            if ($currentPhase->end_time) {
+                $timeParts = explode(':', $currentPhase->end_time);
+                $end->setTime((int)$timeParts[0], (int)($timeParts[1] ?? 0));
+            }
+
+            $canApply = $now->between($start, $end);
+        }
 
         return view('applicantportal::job-postings.show', compact(
             'posting',
