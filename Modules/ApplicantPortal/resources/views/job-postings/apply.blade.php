@@ -351,26 +351,6 @@
                                 @endforeach
                             </select>
 
-                            {{-- Validación de nivel educativo mínimo --}}
-                            @if($minimumEducationLevel)
-                                <div x-show="academic.degreeType && !meetsEducationRequirement(academic.degreeType)"
-                                    x-cloak
-                                    class="mt-2 p-2 bg-yellow-50 border border-yellow-300 rounded">
-                                    <i class="fas fa-exclamation-triangle text-yellow-600"></i>
-                                    <span class="text-yellow-800 text-sm">
-                                        El nivel seleccionado no cumple con el requisito mínimo: <strong>{{ $minimumEducationLevel->label() }}</strong>
-                                    </span>
-                                </div>
-
-                                <div x-show="academic.degreeType && meetsEducationRequirement(academic.degreeType)"
-                                    x-cloak
-                                    class="mt-2 p-2 bg-green-50 border border-green-300 rounded">
-                                    <i class="fas fa-check-circle text-green-600"></i>
-                                    <span class="text-green-800 text-sm">
-                                        ✓ Cumple con el requisito de nivel educativo
-                                    </span>
-                                </div>
-                            @endif
                         </div>
 
                         <div>
@@ -412,30 +392,6 @@
                                 @endforeach
                             </select>
 
-                            {{-- Advertencia si no coincide con requisito --}}
-                            <div
-                                x-show="academic.careerId && !isCareerAccepted(academic.careerId)"
-                                class="mt-2 p-2 bg-yellow-50 border border-yellow-300 rounded"
-                                style="display: none;"
-                            >
-                                <i class="fas fa-exclamation-triangle text-yellow-600"></i>
-                                <span class="text-yellow-800 text-sm">
-                                    La carrera seleccionada no coincide con el requisito del perfil.
-                                    Puedes postular, pero es probable que seas declarado NO APTO.
-                                </span>
-                            </div>
-
-                            {{-- Indicador de match --}}
-                            <div
-                                x-show="academic.careerId && isCareerAccepted(academic.careerId)"
-                                class="mt-2 p-2 bg-green-50 border border-green-300 rounded"
-                                style="display: none;"
-                            >
-                                <i class="fas fa-check-circle text-green-600"></i>
-                                <span class="text-green-800 text-sm">
-                                    ✓ Cumple con el requisito de carrera profesional
-                                </span>
-                            </div>
 
                             {{-- Opción destacada: Carrera no está en la lista --}}
                             <div class="mt-3 p-3 bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 transition-colors">
@@ -1118,6 +1074,7 @@
                 <textarea x-model="formData.otherKnowledge"
                           @input="autoSave"
                           rows="4"
+                          maxlength="255"
                           placeholder="Describe otros conocimientos relevantes que posees..."
                           class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"></textarea>
             </div>
@@ -2078,16 +2035,8 @@ function applicationWizard() {
             this.formData.academics.forEach((academic, index) => {
                 const prefix = `Título/Grado ${index + 1}`;
 
-                if (!academic.degreeType) {
-                    errors.push({ step: 2, field: `${prefix} - Grado Académico`, message: 'Seleccione un grado académico' });
-                }
                 if (!academic.institution || academic.institution.length < 3) {
                     errors.push({ step: 2, field: `${prefix} - Institución`, message: 'Ingrese el nombre de la institución (mín. 3 caracteres)' });
-                }
-
-                // Carrera: requerida si no es carrera afín
-                if (!academic.isRelatedCareer && !academic.careerId) {
-                    errors.push({ step: 2, field: `${prefix} - Carrera Profesional`, message: 'Seleccione una carrera o marque "carrera afín"' });
                 }
 
                 // Si es carrera afín, el nombre es requerido

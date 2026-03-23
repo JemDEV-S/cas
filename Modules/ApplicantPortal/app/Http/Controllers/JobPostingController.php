@@ -591,7 +591,7 @@ class JobPostingController extends Controller
                 $area = trim($area);
                 if (!empty($area)) {
                     $knowledge[] = new \Modules\Application\DTOs\KnowledgeDTO(
-                        knowledgeName: $area,
+                        knowledgeName: mb_substr($area, 0, 255),
                         proficiencyLevel: 'BASICO'
                     );
                 }
