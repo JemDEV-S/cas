@@ -22,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'auth' => \App\Http\Middleware\Authenticate::class,
             'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
             'signed' => \App\Http\Middleware\ValidateSignature::class,
+            'ia.token' => \App\Http\Middleware\VerifyIaToken::class,
         ]);
 
         // Global middleware

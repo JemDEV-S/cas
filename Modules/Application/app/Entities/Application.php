@@ -125,6 +125,14 @@ class Application extends Model
     }
 
     /**
+     * Relación con jobs de evaluación IA
+     */
+    public function iaJobs(): HasMany
+    {
+        return $this->hasMany(IaJob::class);
+    }
+
+    /**
      * Relación con experiencia laboral
      */
     public function experiences(): HasMany

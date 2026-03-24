@@ -72,8 +72,9 @@ class EvaluateApplicationBatch implements ShouldQueue
                 );
 
                 // Actualizar estadísticas en cache
+                $freshApp = $application->fresh();
                 $this->updateStats(
-                    $evaluation->isCompleted() && $application->fresh()->is_eligible
+                    $evaluation->isCompleted() && $freshApp->is_eligible
                         ? 'eligible'
                         : 'not_eligible'
                 );
@@ -81,7 +82,7 @@ class EvaluateApplicationBatch implements ShouldQueue
                 Log::info('Postulación evaluada', [
                     'application_id' => $application->id,
                     'application_code' => $application->code,
-                    'result' => $application->fresh()->is_eligible ? 'APTO' : 'NO_APTO',
+                    'result' => $freshApp->is_eligible ? 'APTO' : 'NO_APTO',
                 ]);
 
             } catch (\Exception $e) {

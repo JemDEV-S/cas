@@ -123,6 +123,14 @@ return [
             'handler' => NullHandler::class,
         ],
 
+        'ia' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/ia-agent.log'),
+            'level' => 'debug',
+            'days' => 30,
+            'replace_placeholders' => true,
+        ],
+
         'emergency' => [
             'path' => storage_path('logs/laravel.log'),
         ],

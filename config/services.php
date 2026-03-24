@@ -45,6 +45,10 @@ return [
     | por postulantes que no están en el catálogo de carreras mapeadas.
     |
     */
+    'ia_agent' => [
+        'token' => env('IA_AGENT_TOKEN'),
+    ],
+
     'career_matcher' => [
         'url' => env('CAREER_MATCHER_URL', 'http://localhost:8000'),
         'threshold' => env('CAREER_MATCHER_THRESHOLD', 0.75),

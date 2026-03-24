@@ -74,6 +74,7 @@ class AutoGraderService
             'is_eligible' => true,
             'reasons' => [],
             'details' => [],
+            'has_pending_ia' => false,
         ];
 
         // 1. Validar Formación Académica
@@ -82,6 +83,9 @@ class AutoGraderService
         if (!$academicResult['passed']) {
             $results['is_eligible'] = false;
             $results['reasons'][] = $academicResult['reason'];
+        }
+        if ($academicResult['pending_ia'] ?? false) {
+            $results['has_pending_ia'] = true;
         }
 
         // 2. Validar Experiencia General
@@ -214,7 +218,12 @@ class AutoGraderService
     }
 
     /**
-     * Validar formación académica (MEJORADO con tabla pivote)
+     * Validar formación académica
+     *
+     * Valida nivel educativo y colegiatura de forma determinista.
+     * La validación de carrera se delega al LLM (Ollama) de forma asíncrona:
+     * - Si ya existe un resultado IA completado → lo usa
+     * - Si no existe → crea el job IA y marca como pendiente
      */
     private function validateAcademics(Application $application, $jobProfile): array
     {
@@ -227,7 +236,7 @@ class AutoGraderService
             ];
         }
 
-        // 1. Validar nivel educativo requerido (soporte para education_levels array)
+        // 1. Validar nivel educativo requerido
         $requiredLevels = !empty($jobProfile->education_levels)
             ? $jobProfile->education_levels
             : [];
@@ -252,67 +261,10 @@ class AutoGraderService
             ];
         }
 
-        // 2. 💎 Validar carrera profesional usando tabla pivote
-        $acceptedCareerIds = $jobProfile->getAcceptedCareerIds(includeEquivalences: true);
-
-        if (!empty($acceptedCareerIds)) {
-            // Verificar si el postulante tiene alguna carrera aceptada
-            $applicantCareerIds = $academics->pluck('career_id')->filter()->unique()->toArray();
-
-            $hasRequiredCareer = !empty(array_intersect($applicantCareerIds, $acceptedCareerIds));
-
-            if (!$hasRequiredCareer) {
-                // Obtener nombres de carreras para mensajes y validación NLP
-                $requiredCareerNames = \Modules\Application\Entities\AcademicCareer::whereIn('id', $jobProfile->careers()->pluck('career_id'))
-                    ->pluck('name')
-                    ->toArray();
-
-                $applicantCareerNames = \Modules\Application\Entities\AcademicCareer::whereIn('id', $applicantCareerIds)
-                    ->pluck('name')
-                    ->toArray();
-
-                // 2.1 Verificar si el postulante declaró una carrera afín
-                $relatedCareers = $academics->filter(
-                    fn($a) => $a->is_related_career && !empty($a->related_career_name)
-                );
-
-                if ($relatedCareers->isNotEmpty()) {
-                    // Intentar validación NLP para carreras afines
-                    $nlpResult = $this->validateRelatedCareerWithNlp(
-                        $relatedCareers,
-                        $requiredCareerNames
-                    );
-
-                    if ($nlpResult !== null) {
-                        return $nlpResult;
-                    }
-                }
-
-                // No hay match por ID ni por NLP
-                return [
-                    'passed' => false,
-                    'reason' => sprintf(
-                        'Carrera profesional no cumple requisito. Requiere: %s. Tiene: %s',
-                        implode(' o ', $requiredCareerNames),
-                        !empty($applicantCareerNames) ? implode(', ', $applicantCareerNames) : 'No especificada'
-                    ),
-                ];
-            }
-        } else {
-            // Fallback: Si el perfil no tiene carreras mapeadas, usar career_field legacy (solo advertencia)
-            if (!empty($jobProfile->career_field)) {
-                // Validación legacy con stripos (menos precisa)
-                $hasCareer = $academics->contains(function ($academic) use ($jobProfile) {
-                    return stripos($academic->career_field, $jobProfile->career_field) !== false;
-                });
-
-                if (!$hasCareer) {
-                    return [
-                        'passed' => false,
-                        'reason' => "No cumple con la carrera requerida: {$jobProfile->career_field} (validación legacy)",
-                    ];
-                }
-            }
+        // 2. Validar carrera profesional con IA (career_field del perfil)
+        $careerResult = $this->validateCareerWithIa($application, $jobProfile);
+        if ($careerResult !== null && !$careerResult['passed']) {
+            return $careerResult;
         }
 
         // 3. Validar colegiatura si es requerida
@@ -331,9 +283,77 @@ class AutoGraderService
         }
 
         return [
-            'passed' => true,
-            'reason' => 'Cumple con la formación académica requerida',
+            'passed' => $careerResult['passed'] ?? true,
+            'reason' => $careerResult['reason'] ?? 'Cumple con la formación académica requerida',
+            'ia_evaluation' => $careerResult['ia_evaluation'] ?? null,
+            'pending_ia' => $careerResult['pending_ia'] ?? false,
         ];
+    }
+
+    /**
+     * Validar carrera profesional usando evaluación IA (Ollama).
+     *
+     * Flujo:
+     * 1. Si career_field está vacío → no hay requisito de carrera, retorna null (pasa)
+     * 2. Si ya existe un job IA completado → usa ese resultado
+     * 3. Si no existe → crea job IA y retorna "pendiente"
+     */
+    private function validateCareerWithIa(Application $application, $jobProfile): ?array
+    {
+        $careerField = $jobProfile->career_field;
+
+        // Sin requisito de carrera → no aplica validación
+        if (empty($careerField)) {
+            return null;
+        }
+
+        // Buscar resultado IA completado para esta postulación
+        $iaJob = \Modules\Application\Entities\IaJob::where('application_id', $application->id)
+            ->where('status', 'completado')
+            ->latest()
+            ->first();
+
+        if ($iaJob) {
+            // Ya tenemos resultado del LLM → usarlo
+            $passed = in_array($iaJob->resultado, ['cumple_exacto', 'cumple_equivalente', 'cumple_afin']);
+
+            return [
+                'passed' => $passed,
+                'reason' => $passed
+                    ? "Carrera validada por IA: {$iaJob->resultado} (score: {$iaJob->score}) - {$iaJob->justificacion}"
+                    : "Carrera no cumple requisito (IA: {$iaJob->resultado}, score: {$iaJob->score}). Requiere: {$careerField}. {$iaJob->justificacion}",
+                'ia_evaluation' => [
+                    'job_id' => $iaJob->id,
+                    'resultado' => $iaJob->resultado,
+                    'score' => $iaJob->score,
+                    'justificacion' => $iaJob->justificacion,
+                ],
+                'pending_ia' => false,
+            ];
+        }
+
+        // No hay resultado IA → crear job para el agente
+        try {
+            $iaJobService = app(IaJobService::class);
+            $newJob = $iaJobService->createCareerEvaluationJob($application);
+
+            return [
+                'passed' => false,
+                'reason' => "Evaluación de carrera pendiente (IA). Requiere: {$careerField}",
+                'ia_evaluation' => $newJob ? ['job_id' => $newJob->id, 'status' => 'pendiente'] : null,
+                'pending_ia' => true,
+            ];
+        } catch (\Exception $e) {
+            \Log::channel('ia')->error("Error creando job IA: {$e->getMessage()}", [
+                'application_id' => $application->id,
+            ]);
+
+            return [
+                'passed' => false,
+                'reason' => "No se pudo evaluar carrera (error al crear job IA). Requiere: {$careerField}",
+                'pending_ia' => true,
+            ];
+        }
     }
 
     /**
