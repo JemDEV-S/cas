@@ -218,7 +218,7 @@
                 </div>
                 <div>
                     <p class="text-sm font-semibold text-gray-700">
-                        ¿Tienes alguna incidencia o olvidaste tu contraseña?
+                        ¿Tienes alguna incidencia u olvidaste tu contraseña?
                     </p>
                     <p class="text-xs text-gray-500 mt-1">
                         Comunícate con la <strong>Oficina de Tecnologías de la Información</strong> mediante WhatsApp:
