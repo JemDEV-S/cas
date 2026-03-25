@@ -140,19 +140,14 @@
                         </div>
                     </div>
 
-                    <!-- Recordarme y Olvidé contraseña -->
-                    <div class="flex items-center justify-between">
-                        <label class="flex items-center space-x-3 cursor-pointer group">
-                            <input type="checkbox" name="remember" class="w-5 h-5 text-[#3484A5] border-gray-300 rounded focus:ring-[#3484A5] transition-colors">
-                            <span class="text-sm text-gray-600 group-hover:text-gray-800 transition-colors">Recordarme</span>
-                        </label>
-
-                        @if (Route::has('password.request'))
+                    <!-- Olvidé contraseña -->
+                    @if (Route::has('password.request'))
+                    <div class="flex items-center justify-end">
                         <a href="{{ route('password.request') }}" class="text-sm font-medium text-[#3484A5] hover:text-[#2CA792] transition-colors duration-200">
                             ¿Olvidaste tu contraseña?
                         </a>
-                        @endif
                     </div>
+                    @endif
 
                     <!-- Botón de inicio de sesión -->
                     <button
