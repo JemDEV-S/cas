@@ -753,11 +753,11 @@ class AutoGraderService
             // 4. Crear Evaluation en el módulo de Evaluation
             $evaluationService = app(\Modules\Evaluation\Services\EvaluationService::class);
 
-            $evaluation = $evaluationService->createEvaluation([
-                'application_id' => $application->id, // UUID de la application
-                'evaluator_id' => $evaluatedBy, // UUID del evaluador
-                'phase_id' => $phase4->id, // process_phases no tiene uuid, usar id
-                'job_posting_id' => $jobPosting->id, // UUID del job posting
+            $evaluation = $evaluationService->createAutomaticEvaluation([
+                'application_id' => $application->id,
+                'evaluator_id' => $evaluatedBy,
+                'phase_id' => $phase4->id,
+                'job_posting_id' => $jobPosting->id,
                 'is_anonymous' => false,
                 'is_collaborative' => false,
                 'general_comments' => $result['is_eligible']

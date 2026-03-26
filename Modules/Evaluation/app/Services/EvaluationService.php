@@ -11,6 +11,39 @@ use Modules\Evaluation\Entities\EvaluatorAssignment;
 class EvaluationService
 {
     /**
+     * Crear una evaluación automática directamente (sin asignación de evaluador).
+     * Usado por el AutoGraderService para evaluaciones de elegibilidad.
+     */
+    public function createAutomaticEvaluation(array $data): Evaluation
+    {
+        return DB::transaction(function () use ($data) {
+            $evaluation = Evaluation::create([
+                'evaluator_assignment_id' => null,
+                'application_id' => $data['application_id'],
+                'evaluator_id' => $data['evaluator_id'],
+                'phase_id' => $data['phase_id'],
+                'job_posting_id' => $data['job_posting_id'],
+                'status' => EvaluationStatusEnum::ASSIGNED,
+                'is_anonymous' => $data['is_anonymous'] ?? false,
+                'is_collaborative' => $data['is_collaborative'] ?? false,
+                'general_comments' => $data['general_comments'] ?? null,
+                'internal_notes' => $data['internal_notes'] ?? null,
+            ]);
+
+            $userId = $data['evaluator_id'];
+
+            EvaluationHistory::logChange(
+                $evaluation->id,
+                $userId,
+                'CREATED',
+                'Evaluación automática creada por el sistema'
+            );
+
+            return $evaluation->fresh('details', 'phase', 'evaluator');
+        });
+    }
+
+    /**
      * Crear una nueva evaluación a partir de una asignación
      */
     public function createEvaluation(EvaluatorAssignment $assignment): Evaluation

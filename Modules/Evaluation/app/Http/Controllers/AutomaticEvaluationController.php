@@ -167,7 +167,6 @@ class AutomaticEvaluationController extends Controller
             $jobs = [];
             foreach ($chunks as $chunk) {
                 $jobs[] = new EvaluateApplicationBatch($chunk, $evaluatorId, $id);
-                $jobs[] = new EvaluateApplicationBatch($chunk, $evaluatorId, $id);
             }
 
             // Crear batch con callback de finalización
