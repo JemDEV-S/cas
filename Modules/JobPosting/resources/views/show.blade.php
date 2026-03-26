@@ -235,7 +235,7 @@
                                                 {{ $schedule->status->icon() }}
                                             </span>
                                             @can('jobposting.manage.phases')
-                                            @if($schedule->status->value !== 'COMPLETED')
+                                            @if($schedule->status->value !== 'COMPLETED' || ($schedule->phase?->code === 'PHASE_05_CV_SUBMISSION' && $schedule->status->value === 'COMPLETED'))
                                             <div class="relative phase-menu-{{ $schedule->id }}">
                                                 <button type="button" data-schedule-id="{{ $schedule->id }}" class="phase-menu-toggle p-2 hover:bg-white rounded-lg transition-colors">
                                                     <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
@@ -267,6 +267,15 @@
                                                         <button type="submit" class="w-full text-left px-4 py-3 hover:bg-purple-50 transition-colors flex items-center space-x-2 rounded-b-xl" onclick="return confirm(&quot;¿Completar esta fase e iniciar la siguiente?&quot;)">
                                                             <span class="text-purple-600">⏭️</span>
                                                             <span class="font-medium text-gray-700">Saltar a Siguiente</span>
+                                                        </button>
+                                                    </form>
+                                                    @endif
+                                                    @if($schedule->status->value === 'COMPLETED' && $schedule->phase?->code === 'PHASE_05_CV_SUBMISSION')
+                                                    <form action="{{ route('jobposting.phase.reactivateForClaims', $schedule) }}" method="POST">
+                                                        @csrf
+                                                        <button type="submit" class="w-full text-left px-4 py-3 hover:bg-orange-50 transition-colors flex items-center space-x-2 rounded-b-xl" onclick="return confirm('¿Reactivar esta fase solo para postulantes con reclamo aprobado?')">
+                                                            <span class="text-orange-600">🔄</span>
+                                                            <span class="font-medium text-gray-700">Reactivar para Reclamos</span>
                                                         </button>
                                                     </form>
                                                     @endif

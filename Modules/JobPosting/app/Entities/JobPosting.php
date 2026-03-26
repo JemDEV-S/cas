@@ -276,6 +276,9 @@ class JobPosting extends Model
                 if ($schedule->end_time) {
                     $timeParts = explode(':', $schedule->end_time);
                     $end->setTime((int)$timeParts[0], (int)($timeParts[1] ?? 0));
+                } else {
+                    // Sin hora fin, considerar todo el día
+                    $end->setTime(23, 59, 59);
                 }
 
                 // Verificar si NOW está dentro del rango

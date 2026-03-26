@@ -39,6 +39,7 @@ Route::middleware(['auth', 'verified'])->prefix('convocatorias')->name('jobposti
     Route::post('/fase/{schedule}/iniciar', [ScheduleController::class, 'startPhase'])->name('phase.start')->can('jobposting.manage.phases');
     Route::post('/fase/{schedule}/completar', [ScheduleController::class, 'completePhase'])->name('phase.complete')->can('jobposting.manage.phases');
     Route::post('/fase/{schedule}/saltar-siguiente', [ScheduleController::class, 'skipToNext'])->name('phase.skipToNext')->can('jobposting.manage.phases');
+    Route::post('/fase/{schedule}/reactivar-reclamos', [ScheduleController::class, 'reactivateForClaims'])->name('phase.reactivateForClaims')->can('jobposting.manage.phases');
 
     // Historial
     Route::get('/{jobPosting}/historial', [JobPostingController::class, 'history'])->name('history');

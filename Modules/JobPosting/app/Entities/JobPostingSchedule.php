@@ -176,9 +176,14 @@ class JobPostingSchedule extends Model
      */
     public function complete(): void
     {
+        // Limpiar is_claims_only al completar
+        $metadata = $this->metadata ?? [];
+        unset($metadata['is_claims_only']);
+
         $this->update([
             'status' => ScheduleStatusEnum::COMPLETED,
             'actual_end_date' => now(),
+            'metadata' => $metadata,
         ]);
 
         // Disparar evento

@@ -161,6 +161,35 @@ class ScheduleController extends Controller
     }
 
     /**
+     * Reactivar fase de CV para postulantes con reclamo aprobado
+     */
+    public function reactivateForClaims(\Modules\JobPosting\Entities\JobPostingSchedule $schedule)
+    {
+        try {
+            // Solo permitir reactivar la fase de CV
+            if ($schedule->phase?->code !== 'PHASE_05_CV_SUBMISSION') {
+                return back()->with('error', '❌ Solo se puede reactivar la fase de Presentación de CV Documentado.');
+            }
+
+            // Debe estar completada para poder reactivarla
+            if ($schedule->status !== \Modules\JobPosting\Enums\ScheduleStatusEnum::COMPLETED) {
+                return back()->with('error', '❌ La fase debe estar completada para poder reactivarla.');
+            }
+
+            $schedule->update([
+                'status' => \Modules\JobPosting\Enums\ScheduleStatusEnum::IN_PROGRESS,
+                'metadata' => array_merge($schedule->metadata ?? [], ['is_claims_only' => true]),
+            ]);
+
+            return back()->with('success', "✅ Fase '{$schedule->phase->name}' reactivada para postulantes con reclamo aprobado.");
+
+        } catch (\Exception $e) {
+            \Log::error('Error reactivando fase para reclamos: ' . $e->getMessage());
+            return back()->with('error', '❌ Error al reactivar fase: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Saltar a la siguiente fase (completa actual e inicia siguiente)
      */
     public function skipToNext(\Modules\JobPosting\Entities\JobPostingSchedule $schedule)

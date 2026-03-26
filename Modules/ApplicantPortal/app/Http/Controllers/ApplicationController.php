@@ -43,23 +43,37 @@ class ApplicationController extends Controller
 
         // Agregar información de fase actual a cada postulación para determinar si puede subir CV
         $applications->getCollection()->transform(function ($application) {
-            $application->load('eligibilityOverride');
-
-            // Verificar si tiene un reclamo aprobado que lo haga apto
-            $hasApprovedClaim = $application->eligibilityOverride
-                && $application->eligibilityOverride->isApproved()
-                && $application->eligibilityOverride->new_status === 'APTO';
-
-            if ($hasApprovedClaim) {
-                $jobPosting = $application->jobProfile?->jobPosting;
-                if ($jobPosting) {
-                    $currentPhase = $jobPosting->getCurrentPhase();
-                    $application->can_upload_cv = $currentPhase && in_array($currentPhase->phase?->code ?? '', ['PHASE_05_CV_SUBMISSION', 'PHASE_05_DOCUMENTS']);
-                } else {
-                    $application->can_upload_cv = false;
-                }
-            } else {
+            if ($application->status !== ApplicationStatus::ELIGIBLE) {
                 $application->can_upload_cv = false;
+                return $application;
+            }
+
+            $application->load('eligibilityOverride');
+            $jobPosting = $application->jobProfile?->jobPosting;
+
+            if (!$jobPosting) {
+                $application->can_upload_cv = false;
+                return $application;
+            }
+
+            $currentPhase = $jobPosting->getCurrentPhase();
+            $isCvPhase = $currentPhase && ($currentPhase->phase?->code ?? '') === 'PHASE_05_CV_SUBMISSION';
+
+            if (!$isCvPhase) {
+                $application->can_upload_cv = false;
+                return $application;
+            }
+
+            // Si la fase es solo para reclamos, solo pueden subir los que tienen reclamo aprobado
+            $isClaimsOnly = $currentPhase->metadata['is_claims_only'] ?? false;
+
+            if ($isClaimsOnly) {
+                $hasApprovedClaim = $application->eligibilityOverride
+                    && $application->eligibilityOverride->isApproved()
+                    && $application->eligibilityOverride->new_status === 'APTO';
+                $application->can_upload_cv = $hasApprovedClaim;
+            } else {
+                $application->can_upload_cv = true;
             }
 
             return $application;
@@ -107,15 +121,20 @@ class ApplicationController extends Controller
         // Get current phase using the method instead of a relationship
         $currentPhase = $jobPosting->getCurrentPhase();
 
-        // Verificar si tiene un reclamo aprobado que lo haga apto
-        $hasApprovedClaim = $application->eligibilityOverride
-            && $application->eligibilityOverride->isApproved()
-            && $application->eligibilityOverride->new_status === 'APTO';
+        // Verificar si puede subir CV
+        $isCvPhase = $currentPhase && ($currentPhase->phase?->code ?? '') === 'PHASE_05_CV_SUBMISSION';
+        $isClaimsOnly = $isCvPhase && ($currentPhase->metadata['is_claims_only'] ?? false);
 
-        // Verificar si puede subir CV (fase de presentación de CV documentado y reclamo aprobado)
-        $canUploadCv = $hasApprovedClaim
-            && $currentPhase
-            && in_array($currentPhase->phase?->code ?? '', ['PHASE_05_CV_SUBMISSION', 'PHASE_05_DOCUMENTS']);
+        if ($isCvPhase && $isClaimsOnly) {
+            // Fase reactivada solo para reclamos: solo APTO con reclamo aprobado
+            $hasApprovedClaim = $application->eligibilityOverride
+                && $application->eligibilityOverride->isApproved()
+                && $application->eligibilityOverride->new_status === 'APTO';
+            $canUploadCv = $hasApprovedClaim;
+        } else {
+            // Fase normal: todos los APTO pueden subir
+            $canUploadCv = $isCvPhase && $application->status === ApplicationStatus::ELIGIBLE;
+        }
 
         return view('applicantportal::applications.show', compact(
             'application',
@@ -443,26 +462,30 @@ class ApplicationController extends Controller
         // Cargar relaciones necesarias
         $application->load(['jobProfile.jobPosting.schedules.phase', 'documents', 'eligibilityOverride']);
 
-        // Verificar que tiene un reclamo aprobado
-        $hasApprovedClaim = $application->eligibilityOverride
-            && $application->eligibilityOverride->isApproved()
-            && $application->eligibilityOverride->new_status === 'APTO';
-
-        if (!$hasApprovedClaim) {
-            return redirect()
-                ->route('applicant.applications.show', $application->id)
-                ->with('error', 'Solo puedes subir tu CV documentado si tu reclamo ha sido aprobado y estás en estado APTO.');
-        }
-
         // Verificar que estemos en la fase de presentación de CV
         $jobPosting = $application->jobProfile?->jobPosting;
         $currentPhase = $jobPosting?->getCurrentPhase();
-        $canUploadCv = $currentPhase && in_array($currentPhase->phase?->code ?? '', ['PHASE_05_CV_SUBMISSION', 'PHASE_05_DOCUMENTS']);
+        $isCvPhase = $currentPhase && ($currentPhase->phase?->code ?? '') === 'PHASE_05_CV_SUBMISSION';
 
-        if (!$canUploadCv) {
+        if (!$isCvPhase) {
             return redirect()
                 ->route('applicant.applications.show', $application->id)
                 ->with('error', 'La fase de presentación de CV documentado no está activa en este momento.');
+        }
+
+        // Si la fase es solo para reclamos, verificar que tenga reclamo aprobado
+        $isClaimsOnly = $currentPhase->metadata['is_claims_only'] ?? false;
+
+        if ($isClaimsOnly) {
+            $hasApprovedClaim = $application->eligibilityOverride
+                && $application->eligibilityOverride->isApproved()
+                && $application->eligibilityOverride->new_status === 'APTO';
+
+            if (!$hasApprovedClaim) {
+                return redirect()
+                    ->route('applicant.applications.show', $application->id)
+                    ->with('error', 'Esta fase de presentación de CV está habilitada solo para postulantes con reclamo aprobado.');
+            }
         }
 
         return view('applicantportal::applications.upload-cv', compact('application'));
@@ -491,24 +514,29 @@ class ApplicationController extends Controller
         // Cargar relaciones necesarias y verificar fase
         $application->load(['jobProfile.jobPosting.schedules.phase', 'eligibilityOverride']);
 
-        // Verificar que tiene un reclamo aprobado
-        $hasApprovedClaim = $application->eligibilityOverride
-            && $application->eligibilityOverride->isApproved()
-            && $application->eligibilityOverride->new_status === 'APTO';
-
-        if (!$hasApprovedClaim) {
-            return redirect()
-                ->back()
-                ->with('error', 'Solo puedes subir tu CV documentado si tu reclamo ha sido aprobado y estás en estado APTO.');
-        }
         $jobPosting = $application->jobProfile?->jobPosting;
         $currentPhase = $jobPosting?->getCurrentPhase();
-        $canUploadCv = $currentPhase && in_array($currentPhase->phase?->code ?? '', ['PHASE_05_CV_SUBMISSION', 'PHASE_05_DOCUMENTS']);
+        $isCvPhase = $currentPhase && ($currentPhase->phase?->code ?? '') === 'PHASE_05_CV_SUBMISSION';
 
-        if (!$canUploadCv) {
+        if (!$isCvPhase) {
             return redirect()
                 ->back()
                 ->with('error', 'La fase de presentación de CV documentado no está activa en este momento.');
+        }
+
+        // Si la fase es solo para reclamos, verificar que tenga reclamo aprobado
+        $isClaimsOnly = $currentPhase->metadata['is_claims_only'] ?? false;
+
+        if ($isClaimsOnly) {
+            $hasApprovedClaim = $application->eligibilityOverride
+                && $application->eligibilityOverride->isApproved()
+                && $application->eligibilityOverride->new_status === 'APTO';
+
+            if (!$hasApprovedClaim) {
+                return redirect()
+                    ->back()
+                    ->with('error', 'Esta fase de presentación de CV está habilitada solo para postulantes con reclamo aprobado.');
+            }
         }
 
         // Validar el archivo
