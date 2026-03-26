@@ -57,7 +57,9 @@ class ApplicationController extends Controller
             }
 
             $currentPhase = $jobPosting->getCurrentPhase();
-            $isCvPhase = $currentPhase && ($currentPhase->phase?->code ?? '') === 'PHASE_05_CV_SUBMISSION';
+            $isCvPhase = $currentPhase
+                && ($currentPhase->phase?->code ?? '') === 'PHASE_05_CV_SUBMISSION'
+                && $this->isScheduleWithinDateRange($currentPhase);
 
             if (!$isCvPhase) {
                 $application->can_upload_cv = false;
@@ -122,7 +124,9 @@ class ApplicationController extends Controller
         $currentPhase = $jobPosting->getCurrentPhase();
 
         // Verificar si puede subir CV
-        $isCvPhase = $currentPhase && ($currentPhase->phase?->code ?? '') === 'PHASE_05_CV_SUBMISSION';
+        $isCvPhase = $currentPhase
+            && ($currentPhase->phase?->code ?? '') === 'PHASE_05_CV_SUBMISSION'
+            && $this->isScheduleWithinDateRange($currentPhase);
         $isClaimsOnly = $isCvPhase && ($currentPhase->metadata['is_claims_only'] ?? false);
 
         if ($isCvPhase && $isClaimsOnly) {
@@ -462,15 +466,17 @@ class ApplicationController extends Controller
         // Cargar relaciones necesarias
         $application->load(['jobProfile.jobPosting.schedules.phase', 'documents', 'eligibilityOverride']);
 
-        // Verificar que estemos en la fase de presentación de CV
+        // Verificar que estemos en la fase de presentación de CV y dentro del rango de fechas
         $jobPosting = $application->jobProfile?->jobPosting;
         $currentPhase = $jobPosting?->getCurrentPhase();
-        $isCvPhase = $currentPhase && ($currentPhase->phase?->code ?? '') === 'PHASE_05_CV_SUBMISSION';
+        $isCvPhase = $currentPhase
+            && ($currentPhase->phase?->code ?? '') === 'PHASE_05_CV_SUBMISSION'
+            && $this->isScheduleWithinDateRange($currentPhase);
 
         if (!$isCvPhase) {
             return redirect()
                 ->route('applicant.applications.show', $application->id)
-                ->with('error', 'La fase de presentación de CV documentado no está activa en este momento.');
+                ->with('error', 'La fase de presentación de CV documentado no está activa o el plazo ha vencido.');
         }
 
         // Si la fase es solo para reclamos, verificar que tenga reclamo aprobado
@@ -516,12 +522,14 @@ class ApplicationController extends Controller
 
         $jobPosting = $application->jobProfile?->jobPosting;
         $currentPhase = $jobPosting?->getCurrentPhase();
-        $isCvPhase = $currentPhase && ($currentPhase->phase?->code ?? '') === 'PHASE_05_CV_SUBMISSION';
+        $isCvPhase = $currentPhase
+            && ($currentPhase->phase?->code ?? '') === 'PHASE_05_CV_SUBMISSION'
+            && $this->isScheduleWithinDateRange($currentPhase);
 
         if (!$isCvPhase) {
             return redirect()
                 ->back()
-                ->with('error', 'La fase de presentación de CV documentado no está activa en este momento.');
+                ->with('error', 'La fase de presentación de CV documentado no está activa o el plazo ha vencido.');
         }
 
         // Si la fase es solo para reclamos, verificar que tenga reclamo aprobado
@@ -672,5 +680,30 @@ class ApplicationController extends Controller
             $document->pdf_path,
             'Ficha_Postulacion_' . $application->code . '.pdf'
         );
+    }
+
+    /**
+     * Verificar si un schedule está dentro de su rango de fechas/horas.
+     */
+    private function isScheduleWithinDateRange($schedule): bool
+    {
+        $now = now();
+
+        $start = \Carbon\Carbon::parse($schedule->start_date);
+        $end = \Carbon\Carbon::parse($schedule->end_date);
+
+        if ($schedule->start_time) {
+            $timeParts = explode(':', $schedule->start_time);
+            $start->setTime((int)$timeParts[0], (int)($timeParts[1] ?? 0));
+        }
+
+        if ($schedule->end_time) {
+            $timeParts = explode(':', $schedule->end_time);
+            $end->setTime((int)$timeParts[0], (int)($timeParts[1] ?? 0));
+        } else {
+            $end->setTime(23, 59, 59);
+        }
+
+        return $now->gte($start) && $now->lte($end);
     }
 }
