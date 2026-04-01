@@ -87,36 +87,44 @@ class EvaluatorAssignmentController extends Controller
                     ->count(),
             ];
 
-            // Carga de trabajo por evaluador
-            $workloadStats = collect([]);
+            // Carga de trabajo por convocatoria y evaluador
+            $workloadByConvocatoria = collect([]);
 
             try {
                 $workloadData = \DB::table('evaluator_assignments')
                     ->select(
                         'user_id',
+                        'job_posting_id',
                         \DB::raw('COUNT(*) as total'),
                         \DB::raw('SUM(CASE WHEN status = "PENDING" THEN 1 ELSE 0 END) as pending'),
                         \DB::raw('SUM(CASE WHEN status = "COMPLETED" THEN 1 ELSE 0 END) as completed')
                     )
                     ->whereNull('deleted_at')
-                    ->groupBy('user_id')
+                    ->groupBy('user_id', 'job_posting_id')
                     ->get();
 
-                // Enriquecer con datos de usuario y jury assignment
-                $workloadStats = $workloadData->map(function($item) {
+                // Enriquecer con datos de usuario, jury assignment y convocatoria
+                $enrichedData = $workloadData->map(function($item) {
                     $user = \Modules\User\Entities\User::find($item->user_id);
-
                     if (!$user) {
                         return null;
                     }
 
-                    // Obtener una asignación activa del jurado (puede tener varias)
+                    $jobPosting = \Modules\JobPosting\Entities\JobPosting::find($item->job_posting_id);
+                    if (!$jobPosting) {
+                        return null;
+                    }
+
                     $juryAssignment = \Modules\Jury\Entities\JuryAssignment::where('user_id', $item->user_id)
+                        ->where('job_posting_id', $item->job_posting_id)
                         ->where('status', 'ACTIVE')
                         ->first();
 
                     return (object)[
                         'user_id' => $item->user_id,
+                        'job_posting_id' => $item->job_posting_id,
+                        'job_posting_title' => $jobPosting->title,
+                        'job_posting_code' => $jobPosting->code,
                         'evaluator_name' => $user->getFullNameAttribute() ?? 'N/A',
                         'email' => $user->email ?? 'N/A',
                         'role' => $juryAssignment?->role_in_jury?->label() ?? 'N/A',
@@ -128,6 +136,24 @@ class EvaluatorAssignmentController extends Controller
                             : 0,
                     ];
                 })->filter()->values();
+
+                // Agrupar por convocatoria
+                $workloadByConvocatoria = $enrichedData->groupBy('job_posting_id')->map(function($evaluators, $jobPostingId) {
+                    $first = $evaluators->first();
+                    $totalAll = $evaluators->sum('total');
+                    $completedAll = $evaluators->sum('completed');
+
+                    return (object)[
+                        'job_posting_id' => $jobPostingId,
+                        'job_posting_title' => $first->job_posting_title,
+                        'job_posting_code' => $first->job_posting_code,
+                        'total_assignments' => $totalAll,
+                        'total_completed' => $completedAll,
+                        'total_pending' => $evaluators->sum('pending'),
+                        'overall_rate' => $totalAll > 0 ? round(($completedAll / $totalAll) * 100, 0) : 0,
+                        'evaluators' => $evaluators,
+                    ];
+                })->values();
 
             } catch (\Exception $e) {
                 \Log::error('Error calculating workload stats: ' . $e->getMessage());
@@ -150,7 +176,7 @@ class EvaluatorAssignmentController extends Controller
                     'success' => true,
                     'data' => $assignments->items(),
                     'stats' => $stats,
-                    'workload' => $workloadStats,
+                    'workload' => $workloadByConvocatoria,
                     'meta' => [
                         'current_page' => $assignments->currentPage(),
                         'total' => $assignments->total(),
@@ -163,7 +189,7 @@ class EvaluatorAssignmentController extends Controller
             return view('evaluation::assignments.index', compact(
                 'assignments',
                 'stats',
-                'workloadStats',
+                'workloadByConvocatoria',
                 'jobPostings',
                 'phases'
             ));
@@ -183,7 +209,7 @@ class EvaluatorAssignmentController extends Controller
             return view('evaluation::assignments.index', [
                 'assignments' => new \Illuminate\Pagination\LengthAwarePaginator([], 0, 15),
                 'stats' => ['total' => 0, 'pending' => 0, 'completed' => 0, 'overdue' => 0],
-                'workloadStats' => collect([]),
+                'workloadByConvocatoria' => collect([]),
                 'jobPostings' => collect([]),
                 'phases' => collect([]),
             ])->with('error', 'Error al cargar las asignaciones: ' . $e->getMessage());

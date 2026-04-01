@@ -158,67 +158,108 @@
             </div>
         </div>
 
-        <!-- Workload Distribution Cards -->
-        @if(isset($workloadStats) && $workloadStats->count() > 0)
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-8">
-            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
-                <h3 class="text-lg font-semibold text-gray-900 flex items-center">
-                    <i class="fas fa-chart-bar text-gray-600 mr-2"></i>
-                    Distribución de Carga por Jurado
-                </h3>
-            </div>
-            <div class="p-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    @foreach($workloadStats as $stat)
-                    <div class="bg-gradient-to-br from-white to-gray-50 rounded-lg border border-gray-200 p-5 hover:shadow-lg transition-all duration-200">
-                        <div class="flex items-start justify-between mb-4">
-                            <div class="flex items-center">
-                                <div class="bg-indigo-100 rounded-full p-3 mr-3">
-                                    <i class="fas fa-user-tie text-indigo-600"></i>
-                                </div>
-                                <div>
-                                    <h4 class="font-semibold text-gray-900">{{ $stat->evaluator_name }}</h4>
-                                    <p class="text-xs text-gray-500">{{ $stat->email }}</p>
-                                </div>
+        <!-- Workload Distribution by Convocatoria -->
+        @if(isset($workloadByConvocatoria) && $workloadByConvocatoria->count() > 0)
+        <div class="space-y-6 mb-8">
+            @foreach($workloadByConvocatoria as $convocatoria)
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200" x-data="{ open: true }">
+                {{-- Header de la convocatoria --}}
+                <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl cursor-pointer" @click="open = !open">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <i class="fas fa-briefcase text-indigo-600"></i>
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-900">{{ $convocatoria->job_posting_title }}</h3>
+                                <p class="text-xs text-gray-500">{{ $convocatoria->job_posting_code }}</p>
                             </div>
-                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                                {{ $stat->role }}
-                            </span>
                         </div>
-
-                        <div class="space-y-3">
-                            <div class="flex justify-between items-center text-sm">
-                                <span class="text-gray-600">Total asignaciones:</span>
-                                <span class="font-bold text-gray-900">{{ $stat->total }}</span>
-                            </div>
-                            <div class="flex justify-between items-center text-sm">
-                                <span class="text-gray-600">Pendientes:</span>
-                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                    {{ $stat->pending }}
-                                </span>
-                            </div>
-                            <div class="flex justify-between items-center text-sm">
-                                <span class="text-gray-600">Completadas:</span>
-                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                    {{ $stat->completed }}
-                                </span>
-                            </div>
-
-                            <div class="pt-3 border-t border-gray-200">
-                                <div class="flex justify-between items-center mb-2">
-                                    <span class="text-xs font-medium text-gray-600">Progreso</span>
-                                    <span class="text-xs font-bold text-gray-900">{{ $stat->completion_rate }}%</span>
-                                </div>
-                                <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                                    <div class="bg-gradient-to-r from-green-500 to-green-600 h-3 rounded-full transition-all duration-500"
-                                         style="width: {{ $stat->completion_rate }}%"></div>
+                        <div class="flex items-center space-x-4">
+                            {{-- Resumen general de la convocatoria --}}
+                            <div class="hidden sm:flex items-center space-x-3 text-sm">
+                                <span class="text-gray-500">{{ $convocatoria->evaluators->count() }} jurado(s)</span>
+                                <span class="text-gray-300">|</span>
+                                <span class="text-gray-500">{{ $convocatoria->total_assignments }} asignaciones</span>
+                                <span class="text-gray-300">|</span>
+                                <div class="flex items-center space-x-2">
+                                    <div class="w-24 bg-gray-200 rounded-full h-2 overflow-hidden">
+                                        <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 h-2 rounded-full transition-all duration-500"
+                                             style="width: {{ $convocatoria->overall_rate }}%"></div>
+                                    </div>
+                                    <span class="font-bold text-indigo-700">{{ $convocatoria->overall_rate }}%</span>
                                 </div>
                             </div>
+                            <i class="fas fa-chevron-down text-gray-400 transition-transform duration-200" :class="{ 'rotate-180': open }"></i>
                         </div>
                     </div>
-                    @endforeach
+                    {{-- Resumen mobile --}}
+                    <div class="sm:hidden mt-2 flex items-center space-x-3 text-sm">
+                        <span class="text-gray-500">{{ $convocatoria->evaluators->count() }} jurado(s)</span>
+                        <span class="text-gray-300">|</span>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-20 bg-gray-200 rounded-full h-2 overflow-hidden">
+                                <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 h-2 rounded-full"
+                                     style="width: {{ $convocatoria->overall_rate }}%"></div>
+                            </div>
+                            <span class="font-bold text-indigo-700">{{ $convocatoria->overall_rate }}%</span>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Cards de jurados --}}
+                <div class="p-6" x-show="open" x-transition>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        @foreach($convocatoria->evaluators as $stat)
+                        <div class="bg-gradient-to-br from-white to-gray-50 rounded-lg border border-gray-200 p-5 hover:shadow-lg transition-all duration-200">
+                            <div class="flex items-start justify-between mb-4">
+                                <div class="flex items-center">
+                                    <div class="bg-indigo-100 rounded-full p-3 mr-3">
+                                        <i class="fas fa-user-tie text-indigo-600"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-semibold text-gray-900">{{ $stat->evaluator_name }}</h4>
+                                        <p class="text-xs text-gray-500">{{ $stat->email }}</p>
+                                    </div>
+                                </div>
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                                    {{ $stat->role }}
+                                </span>
+                            </div>
+
+                            <div class="space-y-3">
+                                <div class="flex justify-between items-center text-sm">
+                                    <span class="text-gray-600">Total asignaciones:</span>
+                                    <span class="font-bold text-gray-900">{{ $stat->total }}</span>
+                                </div>
+                                <div class="flex justify-between items-center text-sm">
+                                    <span class="text-gray-600">Pendientes:</span>
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                        {{ $stat->pending }}
+                                    </span>
+                                </div>
+                                <div class="flex justify-between items-center text-sm">
+                                    <span class="text-gray-600">Completadas:</span>
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        {{ $stat->completed }}
+                                    </span>
+                                </div>
+
+                                <div class="pt-3 border-t border-gray-200">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <span class="text-xs font-medium text-gray-600">Progreso</span>
+                                        <span class="text-xs font-bold text-gray-900">{{ $stat->completion_rate }}%</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                                        <div class="bg-gradient-to-r from-green-500 to-green-600 h-3 rounded-full transition-all duration-500"
+                                             style="width: {{ $stat->completion_rate }}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
                 </div>
             </div>
+            @endforeach
         </div>
         @endif
 
