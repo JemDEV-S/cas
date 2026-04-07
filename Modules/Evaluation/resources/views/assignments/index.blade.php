@@ -1070,7 +1070,7 @@ function assignmentManager() {
                     this.manualJuryList = assignments.filter(a => a !== null).map(a => ({
                         id: a.user_id || a.id,
                         user_id: a.user_id,
-                        name: a.user?.name || 'N/A',
+                        name: a.user ? (a.user.first_name + ' ' + a.user.last_name) : 'N/A',
                         role: a.role_in_jury || '',
                         workload: a.workload || 0
                     }));
