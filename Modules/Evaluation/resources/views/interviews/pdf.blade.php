@@ -308,10 +308,10 @@
                     <table>
                         <thead>
                             <tr>
-                                <th style="width: 10%;">N°</th>
-                                <th style="width: 30%;">Código</th>
-                                <th style="width: 60%;">Postulante</th>
-
+                                <th style="width: 8%;">N°</th>
+                                <th style="width: 20%;">Código</th>
+                                <th style="width: 37%;">Postulante</th>
+                                <th style="width: 35%;">Perfil</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -326,6 +326,7 @@
                                         DNI: {{ $interview->application->dni ?? 'N/A' }}
                                     </span>
                                 </td>
+                                <td>{{ $interview->application->jobProfile->title ?? 'N/A' }}</td>
                             </tr>
                             @endforeach
                         </tbody>
@@ -351,10 +352,11 @@
                             <table>
                                 <thead>
                                     <tr>
-                                        <th style="width: 10%;">N°</th>
-                                        <th style="width: 25%;">Código</th>
-                                        <th style="width: 45%;">Postulante</th>
-                                        <th style="width: 20%;">Estado</th>
+                                        <th style="width: 8%;">N°</th>
+                                        <th style="width: 18%;">Código</th>
+                                        <th style="width: 32%;">Postulante</th>
+                                        <th style="width: 27%;">Perfil</th>
+                                        <th style="width: 15%;">Estado</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -369,6 +371,7 @@
                                                 DNI: {{ $interview->application->dni ?? 'N/A' }}
                                             </span>
                                         </td>
+                                        <td>{{ $interview->application->jobProfile->title ?? 'N/A' }}</td>
                                         <td>
                                             @if($interview->status->value === 'COMPLETED')
                                                 <span class="badge badge-completed">Completada</span>
