@@ -1066,7 +1066,14 @@ function assignmentManager() {
 
                 if (response.ok) {
                     const data = await response.json();
-                    this.manualJuryList = data.data || [];
+                    const assignments = data.data?.data || data.data || [];
+                    this.manualJuryList = assignments.filter(a => a !== null).map(a => ({
+                        id: a.user_id || a.id,
+                        user_id: a.user_id,
+                        name: a.user?.name || 'N/A',
+                        role: a.role_in_jury || '',
+                        workload: a.workload || 0
+                    }));
                 } else {
                     // Fallback: obtener de los workloadStats si está disponible
                     const workloadStats = @json($workloadStats ?? []);
