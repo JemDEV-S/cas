@@ -1056,7 +1056,7 @@ function assignmentManager() {
 
                 // Aquí podrías hacer una petición AJAX para obtener los jurados específicos
                 // Por simplicidad, vamos a usar una llamada a la base de datos
-                const response = await fetch(`{{ route('api.jury.assignments.index') }}?job_posting_id=${this.manualDistribution.job_posting_id}&status=ACTIVE`, {
+                const response = await fetch(`{{ route('api.api.jury.assignments.index') }}?job_posting_id=${this.manualDistribution.job_posting_id}&status=ACTIVE`, {
                     method: 'GET',
                     headers: {
                         'Accept': 'application/json',
