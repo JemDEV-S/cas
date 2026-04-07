@@ -57,7 +57,7 @@ class JuryAssignment extends Model
      */
     public function user(): BelongsTo
     {
-        return $this->belongsTo('App\Models\User', 'user_id');
+        return $this->belongsTo(\Modules\User\Entities\User::class, 'user_id');
     }
 
     public function jobPosting(): BelongsTo
