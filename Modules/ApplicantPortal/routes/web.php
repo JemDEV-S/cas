@@ -86,40 +86,8 @@ Route::prefix('portal')->middleware(['auth', 'role:applicant'])->name('applicant
     // Mi Perfil (Profile)
     // ========================================
     Route::prefix('perfil')->name('profile.')->group(function () {
-        // Ver perfil
-        Route::get('/', [ProfileController::class, 'show'])
-            ->name('show');
-
-        // Editar información personal
-        Route::get('/editar', [ProfileController::class, 'edit'])
-            ->name('edit');
-        Route::put('/actualizar', [ProfileController::class, 'update'])
-            ->name('update');
-
-        // Cambiar contraseña
-        Route::get('/contrasena', [ProfileController::class, 'editPassword'])
-            ->name('edit-password');
-        Route::put('/contrasena', [ProfileController::class, 'updatePassword'])
-            ->name('update-password');
-
-        // Formación académica
-        Route::get('/formacion', [ProfileController::class, 'education'])
-            ->name('education');
-
-        // Experiencia laboral
-        Route::get('/experiencia', [ProfileController::class, 'workExperience'])
-            ->name('work-experience');
-
-        // Cursos y capacitaciones
-        Route::get('/cursos', [ProfileController::class, 'courses'])
-            ->name('courses');
-
-        // Documentos
-        Route::get('/documentos', [ProfileController::class, 'documents'])
-            ->name('documents');
-        Route::post('/documentos', [ProfileController::class, 'uploadDocument'])
-            ->name('documents.upload');
-        Route::delete('/documentos/{documentId}', [ProfileController::class, 'deleteDocument'])
-            ->name('documents.delete');
+        Route::get('/', [ProfileController::class, 'show'])->name('show');
+        Route::put('/actualizar', [ProfileController::class, 'update'])->name('update');
+        Route::put('/contrasena', [ProfileController::class, 'updatePassword'])->name('update-password');
     });
 });

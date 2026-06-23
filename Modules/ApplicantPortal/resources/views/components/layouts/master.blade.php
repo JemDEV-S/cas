@@ -87,7 +87,7 @@
                         <a href="{{ route('applicant.dashboard') }}" class="text-gray-700 hover:text-municipal-blue font-medium transition-colors">Inicio</a>
                         <a href="{{ route('applicant.job-postings.index') }}" class="text-gray-700 hover:text-municipal-blue font-medium transition-colors">Convocatorias</a>
                         <a href="{{ route('applicant.applications.index') }}" class="text-gray-700 hover:text-municipal-blue font-medium transition-colors">Mis Postulaciones</a>
-                        <a href="#" class="text-gray-700 hover:text-municipal-blue font-medium transition-colors">Perfil</a>
+                        <a href="{{ route('applicant.profile.show') }}" class="text-gray-700 hover:text-municipal-blue font-medium transition-colors">Perfil</a>
                     </nav>
                     
                     <!-- Usuario -->
