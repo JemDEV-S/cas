@@ -41,6 +41,10 @@ Route::prefix('portal')->middleware(['auth', 'role:applicant'])->name('applicant
         // Enviar postulación
         Route::post('/{postingId}/postular/{profileId}', [JobPostingController::class, 'storeApplication'])
             ->name('apply.store');
+
+        // Editar borrador existente
+        Route::get('/{postingId}/postular/{profileId}/editar/{applicationId}', [JobPostingController::class, 'editDraft'])
+            ->name('apply.edit');
     });
 
     // ========================================

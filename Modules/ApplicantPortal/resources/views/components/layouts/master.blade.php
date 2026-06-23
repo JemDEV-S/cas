@@ -100,7 +100,7 @@
                             {{ strtoupper(substr(auth()->user()->getFullNameAttribute() ?? 'U', 0, 1)) }}
                         </div>
                         <!-- Botón de cerrar sesión -->
-                        <form method="POST" action="{{ route('logout') }}" class="inline">
+                        <form method="POST" action="{{ route('logout') }}" class="inline" id="logout-form">
                             @csrf
                             <button type="submit" class="flex items-center space-x-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors shadow-sm" title="Cerrar Sesión">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -169,5 +169,14 @@
         </footer>
     </div>
     @stack('scripts')
+    <script>
+        document.getElementById('logout-form').addEventListener('submit', function () {
+            const userId = '{{ auth()->id() }}';
+            const prefix = 'applicationDraft_' + userId + '_';
+            Object.keys(localStorage)
+                .filter(key => key.startsWith(prefix))
+                .forEach(key => localStorage.removeItem(key));
+        });
+    </script>
 </body>
 </html>

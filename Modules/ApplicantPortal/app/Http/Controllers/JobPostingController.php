@@ -261,6 +261,64 @@ class JobPostingController extends Controller
             $minimumEducationLevel = $requiredLevels->first();
         }
 
+        // 💎 Buscar última postulación previa del usuario (de cualquier otra convocatoria)
+        $previousApplication = \Modules\Application\Entities\Application::where('applicant_id', $user->id)
+            ->whereNotIn('status', [
+                \Modules\Application\Enums\ApplicationStatus::WITHDRAWN,
+                \Modules\Application\Enums\ApplicationStatus::DRAFT,
+            ])
+            ->with(['academics', 'experiences', 'professionalRegistrations', 'specialConditions'])
+            ->latest('application_date')
+            ->first();
+
+        $previousApplicationData = null;
+        if ($previousApplication) {
+            $regs = $previousApplication->professionalRegistrations->keyBy('registration_type');
+            $previousApplicationData = [
+                'applicationCode' => $previousApplication->code,
+                'academics' => $previousApplication->academics->map(fn($a) => [
+                    'degreeType'        => $a->degree_type ?? '',
+                    'institution'       => $a->institution_name ?? '',
+                    'careerId'          => $a->career_id ?? '',
+                    'careerField'       => $a->career_field ?? '',
+                    'isRelatedCareer'   => (bool) $a->is_related_career,
+                    'relatedCareerName' => $a->related_career_name ?? '',
+                    'year'              => $a->issue_date ? $a->issue_date->format('Y') : '',
+                ])->values()->all(),
+                'experiences' => $previousApplication->experiences->map(fn($e) => [
+                    'organization'   => $e->organization ?? '',
+                    'position'       => $e->position ?? '',
+                    'startDate'      => $e->start_date ? $e->start_date->format('Y-m-d') : '',
+                    'endDate'        => $e->end_date ? $e->end_date->format('Y-m-d') : '',
+                    'isCurrent'      => false,
+                    'isPublicSector' => (bool) $e->is_public_sector,
+                    'isSpecific'     => (bool) $e->is_specific,
+                    'description'    => '',
+                ])->values()->all(),
+                'registrations' => [
+                    'colegiatura' => [
+                        'habilitado' => $regs->has('COLEGIATURA'),
+                        'college'    => $regs->get('COLEGIATURA')?->issuing_entity ?? '',
+                        'number'     => $regs->get('COLEGIATURA')?->registration_number ?? '',
+                    ],
+                    'osce'    => $regs->get('OSCE')?->registration_number ?? '',
+                    'license' => [
+                        'number'     => $regs->get('LICENCIA_CONDUCIR')?->registration_number ?? '',
+                        'category'   => $regs->get('LICENCIA_CONDUCIR')?->issuing_entity ?? '',
+                        'expiryDate' => $regs->get('LICENCIA_CONDUCIR')?->expiry_date
+                            ? $regs->get('LICENCIA_CONDUCIR')->expiry_date->format('Y-m-d')
+                            : '',
+                    ],
+                ],
+                'specialConditions' => [
+                    'disability'     => $previousApplication->specialConditions->contains('condition_type', 'DISABILITY'),
+                    'military'       => $previousApplication->specialConditions->contains('condition_type', 'MILITARY'),
+                    'athleteNational'=> $previousApplication->specialConditions->contains('condition_type', 'ATHLETE_NATIONAL'),
+                    'athleteIntl'    => $previousApplication->specialConditions->contains('condition_type', 'ATHLETE_INTL'),
+                ],
+            ];
+        }
+
         return view('applicantportal::job-postings.apply', compact(
             'posting',
             'jobProfile',
@@ -271,7 +329,123 @@ class JobPostingController extends Controller
             'requiredCoursesComplianceInitial',
             'knowledgeComplianceInitial',
             'educationLevels',
-            'minimumEducationLevel'
+            'minimumEducationLevel',
+            'previousApplicationData'
+        ));
+    }
+
+    /**
+     * Show the wizard pre-loaded with an existing draft application.
+     */
+    public function editDraft(string $postingId, string $profileId, string $applicationId)
+    {
+        $user = auth()->user();
+        $user->refresh();
+
+        $draft = \Modules\Application\Entities\Application::where('id', $applicationId)
+            ->where('applicant_id', $user->id)
+            ->where('job_profile_id', $profileId)
+            ->where('status', \Modules\Application\Enums\ApplicationStatus::DRAFT)
+            ->with(['academics', 'experiences', 'trainings', 'professionalRegistrations', 'specialConditions', 'knowledge'])
+            ->firstOrFail();
+
+        $posting  = $this->jobPostingService->getJobPostingById($postingId);
+        $jobProfile = \Modules\JobProfile\Entities\JobProfile::with([
+            'positionCode', 'requestingUnit', 'organizationalUnit', 'careers.career',
+        ])->findOrFail($profileId);
+
+        $currentPhase = $this->jobPostingService->getCurrentPhase($postingId);
+        if (!$currentPhase || !in_array($currentPhase->phase?->code ?? '', ['PHASE_03_REGISTRATION', 'REGISTRATION'])) {
+            return redirect()
+                ->route('applicant.job-postings.show', $postingId)
+                ->with('error', 'Esta convocatoria no está en fase de registro.');
+        }
+
+        $academicCareers = \Modules\Application\Entities\AcademicCareer::where('is_active', true)
+            ->orderBy('display_order')->orderBy('name')->get()->groupBy('category_group');
+
+        $acceptedCareerIds   = $jobProfile->getAcceptedCareerIds(includeEquivalences: true);
+        $acceptedCareerNames = \Modules\Application\Entities\AcademicCareer::whereIn('id', $jobProfile->careers()->pluck('career_id'))
+            ->pluck('name')->toArray();
+
+        $requiredCoursesComplianceInitial = collect($jobProfile->required_courses ?? [])->map(fn($course) => [
+            'courseName' => $course, 'status' => 'none',
+            'institution' => '', 'year' => '', 'hours' => '', 'relatedCourseName' => '',
+            'relatedInstitution' => '', 'relatedYear' => '', 'relatedHours' => '',
+            'hasIt' => false, 'isRelated' => false,
+        ])->values()->all();
+
+        $knowledgeComplianceInitial = collect($jobProfile->knowledge_areas ?? [])->map(fn($area) => [
+            'area' => $area, 'hasIt' => false,
+        ])->values()->all();
+
+        $educationLevels      = \Modules\JobProfile\Enums\EducationLevelEnum::options();
+        $minimumEducationLevel = null;
+        if (!empty($jobProfile->education_levels)) {
+            $minimumEducationLevel = collect($jobProfile->education_levels)
+                ->map(fn($l) => \Modules\JobProfile\Enums\EducationLevelEnum::from($l))
+                ->sortBy(fn($e) => $e->level())->first();
+        }
+
+        // Serializar datos del borrador al formato que espera el wizard
+        $regs = $draft->professionalRegistrations->keyBy('registration_type');
+        $draftApplicationData = [
+            'academics' => $draft->academics->map(fn($a) => [
+                'degreeType'        => $a->degree_type ?? '',
+                'institution'       => $a->institution_name ?? '',
+                'careerId'          => $a->career_id ?? '',
+                'careerField'       => $a->career_field ?? '',
+                'isRelatedCareer'   => (bool) $a->is_related_career,
+                'relatedCareerName' => $a->related_career_name ?? '',
+                'year'              => $a->issue_date ? $a->issue_date->format('Y') : '',
+            ])->values()->all(),
+            'experiences' => $draft->experiences->map(fn($e) => [
+                'organization'   => $e->organization ?? '',
+                'position'       => $e->position ?? '',
+                'startDate'      => $e->start_date ? $e->start_date->format('Y-m-d') : '',
+                'endDate'        => $e->end_date ? $e->end_date->format('Y-m-d') : '',
+                'isCurrent'      => false,
+                'isPublicSector' => (bool) $e->is_public_sector,
+                'isSpecific'     => (bool) $e->is_specific,
+                'description'    => '',
+            ])->values()->all(),
+            'additionalTrainings' => $draft->trainings->map(fn($t) => [
+                'courseName'        => $t->course_name ?? '',
+                'institution'       => $t->institution ?? '',
+                'hours'             => $t->academic_hours ?? '',
+                'certificationDate' => $t->end_date ? $t->end_date->format('Y-m') : '',
+            ])->values()->all(),
+            'registrations' => [
+                'colegiatura' => [
+                    'habilitado' => $regs->has('COLEGIATURA'),
+                    'college'    => $regs->get('COLEGIATURA')?->issuing_entity ?? '',
+                    'number'     => $regs->get('COLEGIATURA')?->registration_number ?? '',
+                ],
+                'osce'    => $regs->get('OSCE')?->registration_number ?? '',
+                'license' => [
+                    'number'     => $regs->get('LICENCIA_CONDUCIR')?->registration_number ?? '',
+                    'category'   => $regs->get('LICENCIA_CONDUCIR')?->issuing_entity ?? '',
+                    'expiryDate' => $regs->get('LICENCIA_CONDUCIR')?->expiry_date
+                        ? $regs->get('LICENCIA_CONDUCIR')->expiry_date->format('Y-m-d') : '',
+                ],
+            ],
+            'specialConditions' => [
+                'disability'      => $draft->specialConditions->contains('condition_type', 'DISABILITY'),
+                'military'        => $draft->specialConditions->contains('condition_type', 'MILITARY'),
+                'athleteNational' => $draft->specialConditions->contains('condition_type', 'ATHLETE_NATIONAL'),
+                'athleteIntl'     => $draft->specialConditions->contains('condition_type', 'ATHLETE_INTL'),
+            ],
+            'otherKnowledge' => $draft->knowledge->pluck('knowledge_name')->implode(', '),
+        ];
+
+        $previousApplicationData = null;
+
+        return view('applicantportal::job-postings.apply', compact(
+            'posting', 'jobProfile', 'user',
+            'academicCareers', 'acceptedCareerIds', 'acceptedCareerNames',
+            'requiredCoursesComplianceInitial', 'knowledgeComplianceInitial',
+            'educationLevels', 'minimumEducationLevel',
+            'previousApplicationData', 'draftApplicationData'
         ));
     }
 
