@@ -27,6 +27,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Ver historial de cambios
         Route::get('{id}/history', [ApplicationController::class, 'history'])->name('history');
 
+        // Ver CV documentado en el navegador
+        Route::get('{id}/view-cv', [ApplicationController::class, 'viewCv'])->name('view-cv');
+
         // Gestión de documentos
         // Route::get('{id}/documents', [ApplicationDocumentController::class, 'index'])->name('documents.index');
         // Route::post('{id}/documents', [ApplicationDocumentController::class, 'store'])->name('documents.store');

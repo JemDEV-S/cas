@@ -207,4 +207,27 @@ class ApplicationController extends Controller
 
         return view('application::history', compact('application', 'history'));
     }
+
+    /**
+     * Ver CV documentado del postulante en el navegador
+     */
+    public function viewCv(string $id)
+    {
+        $application = Application::with('documents')->findOrFail($id);
+
+        $cvDocument = $application->documents()
+            ->where('document_type', 'DOC_CV')
+            ->first();
+
+        if (!$cvDocument || !$cvDocument->fileExists()) {
+            abort(404, 'CV no encontrado');
+        }
+
+        $filePath = storage_path('app/' . $cvDocument->file_path);
+
+        return response()->file($filePath, [
+            'Content-Type' => $cvDocument->mime_type,
+            'Content-Disposition' => 'inline; filename="' . $cvDocument->file_name . '"'
+        ]);
+    }
 }
