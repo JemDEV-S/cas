@@ -85,7 +85,7 @@ class Evaluation extends Model
 
     public function evaluator(): BelongsTo
     {
-        return $this->belongsTo('App\Models\User', 'evaluator_id');
+        return $this->belongsTo('Modules\User\Entities\User', 'evaluator_id');
     }
 
     public function phase(): BelongsTo

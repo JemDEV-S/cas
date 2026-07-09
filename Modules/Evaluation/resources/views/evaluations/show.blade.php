@@ -417,7 +417,7 @@
                             </div>
                             <div>
                                 <p class="font-semibold text-gray-900">
-                                    {{ $evaluation->evaluator->full_name ?? 'N/A' }}
+                                    {{ $evaluation->evaluator->getFullNameAttribute() ?? 'N/A' }}
                                 </p>
                                 <p class="text-xs text-gray-600">
                                     {{ $evaluation->evaluator->email ?? 'N/A' }}
